@@ -1782,6 +1782,77 @@ function initLapbulFormSdPage() {
             <fieldset class="ptk-fieldset" style="margin-top: 20px;"><legend>Menurut Agama</legend>${agamaInputsHTML}</fieldset>
             ${validationHTML}${footerHTML}
         `;
+
+        // ==========================================================
+    // === TAMBAHKAN BLOK PENGIRIM FORM (SUBMIT LISTENER) INI ===
+    // ==========================================================
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Mencegah halaman reload
+        
+        // Cek validasi tab terakhir sebelum kirim
+        if (!formLogic.validateTab(0)) { App.showAppModal('error', 'Data Sekolah (Tab 1) belum lengkap.'); formLogic.showTab(0); return; }
+        if (!formLogic.validateTab(1)) { formLogic.showTab(1); return; } // Pesan error sudah diatur di validasi
+        if (!formLogic.validateTab(2)) { App.showAppModal('error', 'Data PTK (Tab 3) belum lengkap.'); formLogic.showTab(2); return; }
+
+        const submitButton = form.querySelector('#finalSubmitBtn');
+        submitButton.disabled = true;
+        App.showAppModal('loading', 'Mengirim Laporan Bulanan SD...');
+
+        const fileInput = document.getElementById('fileLapbul');
+        const file = fileInput.files[0];
+        const MAX_SIZE = 300 * 1024; // 300 KB
+
+        if (!file) {
+             App.showAppModal('error', 'Unggah Dokumen: File Laporan Bulan wajib dilampirkan.');
+             submitButton.disabled = false;
+             return;
+        }
+
+        if (file.size > MAX_SIZE) {
+            App.showAppModal('error', 'Ukuran file melebihi batas maksimal 300 KB. Harap kompresi file PDF Anda.');
+            submitButton.disabled = false;
+            return;
+        }
+        
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        
+        // Ambil data dari field yang di-disable (jika perlu)
+        // (Tapi FormData modern biasanya sudah mengambil data dari field disabled
+        // jika kita mengaktifkannya sebelum submit. Namun, untuk lebih aman,
+        // kita tambahkan data kunci yang mungkin terkunci)
+        payload.Bulan = form.querySelector('[name="Bulan"]').value;
+        payload.Tahun = form.querySelector('[name="Tahun"]').value;
+        payload.Status = form.querySelector('[name="Status"]').value;
+        payload['Nama Sekolah'] = form.querySelector('[name="Nama Sekolah"]').value;
+
+        const sendData = (data) => {
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res && res.error) {
+                         App.showAppModal('error', res.error);
+                         submitButton.disabled = false;
+                    } else {
+                         App.showAppModal('success', 'Laporan berhasil terkirim!', 'lapbul_riwayat');
+                    }
+                })
+                .withFailureHandler(err => {
+                    App.showAppModal('error', `Gagal mengirim laporan: ${err.message}`);
+                    submitButton.disabled = false;
+                })
+                .processLapbulFormSd(data); // <-- Memanggil fungsi SD yang benar
+        };
+
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            payload.fileData = { fileName: file.name, mimeType: file.type, data: event.target.result.split(',')[1] };
+            sendData(payload);
+        };
+        reader.readAsDataURL(file);
+    });
+    // ==========================================================
+    // =================== AKHIR BLOK TAMBAHAN ==================
+    // ==========================================================
     }
 
     // 5. Fungsi Bantuan untuk Setup Logika Tab 2 (Murid)
