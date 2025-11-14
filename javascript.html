@@ -1817,10 +1817,6 @@ function initLapbulFormSdPage() {
         const formData = new FormData(form);
         const payload = Object.fromEntries(formData.entries());
         
-        // Ambil data dari field yang di-disable (jika perlu)
-        // (Tapi FormData modern biasanya sudah mengambil data dari field disabled
-        // jika kita mengaktifkannya sebelum submit. Namun, untuk lebih aman,
-        // kita tambahkan data kunci yang mungkin terkunci)
         payload.Bulan = form.querySelector('[name="Bulan"]').value;
         payload.Tahun = form.querySelector('[name="Tahun"]').value;
         payload.Status = form.querySelector('[name="Status"]').value;
@@ -1991,8 +1987,8 @@ function initLapbulFormSdPage() {
             });
             
             // --- TAMBAHKAN 2 BARIS INI ---
-            if(form.querySelector('#skeleton-loader')) form.querySelector('#skeleton-loader').style.display = 'none';
-            if(form.querySelector('#form-content')) form.querySelector('#form-content').style.display = 'flex';
+            if(document.getElementById('skeleton-loader')) document.getElementById('skeleton-loader').style.display = 'none';
+            if(document.getElementById('form-content')) document.getElementById('form-content').style.display = 'flex';
             // --- AKHIR TAMBAHAN ---
             
             document.getElementById('appModal').classList.remove('show');
@@ -2000,8 +1996,8 @@ function initLapbulFormSdPage() {
         .withFailureHandler(err => {
             App.showAppModal('error', `Gagal memuat daftar sekolah: ${err.message}`);
             // --- TAMBAHKAN 2 BARIS INI JUGA ---
-            if(form.querySelector('#skeleton-loader')) form.querySelector('#skeleton-loader').style.display = 'none';
-            if(form.querySelector('#form-content')) form.querySelector('#form-content').style.display = 'flex';
+            if(document.getElementById('skeleton-loader')) document.getElementById('skeleton-loader').style.display = 'none';
+            if(document.getElementById('form-content')) document.getElementById('form-content').style.display = 'flex';
             // --- AKHIR TAMBAHAN ---
         })
         .getSdSchoolLists();
