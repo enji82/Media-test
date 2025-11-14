@@ -3,7 +3,8 @@
 </header>
 
 <main class="manual-form form-tab-container">
-  <form> <!-- HANYA ADA SATU FORM INI -->
+  
+  <form id="lapbulFormSd" novalidate>
     
     <div id="skeleton-loader">
       <div class="skeleton-tabs">
@@ -33,8 +34,6 @@
       </div>
     </div>
 
-    <!-- TAG <form> KEDUA SUDAH DIHAPUS DARI SINI -->
-    
     <div id="form-content" style="display: none; flex-direction: column; flex-grow: 1; min-height: 0;">    
       <div id="tab-nav" class="tabs-container">
         <button type="button" class="tab-link active" data-tab="dataSekolah">1. Data Sekolah</button>
@@ -261,9 +260,6 @@
           </div>
         </div>
         
-        <!-- ============================================= -->
-        <!-- ===== INI BLOK YANG HILANG (TAB 4) ====== -->
-        <!-- ============================================= -->
         <div id="dataUnggah" class="tab-content-form">
           <div class="form-group">
             <label for="fileLapbul">Scan PDF Laporan Bulan Asli, Ukuran Maksimal 300 KB</label>
@@ -274,12 +270,9 @@
               <button type="submit" class="submit-btn" id="finalSubmitBtn" style="width: auto; margin-left: auto;">Kirim Laporan</button>
           </div>
         </div>
-        <!-- ============================================= -->
-        <!-- ============= AKHIR BLOK HILANG ============= -->
-        <!-- ============================================= -->
 
       </div>
     </div>
   
-  </form> <!-- Ini adalah penutup untuk FORM 1 -->
+  </form> 
 </main>

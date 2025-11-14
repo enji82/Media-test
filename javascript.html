@@ -679,34 +679,35 @@ App.setupTabForm = (formId) => {
     // === PERBAIKAN TOTAL DIMULAI DI SINI ===
     // ========================================================
     function validateTab(tabIndex) {
-        const tabContent = contentDivs[tabIndex];
-        
-        // PERBAIKAN: Hanya validasi field yang 'required' DAN 'enabled' (:not(:disabled))
-        const fields = tabContent.querySelectorAll('[required]:not(:disabled)');
+    const tabContent = contentDivs[tabIndex];
+    
+    // PERBAIKAN: Hanya validasi field yang 'required' DAN 'enabled' (:not(:disabled))
+    const fields = tabContent.querySelectorAll('[required]:not(:disabled)');
 
-        let isValid = true;
-        
-        // Hapus glow merah HANYA dari field yang akan kita periksa
-        fields.forEach(field => field.classList.remove('input-error'));
-        // (Kita tidak lagi menghapus SEMUA .input-error, 
-        //  agar glow merah di field tersembunyi tidak hilang)
+    let isValid = true;
+    
+    // Hapus glow merah HANYA dari field yang akan kita periksa
+    fields.forEach(field => field.classList.remove('input-error'));
 
-        fields.forEach(field => {
-            let fieldIsValid = true;
-            if (field.type === 'file') {
-                if (field.files.length === 0) fieldIsValid = false;
-            } else if (!field.value) { // Cek value kosong
-                fieldIsValid = false;
-            } else if (field.name === 'jumlahRombel' && field.value === '0') { // Cek Rombel 0
-                fieldIsValid = false;
-            }
-            
-            if (!fieldIsValid) {
-                isValid = false;
-                field.classList.add('input-error'); // Tambahkan glow merah
-            }
-        });
-        return isValid;
+    fields.forEach(field => {
+        let fieldIsValid = true;
+        if (field.type === 'file') {
+            if (field.files.length === 0) fieldIsValid = false;
+        } 
+        // 🛠️ PERBAIKAN: Input number kosong diizinkan (dianggap 0)
+        else if (!field.value && field.type !== 'number') { 
+            fieldIsValid = false;
+        } 
+        else if (field.name === 'jumlahRombel' && field.value === '0') { // Cek Rombel 0
+            fieldIsValid = false;
+        }
+        
+        if (!fieldIsValid) {
+            isValid = false;
+            field.classList.add('input-error'); // Tambahkan glow merah
+        }
+    });
+    return isValid;
     }
     // ========================================================
     // === AKHIR PERBAIKAN ===
@@ -1641,6 +1642,86 @@ function initLapbulFormSdPage() {
     // 1. Panggil App.setupTabForm untuk tab utama (Tab 1-4)
     const formLogic = App.setupTabForm('lapbulFormSd'); 
 
+    // ==========================================================
+    // === FIX 2: Pindahkan submit listener ke sini ===
+    // ==========================================================
+    form.addEventListener('submit', function(e) {
+        e.preventDefault(); // Mencegah halaman reload
+        
+        // Cek validasi tab terakhir sebelum kirim
+        if (!formLogic.validateTab(0)) { App.showAppModal('error', 'Data Sekolah (Tab 1) belum lengkap.'); formLogic.showTab(0); return; }
+        if (!formLogic.validateTab(1)) { formLogic.showTab(1); return; } // Pesan error sudah diatur di validasi
+        if (!formLogic.validateTab(2)) { App.showAppModal('error', 'Data PTK (Tab 3) belum lengkap.'); formLogic.showTab(2); return; }
+
+        const submitButton = form.querySelector('#finalSubmitBtn');
+        submitButton.disabled = true;
+        App.showAppModal('loading', 'Mengirim Laporan Bulanan SD...');
+
+        const fileInput = document.getElementById('fileLapbul');
+        const file = fileInput.files[0];
+        const MAX_SIZE = 300 * 1024; // 300 KB
+
+        if (!file) {
+             App.showAppModal('error', 'Unggah Dokumen: File Laporan Bulan wajib dilampirkan.');
+             submitButton.disabled = false;
+             return;
+        }
+
+        if (file.size > MAX_SIZE) {
+            App.showAppModal('error', 'Ukuran file melebihi batas maksimal 300 KB. Harap kompresi file PDF Anda.');
+            submitButton.disabled = false;
+            return;
+        }
+        
+        const formData = new FormData(form);
+        const payload = Object.fromEntries(formData.entries());
+        
+        // Ambil data dari field yang di-disable (jika perlu)
+        payload.Bulan = form.querySelector('[name="Bulan"]').value;
+        payload.Tahun = form.querySelector('[name="Tahun"]').value;
+        payload.Status = form.querySelector('[name="Status"]').value;
+        payload['Nama Sekolah'] = form.querySelector('[name="Nama Sekolah"]').value;
+
+        const sendData = (data) => {
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res && res.error) {
+                         App.showAppModal('error', res.error);
+                         submitButton.disabled = false;
+                    } else {
+                         App.showAppModal('success', 'Laporan berhasil terkirim!', 'lapbul_riwayat');
+                    }
+                })
+                .withFailureHandler(err => {
+                    App.showAppModal('error', `Gagal mengirim laporan: ${err.message}`);
+                    submitButton.disabled = false;
+                })
+                .processLapbulFormSd(data); // <-- Memanggil fungsi SD yang benar
+        };
+
+        const reader = new FileReader();
+
+// [BAGIAN SUKSES]
+reader.onload = function(event) {
+    payload.fileData = { fileName: file.name, mimeType: file.type, data: event.target.result.split(',')[1] };
+    sendData(payload); // Kirim data HANYA jika file sukses dibaca
+};
+
+// [INI TAMBAHAN PENTINGNYA]
+reader.onerror = function(error) {
+    // Tampilkan pesan error dan aktifkan tombol kembali
+    App.showAppModal('error', 'Gagal membaca file. Pastikan file tidak rusak dan coba lagi.');
+    submitButton.disabled = false; 
+    console.error('FileReader Error:', error); // Untuk debugging
+};
+
+// Baru jalankan pembacaan file di akhir
+reader.readAsDataURL(file);
+    });
+    // ==========================================================
+    // =================== AKHIR BLOK SUBMIT ==================
+    // ==========================================================
+
     // 2. Fungsi Bantuan untuk dropdown Bulan/Tahun
     function setupInitialDropdowns() {
         // ========================================================
@@ -1777,78 +1858,12 @@ function initLapbulFormSdPage() {
             footerHTML = `<div class="tab-form-footer"><button type="button" class="submit-btn next-tab-btn" style="width: auto; margin-left: auto;">Berikutnya</button></div>`;
         }
         
+        // FIX: Hapus submit listener dari sini
         return `
             <fieldset class="ptk-fieldset"><legend>Menurut Rombel</legend><div class="form-group form-group-rombel-toggle" style="margin-bottom: 20px;"><label>Jumlah Rombel</label><select class="rombel-toggle" name="k${kelas}_jumlah_rombel" data-kelas="${kelas}"><option value="1" selected>1</option><option value="2">2</option><option value="3">3</option><option value="0">0</option></select></div><h4 class="sub-section-title">Jml Murid per Rombel</h4><div class="rombel-container" id="rombel-container-${kelas}" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 15px;">${rombelInputsHTML}</div></fieldset>
             <fieldset class="ptk-fieldset" style="margin-top: 20px;"><legend>Menurut Agama</legend>${agamaInputsHTML}</fieldset>
             ${validationHTML}${footerHTML}
         `;
-
-        // ==========================================================
-    // === TAMBAHKAN BLOK PENGIRIM FORM (SUBMIT LISTENER) INI ===
-    // ==========================================================
-    form.addEventListener('submit', function(e) {
-        e.preventDefault(); // Mencegah halaman reload
-        
-        // Cek validasi tab terakhir sebelum kirim
-        if (!formLogic.validateTab(0)) { App.showAppModal('error', 'Data Sekolah (Tab 1) belum lengkap.'); formLogic.showTab(0); return; }
-        if (!formLogic.validateTab(1)) { formLogic.showTab(1); return; } // Pesan error sudah diatur di validasi
-        if (!formLogic.validateTab(2)) { App.showAppModal('error', 'Data PTK (Tab 3) belum lengkap.'); formLogic.showTab(2); return; }
-
-        const submitButton = form.querySelector('#finalSubmitBtn');
-        submitButton.disabled = true;
-        App.showAppModal('loading', 'Mengirim Laporan Bulanan SD...');
-
-        const fileInput = document.getElementById('fileLapbul');
-        const file = fileInput.files[0];
-        const MAX_SIZE = 300 * 1024; // 300 KB
-
-        if (!file) {
-             App.showAppModal('error', 'Unggah Dokumen: File Laporan Bulan wajib dilampirkan.');
-             submitButton.disabled = false;
-             return;
-        }
-
-        if (file.size > MAX_SIZE) {
-            App.showAppModal('error', 'Ukuran file melebihi batas maksimal 300 KB. Harap kompresi file PDF Anda.');
-            submitButton.disabled = false;
-            return;
-        }
-        
-        const formData = new FormData(form);
-        const payload = Object.fromEntries(formData.entries());
-        
-        payload.Bulan = form.querySelector('[name="Bulan"]').value;
-        payload.Tahun = form.querySelector('[name="Tahun"]').value;
-        payload.Status = form.querySelector('[name="Status"]').value;
-        payload['Nama Sekolah'] = form.querySelector('[name="Nama Sekolah"]').value;
-
-        const sendData = (data) => {
-            google.script.run
-                .withSuccessHandler(res => {
-                    if (res && res.error) {
-                         App.showAppModal('error', res.error);
-                         submitButton.disabled = false;
-                    } else {
-                         App.showAppModal('success', 'Laporan berhasil terkirim!', 'lapbul_riwayat');
-                    }
-                })
-                .withFailureHandler(err => {
-                    App.showAppModal('error', `Gagal mengirim laporan: ${err.message}`);
-                    submitButton.disabled = false;
-                })
-                .processLapbulFormSd(data); // <-- Memanggil fungsi SD yang benar
-        };
-
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            payload.fileData = { fileName: file.name, mimeType: file.type, data: event.target.result.split(',')[1] };
-            sendData(payload);
-        };
-        reader.readAsDataURL(file);
-    });
-    // ==========================================================
-    // =================== AKHIR BLOK TAMBAHAN ==================
-    // ==========================================================
     }
 
     // 5. Fungsi Bantuan untuk Setup Logika Tab 2 (Murid)
@@ -1949,12 +1964,19 @@ function initLapbulFormSdPage() {
         });
     }
     
+    // ==========================================================
+    // === FIX 1: Panggil fungsi statis SEBELUM server call ===
+    // ==========================================================
+    setupInitialDropdowns();
+    setupDataMurid();
+    // ==========================================================
+
     google.script.run
         .withSuccessHandler(schoolLists => {
             
-            setupInitialDropdowns();
-            setupDataSekolah(schoolLists);
-            setupDataMurid();
+            // setupInitialDropdowns(); // <-- Pindah ke atas
+            setupDataSekolah(schoolLists); // <-- Tetap di sini
+            // setupDataMurid(); // <-- Pindah ke atas
             
             // --- VALIDASI CUSTOM UNTUK TAB 2 (MURID) ---
             formLogic.setTabValidation(1, () => {
@@ -1987,8 +2009,8 @@ function initLapbulFormSdPage() {
             });
             
             // --- TAMBAHKAN 2 BARIS INI ---
-            if(document.getElementById('skeleton-loader')) document.getElementById('skeleton-loader').style.display = 'none';
-            if(document.getElementById('form-content')) document.getElementById('form-content').style.display = 'flex';
+            if(form.querySelector('#skeleton-loader')) form.querySelector('#skeleton-loader').style.display = 'none';
+            if(form.querySelector('#form-content')) form.querySelector('#form-content').style.display = 'flex';
             // --- AKHIR TAMBAHAN ---
             
             document.getElementById('appModal').classList.remove('show');
@@ -1996,13 +2018,13 @@ function initLapbulFormSdPage() {
         .withFailureHandler(err => {
             App.showAppModal('error', `Gagal memuat daftar sekolah: ${err.message}`);
             // --- TAMBAHKAN 2 BARIS INI JUGA ---
-            if(document.getElementById('skeleton-loader')) document.getElementById('skeleton-loader').style.display = 'none';
-            if(document.getElementById('form-content')) document.getElementById('form-content').style.display = 'flex';
+            if(form.querySelector('#skeleton-loader')) form.querySelector('#skeleton-loader').style.display = 'none';
+            if(form.querySelector('#form-content')) form.querySelector('#form-content').style.display = 'flex';
             // --- AKHIR TAMBAHAN ---
         })
         .getSdSchoolLists();
         
-    // (Fungsi App.submitLapbulSd(this.form) di HTML akan menangani submit)
+    // (Fungsi submit listener sudah dipindah ke atas)
 }
 
 function initLapbulRiwayatPage() {

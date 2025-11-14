@@ -139,28 +139,21 @@ function processLapbulFormPaud(formData) {
 }
 
 function processLapbulFormSd(formData) {
+  // CATATAN: Variabel 'formData' ini berisi SEMUA data formulir
+  // ditambah objek file data (formData.fileData) dari client-side JS.
   try {
     const mainFolder = DriveApp.getFolderById(FOLDER_CONFIG.LAPBUL_SD);
 
-    // ========================================================
-    // INI ADALAH PERBAIKANNYA:
     // Menggunakan nama properti yang dikirim dari JavaScript
-    // (formData.Tahun bukan formData.tahun)
-    // (formData.Bulan bukan formData.laporanBulan)
     const tahunFolder = getOrCreateFolder(mainFolder, formData.Tahun);
     const bulanFolder = getOrCreateFolder(tahunFolder, formData.Bulan);
-    // ========================================================
     
     const fileData = formData.fileData;
     const decodedData = Utilities.base64Decode(fileData.data);
     const blob = Utilities.newBlob(decodedData, fileData.mimeType, fileData.fileName);
     
-    // ========================================================
-    // PERBAIKAN KEDUA:
     // Menggunakan nama properti yang benar untuk nama file
-    // (Gunakan kurung siku '[]' karena ada spasi)
     const newFileName = `${formData['Nama Sekolah']} - Lapbul ${formData.Bulan} ${formData.Tahun}.pdf`;
-    // ========================================================
     
     const newFile = bulanFolder.createFile(blob).setName(newFileName);
     const fileUrl = newFile.getUrl();
@@ -171,15 +164,14 @@ function processLapbulFormSd(formData) {
     const headersMap = SD_FORM_INDEX_MAP;
     // Ambil nilai helper
     const getValue = (key) => formData[key] || 0;
-    // --- ▼▼▼ TAKTIK BARU: Bangun baris berdasarkan PETA ▼▼▼ ---
+    
     const newRow = headersMap.map(headerName => {
         // Cek Pengecualian
         if (headerName === 'Tanggal Unggah') return new Date();
-        if (headerName === 'Jenjang') return "SD"; // <--- PAKSA "SD" di posisi yang benar
+        if (headerName === 'Jenjang') return "SD"; 
         if (headerName === 'Dokumen') return fileUrl;
-        if (headerName === 'Update') return ""; // Kosong saat input baru
+        if (headerName === 'Update') return ""; 
     
-        
         // Jika nama header ada di formData, ambil nilainya
         if (formData.hasOwnProperty(headerName)) {
             return getValue(headerName);
@@ -188,12 +180,20 @@ function processLapbulFormSd(formData) {
         // Jika tidak ada (misal: header lama yang sudah tidak dipakai), isi 0
         return 0; 
     });
-    // --- ▲▲▲ AKHIR TAKTIK BARU ▲▲▲ ---
 
     sheet.appendRow(newRow);
+    
+    // Return Sukses
     return "Sukses! Laporan Bulan SD berhasil dikirim.";
+    
   } catch (e) {
-    return handleError('processLapbulFormSd', e);
+    // ⚠️ INI ADALAH PERBAIKAN KRITIS UNTUK MENGHENTIKAN 'MACET'
+    // Kita log errornya, lalu melempar error agar google.script.run 
+    // di browser segera mengaktifkan .withFailureHandler()
+    Logger.log(`Error di processLapbulFormSd: ${e.message} - Stack: ${e.stack}`);
+    
+    // Baris ini akan mengirim error ke browser dan menghentikan macet.
+    throw new Error(`Gagal mengirim laporan: ${e.message}`);
   }
 }
 
