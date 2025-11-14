@@ -1,0 +1,53 @@
+<header>
+  <h2>KEBUTUHAN GURU SD NEGERI</h2>
+</header>
+
+<main class="table-view-container">
+  <div id="loadingStatus" class="loading-container">
+    <div class="spinner-container">
+      <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+    </div>
+    <p>Memuat data kebutuhan Guru, mohon tunggu...</p>
+  </div>
+
+  <div id="tableWrapper" style="display:none;">
+    <div class="table-container">
+      <table id="kebutuhanPtkSdnTable" class="data-table">
+        <thead></thead>
+        <tbody></tbody>
+        <tfoot></tfoot>
+      </table>
+    </div>
+    <div class="table-footer-note">
+      Sumber data: laporan bulan terakhir.
+    </div>
+  </div>
+</main>
+
+<style>
+  /* 1. Mencegah scroll di halaman utama */
+  .main-content {
+    overflow-y: hidden;
+  }
+
+  /* 2. Mengatur layout flexbox agar container tabel mengisi sisa ruang */
+  main.table-view-container {
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  #tableWrapper {
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* 3. Memberikan scrollbar HANYA pada pembungkus tabel */
+  #tableWrapper .table-container {
+    overflow-y: auto; /* Aktifkan scroll vertikal jika konten meluap */
+    flex-grow: 1;
+  }
+</style>

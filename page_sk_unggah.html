@@ -1,0 +1,91 @@
+<div class="form-sk-upload">
+  <form id="manualUploadForm" class="manual-form">
+
+    <div id="skeleton-loader">
+      <div class="form-grid">
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 150px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 150px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 100px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 100px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 100px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 100px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="skeleton skeleton-text" style="width: 250px;"></div>
+        <div class="skeleton skeleton-input" style="height: 60px;"></div>
+      </div>
+      <div class="form-footer">
+        <div class="skeleton skeleton-button" style="width: 150px;"></div>
+      </div>
+    </div>
+
+    <div id="form-content" style="display: none;">
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="namaSD">Nama Sekolah</label>
+          <select id="namaSD" name="namaSD" required>
+            <option value="" disabled selected>Memuat...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="tahunAjaran">Tahun Ajaran</label>
+          <select id="tahunAjaran" name="tahunAjaran" required>
+            <option value="" disabled selected>Memuat...</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="semester">Semester</label>
+          <select id="semester" name="semester" required>
+            <option value="" disabled selected>Memuat...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="kriteriaSK">Kriteria SK</label>
+          <select id="kriteriaSK" name="kriteriaSK" required>
+            <option value="" disabled selected>Memuat...</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid">
+          <div class="form-group">
+              <label for="nomorSK">Nomor SK</label>
+              <input type="text" id="nomorSK" name="nomorSK" required>
+          </div>
+          <div class="form-group">
+              <label for="tanggalSK">Tanggal SK</label>
+              <input type="date" id="tanggalSK" name="tanggalSK" required>
+          </div>
+      </div>
+      <div class="form-group">
+          <label for="fileUpload">Unggah Scan File SK Pembagian Tugas(File PDF, Maks. 1 MB)</label>
+          <input type="file" id="fileUpload" name="fileUpload" accept="application/pdf" required>
+      </div>
+      <div class="form-footer">
+        <button type="submit" class="submit-btn" id="submitBtn">Kirim Dokumen</button>
+      </div>
+    </div> </form>
+</div>

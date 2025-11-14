@@ -1,0 +1,143 @@
+<header>
+  <h2>DAFTAR PRESENSI SIABA</h2>
+</header>
+
+<div class="filter-container">
+  <div class="filter-group">
+    <label for="filterTahun">Tahun:</label>
+    <select id="filterTahun"></select>
+  </div>
+  <div class="filter-group">
+    <label for="filterBulan">Bulan:</label>
+    <select id="filterBulan"></select>
+  </div>
+  <div class="filter-group">
+    <label for="filterUnitKerja">Unit Kerja:</label>
+    <select id="filterUnitKerja"></select>
+  </div>
+  <button id="terapkanFilterBtn" class="submit-btn" style="width: auto; padding: 10px 20px;">
+    Terapkan
+  </button>
+</div>
+
+<main class="table-view-container">
+  <div id="loadingStatus" class="loading-container">
+      <div class="spinner-container">
+        <div class="spinner-bar"></div>
+        <div class="spinner-bar"></div>
+        <div class="spinner-bar"></div>
+        <div class="spinner-bar"></div>
+    </div>
+      <p>Memuat data presensi, mohon tunggu...</p>
+  </div>
+  
+  <div id="tableWrapper" style="display:none;">
+    <div class="table-container">
+        <table id="presensiTable" class="data-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+    </div>
+    <div class="table-footer-note" style="line-height: 1.6;">
+      <strong>Keterangan:</strong><br>
+      TP: Tidak Presensi, HK: Hari Kerja, H: Hadir, HA: Hari Apel, APL: Apel, TAp: Tidak Apel, HU: Hari Upacara, U: Upacara, TU: Tidak Upacara, CT: Cuti Tahunan, CAP: Cuti Alasan Penting, CS: Cuti Sakit, CM: Cuti Melahirkan, DD: Dinas Dalam, DL: Dinas Luar, TA: Terlambat, PLA: Pulang Awal, LA: Lupa Absen
+    </div>
+  </div>
+</main>
+
+<style>
+  /* CSS tidak berubah, tetap sama seperti sebelumnya */
+  .main-content {
+    overflow-y: hidden;
+  }
+  main.table-view-container, #tableWrapper {
+    flex-grow: 1;
+    min-height: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  #tableWrapper .table-container {
+    overflow: auto;
+    flex-grow: 1;
+  }
+  #presensiTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+  }
+  #presensiTable tbody td:nth-child(1),
+  #presensiTable tbody td:nth-child(2) {
+    position: sticky;
+    background-color: #1c2e3a;
+  }
+  #presensiTable thead th:nth-child(1),
+  #presensiTable tbody td:nth-child(1) {
+    left: 0;
+    z-index: 1;
+  }
+  #presensiTable thead th:nth-child(2),
+  #presensiTable tbody td:nth-child(2) {
+    left: 50px;
+    z-index: 1;
+  }
+  #presensiTable thead th:nth-child(1),
+  #presensiTable thead th:nth-child(2) {
+    z-index: 3;
+  }
+  #presensiTable tbody tr:hover td:nth-child(1),
+  #presensiTable tbody tr:hover td:nth-child(2) {
+    background-color: #2a4152;
+  }
+  #presensiTable th,
+  #presensiTable td {
+    text-align: center;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  #presensiTable td:nth-child(2) {
+    text-align: left;
+  }
+
+  /* =================================================================== */
+  /* ====== 26. KONDISIONAL FORMAT UNTUK KOLOM PENTING ====== */
+  /* =================================================================== */
+  
+  .cell-negative {
+    background-color: rgba(231, 76, 60, 0.25) !important; /* Merah lembut (transparan) */
+    font-weight: bold;
+    color: #ffffff !important; /* Pastikan teks tetap putih dan terbaca */
+  }
+  
+  /* Aturan hover yang juga dibuat lebih lembut agar tidak terlalu mencolok */
+  #presensiTable tbody tr:hover .cell-negative {
+    background-color: rgba(231, 76, 60, 0.4) !important;
+  }
+
+  /* =================================================================== */
+  /* ================= 27. KONDISIONAL FORMAT SIABA ================== */
+  /* =================================================================== */
+
+  /* --- Aturan Warna Latar Belakang (Lebih Lembut) --- */
+  .cell-bg-cream  { background-color: rgba(248, 243, 212, 0.15); } /* cream */
+  .cell-bg-green  { background-color: rgba(46, 204, 113, 0.15); } /* green */
+  .cell-bg-blue   { background-color: rgba(52, 152, 219, 0.15); } /* blue */
+  .cell-bg-yellow { background-color: rgba(241, 196, 15, 0.15); } /* yellow */
+  .cell-bg-purple { background-color: rgba(155, 89, 182, 0.15); } /* purple */
+  .cell-bg-red    { background-color: rgba(231, 76, 60, 0.25); } /* red (tetap) */
+  .cell-bg-gray   { background-color: rgba(128, 128, 128, 0.15); } /* gray */
+
+  /* --- Aturan Warna Font --- */
+  .font-red   { color: #ff5757 !important; font-weight: bold; } /* <-- BARU */
+  .font-green { color: #2ecc71 !important; font-weight: bold; }
+  .font-blue  { color: #3498db !important; font-weight: bold; }
+  .font-brown { color: #a0522d !important; font-weight: bold; }
+  
+  /* --- Aturan Hover agar Tetap Terlihat --- */
+  #presensiTable tbody tr:hover .cell-bg-cream  { background-color: rgba(248, 243, 212, 0.25) !important; }
+  #presensiTable tbody tr:hover .cell-bg-green  { background-color: rgba(46, 204, 113, 0.25) !important; }
+  #presensiTable tbody tr:hover .cell-bg-blue   { background-color: rgba(52, 152, 219, 0.25) !important; }
+  #presensiTable tbody tr:hover .cell-bg-yellow { background-color: rgba(241, 196, 15, 0.25) !important; }
+  #presensiTable tbody tr:hover .cell-bg-purple { background-color: rgba(155, 89, 182, 0.25) !important; }
+  #presensiTable tbody tr:hover .cell-bg-red    { background-color: rgba(231, 76, 60, 0.4) !important; }
+  #presensiTable tbody tr:hover .cell-bg-gray   { background-color: rgba(128, 128, 128, 0.25) !important; }
+</style>
