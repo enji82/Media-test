@@ -2405,10 +2405,6 @@ function initLapbulEditPaudPage(params) {
 
         showTab('edit-dataPtk');
     }
-    
-    // --- LOGIKA UTAMA MEMUAT DATA ---
-    
-    App.showAppModal('loading', 'Memuat data Lapbul...');
 
     google.script.run
         .withSuccessHandler(rowData => {
@@ -3426,7 +3422,12 @@ function initPtkKelolaPaudPage() {
 
 function initPtkTambahPaudPage() {
     const form = document.getElementById('addPtkPaudForm');
+    const skeleton = document.getElementById('skeleton-loader'); 
+    
     if (!form) return;
+
+    // Tampilkan skeleton segera (karena form disembunyikan di HTML)
+    if (skeleton) skeleton.style.display = 'block';
 
     // 1. Inisialisasi "Mesin" Tab
     const formLogic = App.setupTabForm('addPtkPaudForm');
@@ -3449,11 +3450,13 @@ function initPtkTambahPaudPage() {
         }
     }
 
-    // 4. Panggil data dari "Markas Komando" (code.gs)
-    App.showAppModal('loading', 'Memuat opsi formulir...');
+    // 4. Panggil data dari server (Tanpa App.showAppModal di sini)
     google.script.run
         .withSuccessHandler(options => {
             if (options.error) {
+                // Jika error, sembunyikan skeleton, tampilkan modal error, dan HENTIKAN proses pengisian
+                if (skeleton) skeleton.style.display = 'none';
+                form.style.display = 'flex'; // Tampilkan form agar tombol OK di modal bisa di-klik
                 App.showAppModal('error', `Gagal memuat opsi: ${options.error}`);
                 return;
             }
@@ -3474,19 +3477,28 @@ function initPtkTambahPaudPage() {
                 lembagaSelect.disabled = false;
             });
             
+            // --- AKTIFKAN FORM DAN TUTUP SKELETON (PERBAIKAN) ---
+            if (skeleton) skeleton.style.display = 'none'; // Sembunyikan skeleton
+            form.style.display = 'flex'; // Tampilkan form utama sebagai flex
+            // --- AKHIR PERBAIKAN ---
+
             document.getElementById('appModal').classList.remove('show');
         })
-        .withFailureHandler(err => App.showAppModal('error', `Gagal memuat opsi form: ${err.message}`))
-        .getNewPtkPaudOptions(); // Memanggil fungsi code.gs yang sudah ada
+        .withFailureHandler(err => {
+             // Tangani kegagalan server
+            if (skeleton) skeleton.style.display = 'none';
+            form.style.display = 'flex';
+            App.showAppModal('error', `Gagal memuat opsi form: ${err.message}`);
+        })
+        .getNewPtkPaudOptions(); 
 
     // 5. Tentukan Aturan Validasi Kustom
     
-    // Validasi Tab 1 (Data Lembaga) - Cukup validasi standar
+    // Validasi Tab 1 (Data Lembaga)
     formLogic.setTabValidation(0, () => formLogic.validateTab(0));
 
-    // Validasi Tab 2 (Data Pribadi) - Validasi standar + Jurusan
+    // Validasi Tab 2 (Data Pribadi)
     formLogic.setTabValidation(1, () => {
-        // Jalankan validasi standar dulu (untuk 'required')
         if (!formLogic.validateTab(1)) return false; 
         
         // Validasi Kustom "Jurusan"
@@ -3504,7 +3516,7 @@ function initPtkTambahPaudPage() {
         return true; // Lolos semua
     });
     
-    // Validasi Tab 3 (Data Kepegawaian) - Cukup validasi standar
+    // Validasi Tab 3 (Data Kepegawaian)
     formLogic.setTabValidation(2, () => formLogic.validateTab(2));
 
 
@@ -3519,8 +3531,6 @@ function initPtkTambahPaudPage() {
             return;
         }
         if (!formLogic.validateTab(1)) {
-            // Pesan error sudah dihandle oleh validasi kustom (Jurusan)
-            // App.showAppModal('error', 'Data Pribadi (Tab 2) belum lengkap.');
             formLogic.showTab(1); // Pindahkan ke tab yang error
             return;
         }
