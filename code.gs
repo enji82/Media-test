@@ -355,72 +355,7 @@ const SD_FORM_INDEX_MAP = [
  * ===================================================================
  */
 
-function getMuridPaudKelasUsiaData() {
-  try {
-    return getDataFromSheet('MURID_PAUD_KELAS');
-  } catch (e) {
-    return handleError('getMuridPaudKelasUsiaData', e);
-  }
-}
 
-function getMuridPaudJenisKelaminData() {
-  try {
-    return getDataFromSheet('MURID_PAUD_JK');
-  } catch (e) {
-    return handleError('getMuridPaudJenisKelaminData', e);
-  }
-}
-
-function getMuridPaudJumlahBulananData() {
-  try {
-    return getDataFromSheet('MURID_PAUD_BULANAN');
-  } catch (e) {
-    return handleError('getMuridPaudJumlahBulananData', e);
-  }
-}
-
-function getMuridSdKelasData() {
-  try {
-    return getDataFromSheet('MURID_SD_KELAS');
-  } catch (e) {
-    return handleError('getMuridSdKelasData', e);
-  }
-}
-
-function getMuridSdRombelData() {
-  try {
-    return getDataFromSheet('MURID_SD_ROMBEL');
-  } catch (e) {
-    return handleError('getMuridSdRombelData', e);
-  }
-}
-
-function getMuridSdJenisKelaminData() {
-  try {
-    return getDataFromSheet('MURID_SD_JK');
-  } catch (e) {
-    return handleError('getMuridSdJenisKelaminData', e);
-  }
-}
-
-function getMuridSdAgamaData() {
-  try {
-    return getDataFromSheet('MURID_SD_AGAMA');
-  } catch (e) {
-    return handleError('getMuridSdAgamaData', e);
-  }
-}
-
-function getMuridSdJumlahBulananData() {
-  try {
-    const config = SPREADSHEET_CONFIG.MURID_SD_BULANAN;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    if (!sheet) throw new Error("Sheet tidak ditemukan");
-    return sheet.getDataRange().getValues(); // Menggunakan getValues() untuk angka
-  } catch (e) {
-    return handleError('getMuridSdJumlahBulananData', e);
-  }
-}
 
 /**
  * ===================================================================
