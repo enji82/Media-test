@@ -469,20 +469,6 @@ App.initializeGenericTablePage = (config) => {
         if (config.initialSort && filtered.length > 0) {
             filtered = applySorting(filtered, config.initialSort); 
         }
-
-        const searchInput = document.getElementById('searchFilter');
-        const searchTerm = searchInput ? String(searchInput.value).toLowerCase() : '';
-
-        if (searchTerm) {
-            filtered = filtered.filter(row => {
-                const isDataNested = config.tableId === 'kelolaTable' || config.tableId === 'kelolaPtkSdTable';
-                const targetRow = isDataNested ? row.data : row;
-                return Object.keys(targetRow).some(key => {
-                    const cellValue = String(targetRow[key] ?? '').toLowerCase();
-                    return cellValue.includes(searchTerm);
-                });
-            });
-        }
         
         config.filters.forEach(filterConf => {
             const dropdown = document.getElementById(filterConf.id);
@@ -3561,15 +3547,16 @@ function initPtkTambahPaudPage() {
 
 function initPtkEditPaudPage(params) {
     const form = document.getElementById('editPtkPaudForm');
-    const loadingDiv = document.getElementById('loading-data');
+    const skeleton = document.getElementById('skeleton-loader');
     
-    // 1. Cek "Amunisi" (parameter)
     if (!form || !params || !params.rowIndex) {
+        if(skeleton) skeleton.style.display = 'none';
         document.getElementById('main-content').innerHTML = `<p style="color:red; text-align:center;">Error: Parameter untuk edit tidak ditemukan.</p>`;
         return;
     }
 
     form.querySelector('[name="rowIndex"]').value = params.rowIndex;
+    if (skeleton) skeleton.style.display = 'block';
 
     // 2. Inisialisasi "Mesin" Tab
     const formLogic = App.setupTabForm('editPtkPaudForm');
@@ -3577,7 +3564,7 @@ function initPtkEditPaudPage(params) {
 
     // 3. Fungsi untuk mengisi dropdown
     function populateSingleDropdown(elementId, optionsArray, defaultText) {
-        const dropdown = form.querySelector('#' + elementId); // Targetkan form
+        const dropdown = form.querySelector('#' + elementId);
         if (!dropdown) return;
         dropdown.innerHTML = `<option value="" disabled selected>${defaultText}</option>`;
         if (optionsArray && optionsArray.length > 0) {
@@ -3590,18 +3577,18 @@ function initPtkEditPaudPage(params) {
         }
     }
 
-    // 4. Panggil data dari "Markas Komando" (code.gs)
-    App.showAppModal('loading', 'Memuat data PTK...');
-
+    // --- PANGGIL DATA OPSI DROPDOWN ---
     google.script.run
         .withSuccessHandler(options => {
             if (options.error) {
+                if (skeleton) skeleton.style.display = 'none';
+                form.style.display = 'flex';
                 App.showAppModal('error', `Gagal memuat opsi: ${options.error}`);
                 return;
             }
-            serverOptions = options; // Simpan data server
+            serverOptions = options; 
 
-            // Isi dropdown Status dan Jabatan
+            // Isi dropdown Statis (Status dan Jabatan)
             populateSingleDropdown("status", serverOptions['Status'], "-- Pilih Status --");
             populateSingleDropdown("jabatan", serverOptions['Jabatan'], "-- Pilih Jabatan --");
             
@@ -3617,7 +3604,7 @@ function initPtkEditPaudPage(params) {
                 lembagaSelect.disabled = false;
             });
 
-            // 5. Setelah Opsi Siap, Panggil Data Baris yang Akan Diedit
+            // --- PANGGIL DATA BARIS YANG AKAN DIEDIT (CHAINING) ---
             google.script.run
                 .withSuccessHandler(rowData => {
                     if (rowData.error) {
@@ -3625,47 +3612,49 @@ function initPtkEditPaudPage(params) {
                         return;
                     }
 
-                    // 6. Isi Semua Field Form
+                    // 1. Isi Semua Field Form
                     for (const key in rowData) {
                         const field = form.querySelector(`[name="${key}"]`);
                         if (field) {
-                            // Taktik khusus untuk TMT (tanggal)
-                            if (key === 'TMT' && rowData[key].includes('/')) {
-                                // Ubah format dd/MM/yyyy (dari server) ke yyyy-MM-dd (untuk input)
-                                const parts = rowData[key].split(' ')[0].split('/');
-                                field.value = `${parts[2]}-${parts[1]}-${parts[0]}`;
+                            if (key === 'TMT' && rowData[key]) {
+                                field.value = rowData[key]; // yyyy-MM-dd
                             } else {
                                 field.value = rowData[key];
                             }
                         }
                     }
 
-                    // 7. Taktik Kunci: Isi Dropdown Bertingkat
+                    // 2. Taktik Kunci: Isi Dropdown Bertingkat
                     jenjangSelect.value = rowData['Jenjang'];
                     jenjangSelect.dispatchEvent(new Event('change')); // Picu event 'change'
                     lembagaSelect.value = rowData['Nama Lembaga']; // Set nilai anak
 
-                    // 8. Buka semua tab
-                    formLogic.unlockTab(1);
-                    formLogic.unlockTab(2);
-
-                    // Sembunyikan loading, tampilkan form
-                    loadingDiv.style.display = 'none';
+                    // 3. Tampilkan Form, Sembunyikan Skeleton
+                    if (skeleton) skeleton.style.display = 'none';
                     form.style.display = 'flex';
                     document.getElementById('appModal').classList.remove('show');
 
                 })
-                .withFailureHandler(err => App.showAppModal('error', `Gagal mengambil data baris: ${err.message}`))
-                .getPtkPaudDataByRow(params.rowIndex); // <- Panggil data baris
+                .withFailureHandler(err => { 
+                    if (skeleton) skeleton.style.display = 'none';
+                    form.style.display = 'flex';
+                    App.showAppModal('error', `Gagal mengambil data baris: ${err.message}`);
+                })
+                .getPtkPaudDataByRow(params.rowIndex); 
 
         })
-        .withFailureHandler(err => App.showAppModal('error', `Gagal memuat opsi form: ${err.message}`))
-        .getNewPtkPaudOptions(); // <- Panggil opsi dropdown dulu
+        .withFailureHandler(err => { 
+            if (skeleton) skeleton.style.display = 'none';
+            form.style.display = 'flex';
+            App.showAppModal('error', `Gagal memuat opsi form: ${err.message}`);
+        })
+        .getNewPtkPaudOptions(); 
 
-    // 9. Tentukan Aturan Validasi Kustom (Sama seperti Tambah)
+    // 5. Tentukan Aturan Validasi Kustom
     formLogic.setTabValidation(0, () => formLogic.validateTab(0));
     formLogic.setTabValidation(1, () => {
         if (!formLogic.validateTab(1)) return false; 
+        // Validasi Kustom "Jurusan"
         const pendidikan = form.querySelector('#pendidikan').value;
         const jurusanInput = form.querySelector('#jurusan');
         const jurusan = jurusanInput.value;
@@ -3679,7 +3668,7 @@ function initPtkEditPaudPage(params) {
     });
     formLogic.setTabValidation(2, () => formLogic.validateTab(2));
 
-    // 10. Atur Logika "Submit" Final (Memanggil UPDATE)
+    // 6. Atur Logika "Submit" Final
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -3693,7 +3682,6 @@ function initPtkEditPaudPage(params) {
         App.showAppModal('loading', 'Menyimpan perubahan...');
 
         const formData = Object.fromEntries(new FormData(form));
-        // rowIndex sudah ada di dalam formData (dari hidden input)
         
         google.script.run
             .withSuccessHandler(response => {
@@ -3703,7 +3691,7 @@ function initPtkEditPaudPage(params) {
                 App.showAppModal('error', `Gagal menyimpan: ${error.message}`);
                 submitButton.disabled = false;
             })
-            .updatePtkPaudData(formData); // <- Panggil fungsi UPDATE
+            .updatePtkPaudData(formData); 
     });
 }
 
@@ -4329,219 +4317,53 @@ function initPtkDaftarSdsPage() {
 }
 
 function initPtkKelolaSdPage() {
-    // 1. Tentukan target elemen
-    const loadingStatus = document.getElementById('loadingStatus');
-    const tableWrapper = document.getElementById('tableWrapper');
-    const table = document.getElementById('kelolaPtkSdTable');
-    const tableHead = table.querySelector('thead');
-    const tableBody = table.querySelector('tbody');
-    const paginationContainer = document.getElementById('pagination-container');
-    const filterUnitKerja = document.getElementById('filterUnitKerja');
-    
-    // Tambahkan listener untuk tombol "Tambah PTK"
+    // Definisi header yang diinginkan di tabel
+    const desiredHeaders = [
+        "Nama", "Unit Kerja", "Status", "NIP/NIY", "Jabatan", "Aksi", "Input", "Update"
+    ];
+
+    App.initializeGenericTablePage({
+        tableId: 'kelolaPtkSdTable',
+        serverFunction: 'getKelolaPtkSdData',
+        displayHeaders: desiredHeaders, // Gunakan header yang sudah didefinisikan
+        editPage: 'ptk_edit_sd',
+        
+        // KONFIGURASI FILTER BARU (Cascading Filter + Search)
+        filters: [
+            // Filter 1: Status Sekolah (Parent)
+            { 
+              id: 'filterStatusSekolah', 
+              dataColumn: 'Status', // Sekarang Status Sekolah (Negeri/Swasta)
+              defaultText: 'Semua Status' 
+            },
+            // Filter 2: Unit Kerja (Child)
+            { 
+              id: 'filterUnitKerja', 
+              dataColumn: 'Unit Kerja', 
+              type: 'cascading-local',
+              parent: 'filterStatusSekolah',      
+              parentKey: 'Status',      
+              defaultText: 'Semua Unit Kerja' 
+            }
+        ]
+    });
+
     document.getElementById('tambahPtkSdBtn').addEventListener('click', (e) => {
         App.loadPage(e, 'ptk_tambah_sd');
     });
-
-    let allDataRows = []; // Menyimpan baris data asli (setelah header)
-    let allHeaders = [];  // Menyimpan header yang dikirim server
-    let unitKerjaColumnIndex = -1; // Indeks kolom "Unit Kerja"
-    
-    let currentPage = 1;
-    let rowsPerPage = 15; // Default
-
-    // 2. Fungsi Paginasi
-    const calculateRowsPerPage = () => {
-        const tableContainer = table.closest('.table-container');
-        if (!tableContainer) return 15;
-        const bottomOffset = 180;
-        const rowHeight = 38; 
-        const availableHeight = window.innerHeight - tableContainer.getBoundingClientRect().top - bottomOffset;
-        return Math.max(5, Math.floor(availableHeight / rowHeight));
-    };
-
-    const setupPagination = (totalRows) => {
-        if (!paginationContainer) return;
-        const pageCount = Math.ceil(totalRows / rowsPerPage) || 1;
-        
-        if (pageCount <= 1) {
-            paginationContainer.style.display = 'none';
-            return;
-        }
-        
-        paginationContainer.style.display = 'flex';
-        const pageInfo = `<span class="page-info">Halaman ${currentPage} dari ${pageCount}</span>`;
-        // Buat fungsi ganti halaman unik
-        const prevBtn = `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="App.changePage_KelolaPTKSD(-1)">«</button>`;
-        const nextBtn = `<button class="page-btn" ${currentPage === pageCount ? 'disabled' : ''} onclick="App.changePage_KelolaPTKSD(1)">»</button>`;
-        paginationContainer.innerHTML = prevBtn + pageInfo + nextBtn;
-    };
-
-    // Fungsi ganti halaman unik untuk tabel ini
-    App.changePage_KelolaPTKSD = (direction) => {
-        currentPage += direction;
-        buildTableBody();
-    };
-
-    // ========================================================
-    // === PERBAIKAN TOTAL DI FUNGSI buildTableBody ===
-    // ========================================================
-    // 3. Fungsi untuk membangun <tbody>
-    function buildTableBody() {
-        tableBody.innerHTML = '';
-        
-        const valUnitKerja = filterUnitKerja.value;
-        
-        const filteredRows = allDataRows.filter(row => {
-            const matchUK = !valUnitKerja || (unitKerjaColumnIndex !== -1 && String(row[allHeaders[unitKerjaColumnIndex]]).trim() === valUnitKerja);
-            return matchUK;
-        });
-
-        // Hitung ulang paginasi
-        rowsPerPage = calculateRowsPerPage();
-        const pageCount = Math.ceil(filteredRows.length / rowsPerPage) || 1;
-        currentPage = Math.min(currentPage, pageCount) || 1;
-        const start = (currentPage - 1) * rowsPerPage;
-        const paginatedRows = filteredRows.slice(start, start + rowsPerPage);
-        
-        setupPagination(filteredRows.length);
-
-        if (paginatedRows.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="${allHeaders.length + 1}">Tidak ada data yang cocok dengan filter.</td></tr>`;
-            return;
-        }
-
-        // Siapkan fungsi (agar tidak error 'undefined' di loop)
-        const AppLoadPage = App.loadPage;
-        const AppShowDelete = App.showDeleteConfirmation;
-
-        // Bangun baris <tbody> menggunakan DOM (appendChild) BUKAN innerHTML
-        paginatedRows.forEach((row, index) => {
-            const tr = document.createElement('tr'); // 1. Buat <tr>
-            const rowNumber = (currentPage - 1) * rowsPerPage + index + 1;
-            
-            // 2. Buat sel "No."
-            const tdNo = document.createElement('td');
-            tdNo.textContent = rowNumber;
-            tr.appendChild(tdNo); // 3. Masukkan sel "No." ke <tr>
-
-            // 4. Loop berdasarkan header
-            allHeaders.forEach(header => {
-                const td = document.createElement('td'); // 5. Buat <td>
-                const cellData = row[header] ?? '';
-                
-                if (header === "Aksi") {
-                    td.className = 'action-buttons';
-                    const rowIndex = row._rowIndex;
-                    const source = row._source; // 'SDN' or 'SDS'
-                    
-                    if (rowIndex !== undefined && typeof AppLoadPage === 'function' && typeof AppShowDelete === 'function') {
-                        
-                        // Buat tombol Edit (DOM)
-                        const editButton = document.createElement('button');
-                        editButton.className = 'action-btn edit-btn';
-                        editButton.innerHTML = '<i class="fas fa-pencil-alt"></i> Edit';
-                        // PASANG LISTENER LANGSUNG KE ELEMEN
-                        editButton.addEventListener('click', (e) => {
-                            App.loadPage(e, 'ptk_edit_sd', { rowIndex: rowIndex, source: source });
-                        });
-                        
-                        // Buat tombol Hapus (DOM)
-                        const deleteButton = document.createElement('button');
-                        deleteButton.className = 'action-btn delete-btn';
-                        deleteButton.innerHTML = '<i class="fas fa-trash"></i> Hapus';
-                        deleteButton.dataset.rowInfo = JSON.stringify(row);
-                        // PASANG LISTENER LANGSUNG KE ELEMEN
-                        deleteButton.addEventListener('click', function() {
-                            App.showDeleteConfirmation(this);
-                        });
-                        
-                        // MASUKKAN ELEMEN (BUKAN outerHTML) KE <td>
-                        td.appendChild(editButton);
-                        td.appendChild(deleteButton);
-                    } else {
-                        td.textContent = '-';
-                    }
-                } else {
-                    // Kolom data biasa
-                    const displayValue = (cellData === "" || cellData === null || cellData === undefined || cellData == 0) ? '-' : cellData;
-                    td.textContent = displayValue;
-                }
-                
-                tr.appendChild(td); // 6. Masukkan <td> ke <tr>
-            });
-            
-            tableBody.appendChild(tr); // 7. Masukkan <tr> ke <tbody>
-        });
-    }
-    // ========================================================
-    // === AKHIR PERBAIKAN ===
-    // ========================================================
-
-    // 4. Fungsi untuk mengisi dropdown filter
-    function setupFilters() {
-        // Cari indeks kolom "Unit Kerja"
-        unitKerjaColumnIndex = allHeaders.indexOf('Unit Kerja');
-
-        function populateFilter(selectEl, columnIndex) {
-            if (!selectEl || columnIndex === -1) {
-                if(selectEl) selectEl.parentElement.style.display = 'none';
-                return;
-            }
-            
-            const unique = [...new Set(allDataRows.map(row => String(row[allHeaders[columnIndex]]).trim()))].filter(Boolean).sort();
-            selectEl.innerHTML = `<option value="">Semua Unit Kerja</option>`;
-            unique.forEach(val => selectEl.add(new Option(val, val)));
-            
-            selectEl.addEventListener('change', () => {
-                currentPage = 1; 
-                buildTableBody();
-            });
-        }
-        
-        populateFilter(filterUnitKerja, unitKerjaColumnIndex);
-    }
-
-    // 5. Ambil data mentah dari server
-    google.script.run
-        .withSuccessHandler(data => {
-            if (data.error) {
-                loadingStatus.innerHTML = `<p style="color:red;">Error: ${data.error}</p>`;
-                return;
-            }
-            
-            if (!data || !data.rows || data.rows.length === 0) {
-                loadingStatus.innerHTML = '<p>Data tidak ditemukan di spreadsheet.</p>';
-                return;
-            }
-
-            allHeaders = data.headers; // Ambil header yang dikirim server
-            allDataRows = data.rows;   // Ambil data baris
-            
-            // Buat <thead>
-            tableHead.innerHTML = `<tr><th>No.</th>${allHeaders.map(h => `<th>${h}</th>`).join('')}</tr>`;
-
-            // Buat filter
-            setupFilters(); 
-
-            // Tampilkan tabel dan jalankan filter pertama kali
-            loadingStatus.style.display = 'none';
-            tableWrapper.style.display = 'block';
-            buildTableBody(); // <-- Panggilan pertama untuk mengisi tabel
-
-        })
-        .withFailureHandler(error => { 
-            loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat data: ${error.message}</p>`;
-        })
-        .getKelolaPtkSdData(); // <-- Memanggil fungsi code.gs
 }
 
 function initPtkTambahSdPage() {
-    // === PERBAIKAN: Dapatkan referensi ke skeleton dan form ===
     const form = document.getElementById('addPtkSdForm');
-    const skeletonLoader = document.getElementById('skeleton-loader');
-    if (!form || !skeletonLoader) return;
-    // ========================================================
+    const skeleton = document.getElementById('skeleton-loader'); 
+    
+    // Pastikan form disembunyikan sejak awal
+    if (form) form.style.display = 'none';
+
+    // Tampilkan skeleton segera
+    if (skeleton) skeleton.style.display = 'block';
+    
+    if (!form) return;
 
     // 1. Inisialisasi "Mesin" Tab
     const formLogic = App.setupTabForm('addPtkSdForm');
@@ -4570,28 +4392,24 @@ function initPtkTambahSdPage() {
         if (optionsArr) optionsArr.forEach(opt => selectEl.add(new Option(opt, opt)));
     }
 
-    // 4. Isi dropdown STATIS (Agama, Pendidikan, DAN STATUS)
+    // 4. Isi dropdown STATIS
     if (typeof DROPDOWN_STATIS !== 'undefined') {
         populateSelect(agamaSelect, DROPDOWN_STATIS['Agama'], 'Pilih Agama');
         populateSelect(pendidikanSelect, DROPDOWN_STATIS['Pendidikan'], 'Pilih Pendidikan');
         populateSelect(statusNegeriSelect, DROPDOWN_STATIS['StatusKepegawaian'], 'Pilih Status');
+        populateSelect(statusSwastaSelect, DROPDOWN_STATIS['StatusKepegawaianSwasta'], 'Pilih Status');
         populateSelect(jabatanSelect, DROPDOWN_STATIS['TugasJabatan'], 'Pilih Tugas/Jabatan');
         populateSelect(tugasTambahanSelect, DROPDOWN_STATIS['TugasTambahan'], 'Pilih Tugas Tambahan');
     } else {
-        console.error("Gagal memuat DROPDOWN_STATIS. Pastikan file dropdown_data.js.html sudah di-include.");
+        console.error("Gagal memuat DROPDOWN_STATIS.");
     }
-
-    // ========================================================
-    // === PERBAIKAN: Hapus spinner global (modal) ===
-    // App.showAppModal('loading', 'Memuat opsi formulir...'); // <-- DIHAPUS
-    // ========================================================
 
     // 5. Panggil data DINAMIS dari server (Unit Kerja, Pangkat)
     google.script.run
         .withSuccessHandler(options => {
             if (options.error) {
-                // Sembunyikan skeleton, tampilkan modal error
-                skeletonLoader.style.display = 'none'; 
+                if (skeleton) skeleton.style.display = 'none';
+                form.style.display = 'flex';
                 App.showAppModal('error', `Gagal memuat opsi: ${options.error}`);
                 return;
             }
@@ -4650,16 +4468,15 @@ function initPtkTambahSdPage() {
                 }
             });
             
-            // ========================================================
-            // === PERBAIKAN: Tukar Skeleton dengan Form Asli ===
-            // document.getElementById('appModal').classList.remove('show'); // <-- DIHAPUS
-            skeletonLoader.style.display = 'none'; // Sembunyikan kerangka
-            form.style.display = 'flex'; // Tampilkan form (gunakan 'flex' karena dia form-tab-container)
-            // ========================================================
+            // --- AKTIFKAN FORM DAN TUTUP SKELETON (PERBAIKAN) ---
+            if (skeleton) skeleton.style.display = 'none'; // Sembunyikan skeleton
+            form.style.display = 'flex'; // Tampilkan form utama sebagai flex
+            // --- AKHIR PERBAIKAN ---
         })
         .withFailureHandler(err => {
             // Sembunyikan skeleton dan tampilkan modal error
-            skeletonLoader.style.display = 'none';
+            if (skeleton) skeleton.style.display = 'none';
+            form.style.display = 'flex';
             App.showAppModal('error', `Gagal memuat opsi form: ${err.message}`);
         })
         .getNewPtkSdOptions(); 
@@ -4746,13 +4563,17 @@ function initPtkTambahSdPage() {
 
 function initPtkEditSdPage(params) {
     const form = document.getElementById('editPtkSdForm');
-    const skeletonLoader = document.getElementById('skeleton-loader'); 
+    const skeleton = document.getElementById('skeleton-loader'); 
     
-    if (!form || !skeletonLoader || !params || !params.rowIndex || !params.source) {
-        if(skeletonLoader) skeletonLoader.style.display = 'none';
+    if (!form || !params || !params.rowIndex || !params.source) {
+        if(skeleton) skeleton.style.display = 'none';
         document.getElementById('main-content').innerHTML = `<p style="color:red; text-align:center;">Error: Parameter untuk edit (rowIndex/source) tidak ditemukan.</p>`;
         return;
     }
+
+    form.querySelector('[name="rowIndex"]').value = params.rowIndex;
+    form.querySelector('[name="source"]').value = params.source;
+    if (skeleton) skeleton.style.display = 'block';
 
     // 1. Inisialisasi "Mesin" Tab
     const formLogic = App.setupTabForm('editPtkSdForm');
@@ -4768,7 +4589,7 @@ function initPtkEditSdPage(params) {
     const pendidikanSelect = form.querySelector('#pendidikan');
     const statusNegeriSelect = form.querySelector('#statusNegeri');
     const pangkatNegeriSelect = form.querySelector('#pangkatNegeri');
-    const statusSwastaSelect = form.querySelector('#statusSwasta'); // <-- (Sudah ada)
+    const statusSwastaSelect = form.querySelector('#statusSwasta');
     const jabatanSelect = form.querySelector('#jabatan');
     const tugasTambahanSelect = form.querySelector('#tugasTambahan');
     
@@ -4793,132 +4614,136 @@ function initPtkEditSdPage(params) {
         console.error("Gagal memuat DROPDOWN_STATIS.");
     }
 
-    // 5. Panggil data DINAMIS dari server (Unit Kerja, Pangkat)
-    // (Skeleton loader menggantikan modal loading)
-    
+    // 5. Panggil data DINAMIS dari server
     google.script.run
         .withSuccessHandler(options => {
-            allOptions = options; // Simpan data server
+            if (options.error) {
+                if (skeleton) skeleton.style.display = 'none';
+                form.style.display = 'flex';
+                App.showAppModal('error', `Gagal memuat opsi: ${options.error}`);
+                return;
+            }
+            allOptions = options; 
             
-            // 7. SETELAH OPSI SIAP, AMBIL DATA BARIS YANG MAU DIEDIT
+            // --- INI ADALAH LOGIKA BARU UNTUK MEMBUKA KUNCI ---
+            // Kita tambahkan listener cascading (sama seperti form Tambah)
+            statusSekolahSelect.addEventListener('change', function() {
+                const isNegeri = this.value === 'Negeri';
+                
+                formNegeri.style.display = isNegeri ? 'block' : 'none';
+                formSwasta.style.display = isNegeri ? 'none' : 'block';
+                
+                formNegeri.querySelectorAll('select, input').forEach(el => el.disabled = !isNegeri);
+                formSwasta.querySelectorAll('select, input').forEach(el => el.disabled = isNegeri);
+
+                if (isNegeri) {
+                    populateSelect(unitKerjaSelect, allOptions['Unit Kerja Negeri'], 'Pilih Unit Kerja (Negeri)');
+                } else {
+                    populateSelect(unitKerjaSelect, allOptions['Unit Kerja Swasta'], 'Pilih Unit Kerja (Swasta)');
+                }
+                unitKerjaSelect.disabled = false;
+                
+                pangkatNegeriSelect.innerHTML = '<option value="">-- Pilih Status Dahulu --</option>';
+                pangkatNegeriSelect.disabled = true;
+                
+                // BARU: Perbarui juga hidden input "source"
+                form.querySelector('[name="source"]').value = isNegeri ? 'SDN' : 'SDS';
+            });
+            // --- AKHIR LOGIKA BARU ---
+            
+            // Logika Dropdown Bertingkat: "Status Negeri" -> "Pangkat" (Tab 3)
+            statusNegeriSelect.addEventListener('change', function() {
+                const status = this.value;
+                const nipInput = form.querySelector('#nip');
+                
+                const isPNS = (status === 'PNS');
+                const isPPPK = (status === 'PPPK');
+                const isPPPKPW = (status === 'PPPK PW'); 
+                const isASN = isPNS || isPPPK || isPPPKPW;
+                const isNonASN = (status === 'Tenaga Non ASN');
+
+                nipInput.disabled = !isASN;
+                nipInput.required = isASN;
+                if (!isASN) nipInput.value = ""; 
+                
+                pangkatNegeriSelect.disabled = !isASN;
+
+                if (isPNS) {
+                    populateSelect(pangkatNegeriSelect, allOptions['Pangkat PNS'], 'Pilih Pangkat');
+                } else if (isPPPK) {
+                    populateSelect(pangkatNegeriSelect, allOptions['Pangkat PPPK'], 'Pilih Golongan');
+                } else if (isPPPKPW) {
+                    populateSelect(pangkatNegeriSelect, allOptions['Pangkat PPPK PW'], 'Pilih Golongan'); 
+                } else if (isNonASN) {
+                    pangkatNegeriSelect.innerHTML = '<option value="— Tidak Perlu Diisi —" selected>— Tidak Perlu Diisi —</option>';
+                } else {
+                     pangkatNegeriSelect.innerHTML = '<option value="">-- Pilih Status Dahulu --</option>';
+                }
+            });
+
+            // 6. Panggil data baris yang mau diedit
             google.script.run
                 .withSuccessHandler(rowData => {
                     if (rowData.error) {
-                        skeletonLoader.style.display = 'none'; 
                         App.showAppModal('error', `Gagal memuat data baris: ${rowData.error}`);
                         return;
                     }
 
-                    // Isi hidden fields
-                    form.querySelector('[name="rowIndex"]').value = params.rowIndex;
-                    form.querySelector('[name="source"]').value = params.source;
-
-                    // ========================================================
-                    // === PERBAIKAN Langkah 8: Isi semua field KECUALI "Status" ===
-                    // ========================================================
+                    // Isi Semua Field Form
                     for (const key in rowData) {
-                        // Lewati "Status", kita akan mengisinya secara manual
-                        if (key === "Status") continue; 
-                        
                         const field = form.querySelector(`[name="${key}"]`);
                         if (field) {
-                            field.value = String(rowData[key]).replace(/'/g, ''); 
+                            if (key === 'TMT' && rowData[key]) {
+                                field.value = rowData[key]; // yyyy-MM-dd
+                            } else {
+                                // Ganti petik satu (misal: '00123) menjadi 00123
+                                field.value = String(rowData[key]).replace(/'/g, ''); 
+                            }
                         }
                     }
 
-                    // 9. LOGIKA TRIGER (PENTING)
+                    // 7. Taktik Kunci: Isi Dropdown Bertingkat
                     const isNegeri = (params.source === 'SDN');
                     
                     // Triger Tab 1 (Status Sekolah -> Unit Kerja)
                     statusSekolahSelect.value = isNegeri ? 'Negeri' : 'Swasta';
-                    statusSekolahSelect.disabled = true; 
+                    statusSekolahSelect.dispatchEvent(new Event('change')); // Picu event 'change'
+                    unitKerjaSelect.value = rowData['Unit Kerja']; // Set nilai anak
                     
-                    formNegeri.style.display = isNegeri ? 'block' : 'none';
-                    formSwasta.style.display = isNegeri ? 'none' : 'block';
-                    
-                    formNegeri.querySelectorAll('select, input').forEach(el => el.disabled = !isNegeri);
-                    formSwasta.querySelectorAll('select, input').forEach(el => el.disabled = isNegeri);
-                    
+                    // Triger Tab 3 (Status Kepegawaian -> Pangkat)
                     if (isNegeri) {
-                        populateSelect(unitKerjaSelect, allOptions['Unit Kerja Negeri'], 'Pilih Unit Kerja (Negeri)');
-                    } else {
-                        populateSelect(unitKerjaSelect, allOptions['Unit Kerja Swasta'], 'Pilih Unit Kerja (Swasta)');
-                    }
-                    unitKerjaSelect.value = rowData['Unit Kerja'];
-                    unitKerjaSelect.disabled = true; // Kunci juga unit kerja
-
-                    // ========================================================
-                    // === PERBAIKAN Langkah 9: Set "Status" & "Pangkat" secara manual ===
-                    // ========================================================
-                    if (isNegeri) {
-                        // 1. Isi dropdown Status Negeri
-                        statusNegeriSelect.value = rowData['Status']; 
-                        // 2. Triger 'change' untuk memuat Pangkat
+                        statusNegeriSelect.value = rowData['Status'];
                         statusNegeriSelect.dispatchEvent(new Event('change'));
-                        // 3. SEKARANG baru isi Pangkatnya
                         pangkatNegeriSelect.value = rowData['Pangkat, Gol./Ruang'];
                     } else {
-                        // 1. Isi dropdown Status Swasta
                         statusSwastaSelect.value = rowData['Status'];
-                        // (Tidak perlu triger Pangkat untuk Swasta)
                     }
-                    
-                    // 10. Buka semua tab
+
+                    // 8. Buka semua tab
                     formLogic.unlockTab(1);
                     formLogic.unlockTab(2);
 
                     // Sembunyikan Skeleton, Tampilkan Form
-                    skeletonLoader.style.display = 'none';
-                    form.style.display = 'flex'; // Tampilkan form
+                    if (skeleton) skeleton.style.display = 'none';
+                    form.style.display = 'flex';
 
                 })
-                .withFailureHandler(err => {
-                    skeletonLoader.style.display = 'none';
-                    App.showAppModal('error', `Gagal memuat data PTK: ${err.message}`);
+                .withFailureHandler(err => { 
+                    if (skeleton) skeleton.style.display = 'none';
+                    form.style.display = 'flex';
+                    App.showAppModal('error', `Gagal mengambil data baris: ${err.message}`);
                 })
-                .getPtkSdDataByRow(params.rowIndex, params.source); // Panggil fungsi code.gs
+                .getPtkSdDataByRow(params.rowIndex, params.source); 
 
         })
         .withFailureHandler(err => {
-             skeletonLoader.style.display = 'none';
+             if (skeleton) skeleton.style.display = 'none';
+             form.style.display = 'flex';
              App.showAppModal('error', `Gagal memuat opsi form: ${err.message}`);
         })
-        .getNewPtkSdOptions(); // Panggil fungsi di code.gs
+        .getNewPtkSdOptions(); 
 
-
-    // (Event listener untuk 'statusNegeriSelect' sudah ada di 'allOptions' success handler)
-    statusNegeriSelect.addEventListener('change', function() {
-        const status = this.value;
-        const nipInput = form.querySelector('#nip');
-        
-        const isPNS = (status === 'PNS');
-        const isPPPK = (status === 'PPPK');
-        const isPPPKPW = (status === 'PPPK PW'); 
-        const isASN = isPNS || isPPPK || isPPPKPW;
-        const isNonASN = (status === 'Tenaga Non ASN');
-
-        nipInput.disabled = !isASN;
-        nipInput.required = isASN;
-        if (!isASN) {
-            nipInput.value = ""; 
-        }
-        
-        pangkatNegeriSelect.disabled = !isASN;
-
-        if (isPNS) {
-            populateSelect(pangkatNegeriSelect, allOptions['Pangkat PNS'], 'Pilih Pangkat');
-        } else if (isPPPK) {
-            populateSelect(pangkatNegeriSelect, allOptions['Pangkat PPPK'], 'Pilih Golongan');
-        } else if (isPPPKPW) {
-            populateSelect(pangkatNegeriSelect, allOptions['Pangkat PPPK PW'], 'Pilih Golongan'); 
-        } else if (isNonASN) {
-            pangkatNegeriSelect.innerHTML = '<option value="— Tidak Perlu Diisi —" selected>— Tidak Perlu Diisi —</option>';
-        } else {
-             pangkatNegeriSelect.innerHTML = '<option value="">-- Pilih Status Dahulu --</option>';
-        }
-    });
-
-    // 11. Atur Validasi Kustom untuk setiap Tab
+    // 8. Atur Validasi Kustom (Sama seperti Tambah)
     formLogic.setTabValidation(0, () => formLogic.validateTab(0));
     formLogic.setTabValidation(1, () => {
         if (!formLogic.validateTab(1)) return false; 
@@ -4926,29 +4751,25 @@ function initPtkEditSdPage(params) {
         const jurusanInput = form.querySelector('#jurusan');
         const jurusan = jurusanInput.value;
         const needsNoJurusan = ['SD', 'MI', 'SMP', 'MTs', 'Paket A', 'Paket B'].includes(pendidikan);
-
         if (needsNoJurusan && jurusan !== '-') {
             App.showAppModal('error', 'Jurusan harus diisi tanda - (strip) untuk jenjang SD/SMP sederajat.');
             jurusanInput.classList.add('input-error');
             return false;
         }
-        
         const nuptkInput = form.querySelector('#nuptk');
         const nuptkValue = nuptkInput.value.trim();
         const nuptkRegex = /^\d{16}$/; 
-
         if (nuptkValue !== "" && !nuptkRegex.test(nuptkValue)) {
             App.showAppModal('error', 'NUPTK tidak valid. Harap isikan 16 digit angka atau kosongkan field tersebut.');
             nuptkInput.classList.add('input-error'); 
             return false; 
         }
-        
         nuptkInput.classList.remove('input-error');
         return true; 
     });
     formLogic.setTabValidation(2, () => formLogic.validateTab(2));
 
-    // 12. Atur Logika "Submit" Final (Panggil UPDATE)
+    // 9. Atur Logika "Submit" Final
     form.addEventListener('submit', function(e) {
         e.preventDefault();
         
@@ -4963,10 +4784,11 @@ function initPtkEditSdPage(params) {
         // Ambil data dari field yang AKTIF
         const formData = Object.fromEntries(new FormData(form));
         
-        // Tambahkan data dari field yang DI-NONAKTIFKAN (disabled) secara manual
+        // Ambil data dari field yang DI-NONAKTIFKAN (disabled)
         formData.rowIndex = params.rowIndex;
-        formData.source = params.source;
+        formData.source = form.querySelector('[name="source"]').value; // Ambil source yang mungkin baru
         formData['Unit Kerja'] = unitKerjaSelect.value;
+        formData['statusSekolah'] = statusSekolahSelect.value;
         
         google.script.run
             .withSuccessHandler(response => {
@@ -4974,23 +4796,196 @@ function initPtkEditSdPage(params) {
                     App.showAppModal('error', `Gagal: ${response.error}`);
                     submitButton.disabled = false;
                 } else {
-                    App.showAppModal('success', response, 'ptk_kelola_sd');
+                    // ===================================
+                    // ===== INI ADALAH PERBAIKANNYA =====
+                    // ===================================
+                    App.showAppModal('success', response, 'ptk_kelola_sd'); // <- 'App.showAppModal'
                 }
             })
             .withFailureHandler(error => {
                 App.showAppModal('error', `Gagal menyimpan: ${error.message}`);
                 submitButton.disabled = false;
             })
-            .updatePtkSdData(formData); // Panggil fungsi UPDATE
+            .updatePtkSdData(formData); 
     });
 }
 
-function initPtkKebutuhanSdnPage() {
-    App.initializeGenericTablePage({
-        tableId: 'kebutuhanPtkSdnTable',
-        serverFunction: 'getKebutuhanPtkSdnData',
-        isDoubleHeader: true
-    });
+function initPtkKebutuhanSdPage() {
+    // 1. Referensi Elemen
+    const loadingStatus = document.getElementById('loadingStatus');
+    const tableWrapper = document.getElementById('tableWrapper');
+    const table = document.getElementById('kebutuhanGuruTable'); // Target ID baru
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+    const tableFoot = table.querySelector('tfoot');
+    const filterSelect = document.getElementById('filterKebutuhanStatus'); // Target ID filter baru
+
+    // 2. Variabel Penyimpanan Data
+    let allData = { negeri: [], swasta: [] };
+    let headerData = { negeri: [], swasta: [] };
+    let dataRows = { negeri: [], swasta: [] };
+
+    // 3. Fungsi untuk membangun Header (Header Bertingkat)
+    function buildTableHeader(headers1, headers2) {
+        tableHead.innerHTML = '';
+        let row1HTML = '<th rowspan="2">No.</th>';
+        let row2HTML = '';
+        const dataHeaderCount = headers1.length;
+
+        for (let i = 0; i < dataHeaderCount; i++) {
+            const header1 = headers1[i];
+            const header2 = headers2[i];
+
+            if (header1 !== "" && header2 === "") {
+                row1HTML += `<th rowspan="2">${header1}</th>`;
+            } else if (header1 !== "" && header2 !== "") {
+                let colspan = 1;
+                for (let j = i + 1; j < dataHeaderCount; j++) {
+                    if (headers1[j] === "" && headers2[j] !== "") {
+                        colspan++;
+                    } else {
+                        break;
+                    }
+                }
+                row1HTML += `<th colspan="${colspan}">${header1}</th>`;
+                row2HTML += `<th>${header2}</th>`;
+            } else if (header1 === "" && header2 !== "") {
+                row2HTML += `<th>${header2}</th>`;
+            }
+        }
+        tableHead.innerHTML = `<tr>${row1HTML}</tr><tr>${row2HTML}</tr>`;
+    }
+
+    // 4. Fungsi untuk membangun Body dan Footer (JUMLAH)
+    // PERUBAHAN: Menerima headers1 dan headers2
+    function buildTableBodyAndFooter(headers1, headers2, data) {
+        tableBody.innerHTML = '';
+        tableFoot.innerHTML = '';
+        if (data.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="${headers1.length + 1}">Tidak ada data.</td></tr>`;
+            return;
+        }
+
+        const sumStartIndex = 1; // Mulai menjumlahkan dari kolom ke-2 (setelah Nama Sekolah)
+        const totals = new Array(headers1.length).fill(0);
+
+        data.forEach((row, index) => {
+            const tr = document.createElement('tr');
+            let cellsHTML = `<td>${index + 1}</td>`; // Kolom "No."
+            
+            row.forEach((cell, cellIndex) => {
+                // Perbaikan: Pastikan angka 0 dibaca sebagai string '-'
+                const displayValue = (cell === "" || cell === null || cell == 0) ? '-' : cell;
+                
+                // --- KODE BARU: PEWARNAAN DAN FORMAT KONDISIONAL ---
+                let classes = [];
+                let fontClass = '';
+                const subHeaderName = headers2[cellIndex]; // KUNCI PERBAIKAN: Menggunakan sub-header
+                
+                // 1. Pewarnaan Latar Belakang Grup (Kolom 5-39 / Index 3-37)
+                // Col 5-11 (Index 3-9) <-- Digeser dari 4 ke 3
+                if (cellIndex >= 3 && cellIndex <= 9) classes.push('cell-bg-blue');      
+                // Col 12-18 (Index 10-16) <-- Digeser dari 11 ke 10
+                if (cellIndex >= 10 && cellIndex <= 16) classes.push('cell-bg-green');    
+                // Col 19-25 (Index 17-23) <-- Digeser dari 18 ke 17
+                if (cellIndex >= 17 && cellIndex <= 23) classes.push('cell-bg-purple');   
+                // Col 26-32 (Index 24-30) <-- Digeser dari 25 ke 24
+                if (cellIndex >= 24 && cellIndex <= 30) classes.push('cell-bg-yellow');   
+                // Col 33-39 (Index 31-37) <-- Digeser dari 32 ke 31
+                if (cellIndex >= 31 && cellIndex <= 37) classes.push('cell-bg-red');      
+
+                // 2. Format Kondisional Font (HANYA UNTUK KOLOM "KURANG")
+                if (subHeaderName === 'Kurang') {
+                    const numericValue = parseFloat(String(cell).replace(/\./g, '')) || 0;
+                    
+                    if (numericValue < 0) fontClass = 'font-red';      
+                    else if (numericValue > 0) fontClass = 'font-green';
+                    else if (numericValue === 0) fontClass = 'font-blue';
+                }
+                
+                if (fontClass) classes.push(fontClass);
+                const classString = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
+                // --- AKHIR KODE BARU ---
+
+                cellsHTML += `<td${classString}>${displayValue}</td>`;
+                
+                // ... (Logika kalkulasi total footer) ...
+                if (cellIndex >= sumStartIndex) {
+                    const numericValue = parseFloat(String(cell).replace(/\./g, '')) || 0;
+                    totals[cellIndex] += numericValue;
+                }
+            });
+            tr.innerHTML = cellsHTML;
+            tableBody.appendChild(tr);
+        });
+
+        // Bangun Footer (JUMLAH)
+        let footerHTML = '<tr>';
+        footerHTML += '<td>-</td>';       // Kolom No.
+        footerHTML += '<td style="text-align: left; font-weight: bold;">JUMLAH</td>'; // Kolom Nama Sekolah (Rata Kiri)
+        
+        for (let i = sumStartIndex; i < totals.length; i++) {
+            // Perbaikan: Angka 0 di total juga ditampilkan sebagai '-'
+            let displayTotal = (totals[i] === 0) ? '-' : totals[i];
+            footerHTML += `<td>${displayTotal}</td>`;
+        }
+        footerHTML += '</tr>';
+        tableFoot.innerHTML = footerHTML;
+    }
+
+    // 5. Fungsi Render Utama
+    function renderTable(status) { // status = "negeri" atau "swasta"
+        if (!allData[status] || allData[status].length === 0) {
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = `<tr><td colspan="1">Data untuk ${status} tidak tersedia.</td></tr>`;
+            tableFoot.innerHTML = '';
+            return;
+        }
+        
+        const headers1 = headerData[status][0];
+        const headers2 = headerData[status][1];
+        const rows = dataRows[status];
+        
+        buildTableHeader(headers1, headers2);
+        // PERUBAHAN: Memanggil buildTableBodyAndFooter dengan headers1 dan headers2
+        buildTableBodyAndFooter(headers1, headers2, rows); 
+    }
+
+    // 6. Panggil data dari Server
+    google.script.run
+        .withSuccessHandler(result => {
+            if (result.error) {
+                loadingStatus.innerHTML = `<p style="color:red;">Error: ${result.error}</p>`;
+                return;
+            }
+
+            // Pisahkan Header dan Data untuk kedua sumber
+            allData.negeri = result.negeri;
+            allData.swasta = result.swasta;
+            
+            // Data Header (Baris 1 dan 2)
+            headerData.negeri = [result.negeri[0], result.negeri[1]];
+            headerData.swasta = [result.swasta[0], result.swasta[1]];
+            
+            // Data baris (Baris 3 sampai akhir, dikurangi 1 baris footer statis)
+            dataRows.negeri = result.negeri.slice(2, result.negeri.length - 1);
+            dataRows.swasta = result.swasta.slice(2, result.swasta.length - 1);
+
+            // 7. Tampilkan tabel default (Negeri)
+            loadingStatus.style.display = 'none';
+            tableWrapper.style.display = 'flex';
+            renderTable('negeri'); // Tampilkan data 'negeri' saat pertama kali dimuat
+
+            // 8. Tambahkan Event Listener ke Filter
+            filterSelect.addEventListener('change', () => {
+                renderTable(filterSelect.value); // Panggil renderTable dengan nilai baru ('negeri' or 'swasta')
+            });
+
+        })
+        .withFailureHandler(error => { 
+            loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat data: ${error.message}</p>`;
+        })
+        .getKebutuhanGuruData(); // Panggil fungsi backend baru
 }
 
 function initMuridPaudKelasUsiaPage() {
@@ -5388,7 +5383,7 @@ App.pageInitializers = {
     'ptk_daftar_sd_negeri': initPtkDaftarSdnPage,
     'ptk_daftar_sd_swasta': initPtkDaftarSdsPage,
     'ptk_kelola_sd': initPtkKelolaSdPage,
-    'ptk_kebutuhan_sd_negeri': initPtkKebutuhanSdnPage,
+    'ptk_kebutuhan_sd_negeri': initPtkKebutuhanSdPage,
     'ptk_tambah_sd': initPtkTambahSdPage,
     'ptk_edit_sd': initPtkEditSdPage,
     'ptk_bezetting_sd_negeri': initMenuPage,

@@ -3,7 +3,8 @@
 </header>
 
 <main class="manual-form form-tab-container">
-
+  
+  <!-- SKELETON SEKARANG BERADA DI LUAR FORM -->
   <div id="skeleton-loader">
     <div class="skeleton-tabs">
       <div class="skeleton skeleton-tab" style="width: 150px;"></div>
@@ -53,11 +54,12 @@
       </div>
       
       <div class="skeleton-footer">
-        <div class="skeleton skeleton-button"></div>
+        <div class="skeleton skeleton-button" style="width: 120px; margin-left: auto;"></div>
       </div>
     </div>
   </div>
   
+  <!-- FORM UTAMA: Awalnya tersembunyi, akan muncul setelah data siap -->
   <form id="addPtkSdForm" style="display: none;">
     
     <div id="tab-nav" class="tabs-container">
@@ -69,8 +71,6 @@
     <div id="tab-content-wrapper" class="tab-content-wrapper">
 
       <div id="dataSekolah" class="tab-content-form active">
-        <h3 class="sub-section-title">Data Sekolah</h3>
-        
         <div class="form-grid-12">
           <div class="col-span-4">
             <div class="form-group">
@@ -98,8 +98,6 @@
       </div>
 
       <div id="dataPribadi" class="tab-content-form">
-        <h3 class="sub-section-title">Data Pribadi PTK</h3>
-        
         <div class="form-grid-12">
           <div class="col-span-12">
             <div class="form-group">
@@ -189,8 +187,6 @@
       </div>
 
       <div id="dataKepegawaian" class="tab-content-form">
-        <h3 class="sub-section-title">Data Kepegawaian</h3>
-        
         <div id="form-negeri" style="display: none;">
           <div class="form-grid-12">
             <div class="col-span-3">

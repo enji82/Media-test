@@ -4,13 +4,56 @@
 
 <main class="manual-form form-tab-container">
   
-  <div id="loading-data" class="loading-container">
-      <div class="spinner-container">
-          <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+  <!-- SKELETON LOADER -->
+  <div id="skeleton-loader">
+    <div class="skeleton-tabs">
+      <div class="skeleton skeleton-tab" style="width: 150px;"></div>
+      <div class="skeleton skeleton-tab" style="width: 150px;"></div>
+      <div class="skeleton skeleton-tab" style="width: 180px;"></div>
+    </div>
+    
+    <div class="tab-content-wrapper" style="padding-top: 15px;">
+      <h3 class="skeleton skeleton-text" style="width: 200px;"></h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 120px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 200px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
       </div>
-      <p>Memuat data untuk diedit...</p>
+      
+      <h3 class="skeleton skeleton-text" style="width: 220px; margin-top: 30px;"></h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 150px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 150px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 100px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+        <div class="form-group">
+          <div class="skeleton skeleton-text" style="width: 150px;"></div>
+          <div class="skeleton skeleton-input"></div>
+        </div>
+      </div>
+      
+      <div class="skeleton-footer">
+        <div class="skeleton skeleton-button" style="width: 120px; margin-left: auto;"></div>
+      </div>
+    </div>
   </div>
-
+  
+  <!-- FORM UTAMA: Awalnya tersembunyi, akan muncul setelah data siap -->
   <form id="editPtkPaudForm" style="display: none;">
     
     <input type="hidden" name="rowIndex">

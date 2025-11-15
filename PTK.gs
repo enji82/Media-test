@@ -478,7 +478,6 @@ function getKelolaPtkSdData() {
     let combinedData = [];
     let allHeaders = []; 
 
-    // Fungsi helper untuk mem-parsing tanggal
     const parseDate = (value) => value instanceof Date && !isNaN(value) ? value.getTime() : 0;
 
     // Fungsi untuk memproses satu sheet
@@ -486,78 +485,70 @@ function getKelolaPtkSdData() {
       if (!sheet || sheet.getLastRow() < 2) return;
       
       const range = sheet.getDataRange();
-      const rawValues = range.getValues(); // Untuk tanggal
-      const displayValues = range.getDisplayValues(); // Untuk string
+      const rawValues = range.getValues();
+      const displayValues = range.getDisplayValues();
 
       const headers = displayValues[0].map(h => String(h).trim());
-      if (allHeaders.length === 0) allHeaders = headers; // Simpan header
+      if (allHeaders.length === 0) {
+        // HANYA ambil header yang dibutuhkan oleh klien (untuk Kelola)
+        allHeaders = ["Nama", "Unit Kerja", "Status", "NIP/NIY", "Jabatan", "Aksi", "Input", "Update"]; 
+      }
       
-      // ========================================================
-      // === PERBAIKAN: Temukan semua indeks kolom yang kita butuhkan ===
-      // ========================================================
+      // Temukan semua indeks kolom yang kita butuhkan
       const updateIndex = headers.indexOf('Update');
       const inputIndex = headers.indexOf('Input');
       const namaIndex = headers.indexOf('Nama');
       const unitKerjaIndex = headers.indexOf('Unit Kerja');
-      const statusIndex = headers.indexOf('Status');
+      const statusIndex = headers.indexOf('Status'); // Status Kepegawaian
       const jabatanIndex = headers.indexOf('Jabatan');
-      
-      // Ini adalah kunci perbaikannya:
-      // Cari 'NIP' (untuk SDN) atau 'NIY' (untuk SDS)
       const nipIndex = headers.indexOf('NIP'); 
       const niyIndex = headers.indexOf('NIY');
-      // ========================================================
-
+      
       const dataRows = displayValues.slice(1);
       const rawRows = rawValues.slice(1);
 
       dataRows.forEach((row, index) => {
-        // Jangan proses baris kosong
-        if (!row[namaIndex]) return; 
+        if (!row[namaIndex] || !row[statusIndex]) return; 
         
         const rawRow = rawRows[index];
+        const statusSekolah = (sourceName === 'SDN') ? 'Negeri' : 'Swasta'; // <-- KUNCI PERBAIKAN
+
         const rowObject = {
           _rowIndex: index + 2,
           _source: sourceName,
         };
 
-        // Ambil tanggal mentah untuk pengurutan
         const dateUpdate = parseDate(rawRow[updateIndex]);
         const dateInput = parseDate(rawRow[inputIndex]);
-        rowObject._sortDate = Math.max(dateUpdate, dateInput); // Tanggal terbaru
+        rowObject._sortDate = Math.max(dateUpdate, dateInput);
 
-        // ========================================================
-        // === PERBAIKAN: Isi rowObject secara eksplisit ===
-        // ========================================================
+        // Isi data objek
         rowObject['Nama'] = row[namaIndex] || "";
         rowObject['Unit Kerja'] = row[unitKerjaIndex] || "";
-        rowObject['Status'] = row[statusIndex] || "";
+        rowObject['Status Kepegawaian'] = row[statusIndex] || ""; // Simpan status kepegawaian sebagai kolom terpisah
+        rowObject['Status'] = statusSekolah; // <-- KUNCI: Status SEKOLAH yang dipakai filter
         rowObject['Jabatan'] = row[jabatanIndex] || "";
         rowObject['Input'] = row[inputIndex] || "";
         rowObject['Update'] = row[updateIndex] || "";
-
+        
         // Buat kolom 'NIP/NIY' gabungan
-        if (nipIndex !== -1) { // Jika ini sheet SDN (ada kolom NIP)
+        if (nipIndex !== -1) {
             rowObject['NIP/NIY'] = row[nipIndex] || "";
-        } else if (niyIndex !== -1) { // Jika ini sheet SDS (ada kolom NIY)
+        } else if (niyIndex !== -1) { 
             rowObject['NIP/NIY'] = row[niyIndex] || "";
         } else {
-            rowObject['NIP/NIY'] = ""; // Fallback
+            rowObject['NIP/NIY'] = ""; 
         }
-        // ========================================================
         
         combinedData.push(rowObject);
       });
     };
 
-    // Proses kedua sheet
     processSheet(sdnSheet, 'SDN');
     processSheet(sdsSheet, 'SDS');
     
-    // Urutkan data gabungan berdasarkan tanggal terbaru
     combinedData.sort((a, b) => b._sortDate - a._sortDate);
 
-    // Header yang diminta oleh Klien (javascript.html)
     const desiredHeaders = [
         "Nama", "Unit Kerja", "Status", "NIP/NIY", "Jabatan", "Aksi", "Input", "Update"
     ];
@@ -776,11 +767,29 @@ function updatePtkSdData(formData) {
   }
 }
 
-function getKebutuhanPtkSdnData() {
+function getKebutuhanGuruData() {
   try {
-    return getDataFromSheet('PTK_SD_KEBUTUHAN');
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SD_DATA); // ID "1u4tNL3uqt5xHITXYwHnytK6Kul9Siam-vNYuzmdZB4s"
+    
+    // 1. Ambil data Negeri
+    const sheetSdn = ss.getSheetByName("Kebutuhan Guru SDN");
+    if (!sheetSdn) throw new Error("Sheet 'Kebutuhan Guru SDN' tidak ditemukan.");
+    // Kita gunakan getDisplayValues() agar angka yang kosong terbaca '-' atau string
+    const dataSdn = sheetSdn.getDataRange().getDisplayValues(); 
+
+    // 2. Ambil data Swasta
+    const sheetSds = ss.getSheetByName("Kebutuhan Guru SDS");
+    if (!sheetSds) throw new Error("Sheet 'Kebutuhan Guru SDS' tidak ditemukan.");
+    const dataSds = sheetSds.getDataRange().getDisplayValues();
+
+    // 3. Kembalikan keduanya dalam satu objek
+    return { 
+      negeri: dataSdn, 
+      swasta: dataSds 
+    };
+    
   } catch (e) {
-    return handleError('getKebutuhanPtkSdnData', e);
+    return handleError('getKebutuhanGuruData', e);
   }
 }
 
