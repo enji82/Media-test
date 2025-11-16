@@ -86,7 +86,7 @@
     bottom: 0;
     background-color: #101E26; /* Warna solid untuk footer */
     z-index: 2;
-    border-top: 2px solid rgba(0, 195, 255, 0.5); /* <-- TAMBAHKAN BARIS INI */
+    border-top: 2px solid rgba(0, 195, 255, 0.5);
   }
   #muridPaudBulananTable thead tr:first-child th { top: 0; }
   #muridPaudBulananTable thead tr:nth-child(2) th { top: 40px; }
@@ -130,12 +130,12 @@
   }
   
   /* =================================================================== */
-  /* ====== PEWARNAAN FONT & KOLOM (FINAL) ====== */
+  /* ====== PEWARNAAN FONT & KOLOM (PERBAIKAN +2 KOLOM) ====== */
   /* =================================================================== */
 
-  /* 5. Beri warna font biru pada kolom 22-23 (ISI & SUBHEADER) */
-  #muridPaudBulananTable td:nth-child(n+22):nth-child(-n+23),
-  #muridPaudBulananTable thead tr:nth-child(2) th:nth-child(n+19):nth-child(-n+20) {
+  /* 5. Beri warna font biru pada kolom 24-25 (ISI & SUBHEADER) */
+  #muridPaudBulananTable td:nth-child(n+26):nth-child(-n+27),
+  #muridPaudBulananTable thead tr:nth-child(2) th:nth-child(n+21):nth-child(-n+22) {
     color: var(--color-blue);
     font-weight: bold;
   }
@@ -147,12 +147,12 @@
     font-weight: bold;
   }
 
-  /* 7. Beri warna latar pada grup kolom di dalam body tabel */
-  #muridPaudBulananTable tbody td:nth-child(n+4):nth-child(-n+17) { background-color: rgba(52, 152, 219, 0.1); }
-  #muridPaudBulananTable tbody td:nth-child(n+18):nth-child(-n+21) { background-color: rgba(46, 204, 113, 0.1); }
-  #muridPaudBulananTable tbody td:nth-child(n+22):nth-child(-n+23) { background-color: rgba(155, 89, 182, 0.1); }
-  #muridPaudBulananTable tbody td:nth-child(n+24):nth-child(-n+30) { background-color: rgba(241, 196, 15, 0.1); }
-  #muridPaudBulananTable tbody td:nth-child(n+31):nth-child(-n+32) { background-color: rgba(230, 126, 34, 0.1); }
+  /* 7. Beri warna latar pada grup kolom di dalam body tabel (DIGESER +2) */
+  #muridPaudBulananTable tbody td:nth-child(n+8):nth-child(-n+21) { background-color: rgba(52, 152, 219, 0.1); }
+  #muridPaudBulananTable tbody td:nth-child(n+22):nth-child(-n+25) { background-color: rgba(46, 204, 113, 0.1); }
+  #muridPaudBulananTable tbody td:nth-child(n+26):nth-child(-n+27) { background-color: rgba(155, 89, 182, 0.1); }
+  #muridPaudBulananTable tbody td:nth-child(n+28):nth-child(-n+34) { background-color: rgba(241, 196, 15, 0.1); }
+  #muridPaudBulananTable tbody td:nth-child(n+35):nth-child(-n+36) { background-color: rgba(230, 126, 34, 0.1); }
   #muridPaudBulananTable tbody td:last-child { background-color: rgba(231, 76, 60, 0.1); }
 
 

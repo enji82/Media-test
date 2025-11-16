@@ -61,7 +61,7 @@
     vertical-align: middle;
   }
   #muridSdRombelTable td:nth-child(2),
-  #muridSdRombelTable td:nth-child(3) {
+  #muridSdRombelTable td:nth-child(4) {
     text-align: left;
   }
   #muridSdRombelTable th {
@@ -79,7 +79,7 @@
     bottom: 0;
     background-color: #101E26; /* Warna solid untuk footer */
     z-index: 2;
-    border-top: 2px solid rgba(0, 195, 255, 0.5); /* <-- TAMBAHKAN BARIS INI */
+    border-top: 2px solid rgba(0, 195, 255, 0.5); 
   }
   #muridSdRombelTable thead tr:first-child th { top: 0; }
   #muridSdRombelTable thead tr:nth-child(2) th { top: 40px; }
@@ -126,18 +126,18 @@
   /* ====== PEWARNAAN ISI KOLOM & FONT BOLD (PERBAIKAN FINAL) ====== */
   /* =================================================================== */
 
-  /* 5. Beri warna pada kolom "Jml. Murid" (ISI TABEL) */
-  #muridSdRombelTable td:nth-child(11),
-  #muridSdRombelTable td:nth-child(17),
-  #muridSdRombelTable td:nth-child(23),
-  #muridSdRombelTable td:nth-child(29),
-  #muridSdRombelTable td:nth-child(35),
-  #muridSdRombelTable td:nth-child(41) {
+  /* 5. Beri warna pada kolom "Jml. Murid" (ISI TABEL) - INI SUDAH BENAR */
+  #muridSdRombelTable td:nth-child(12),
+  #muridSdRombelTable td:nth-child(18),
+  #muridSdRombelTable td:nth-child(24),
+  #muridSdRombelTable td:nth-child(30),
+  #muridSdRombelTable td:nth-child(36),
+  #muridSdRombelTable td:nth-child(42) {
     color: var(--color-blue);
     font-weight: bold;
   }
 
-  /* 6. Beri warna pada SUBHEADER yang sesuai */
+  /* 6. Beri warna pada SUBHEADER yang sesuai - DIGESER -1 (PERBAIKAN) */
   #muridSdRombelTable thead tr:nth-child(2) th:nth-child(6),
   #muridSdRombelTable thead tr:nth-child(2) th:nth-child(12),
   #muridSdRombelTable thead tr:nth-child(2) th:nth-child(18),
@@ -148,21 +148,21 @@
     font-weight: bold;
   }
 
-  /* 7. Buat teks di kolom terakhir menjadi tebal dan berwarna lain (PERBAIKAN FINAL) */
+  /* 7. Buat teks di kolom terakhir menjadi tebal dan berwarna lain - INI SUDAH BENAR */
   #muridSdRombelTable thead tr:first-child th:last-child,
   #muridSdRombelTable td:last-child {
     font-weight: bold;
     color: var(--color-orange);
   }
 
-  /* 8. Beri warna pada grup kolom Kelas di dalam body tabel */
-  #muridSdRombelTable tbody td:nth-child(n+6):nth-child(-n+11) { background-color: rgba(52, 152, 219, 0.1); }
-  #muridSdRombelTable tbody td:nth-child(n+12):nth-child(-n+17) { background-color: rgba(46, 204, 113, 0.1); }
-  #muridSdRombelTable tbody td:nth-child(n+18):nth-child(-n+23) { background-color: rgba(155, 89, 182, 0.1); }
-  #muridSdRombelTable tbody td:nth-child(n+24):nth-child(-n+29) { background-color: rgba(241, 196, 15, 0.1); }
-  #muridSdRombelTable tbody td:nth-child(n+30):nth-child(-n+35) { background-color: rgba(230, 126, 34, 0.1); }
-  #muridSdRombelTable tbody td:nth-child(n+36):nth-child(-n+41) { background-color: rgba(26, 188, 156, 0.1); }
-  #muridSdRombelTable tbody td:nth-child(42) { background-color: rgba(231, 76, 60, 0.1); }
+  /* 8. Beri warna pada grup kolom Kelas di dalam body tabel - INI SUDAH BENAR */
+  #muridSdRombelTable tbody td:nth-child(n+7):nth-child(-n+12) { background-color: rgba(52, 152, 219, 0.1); }
+  #muridSdRombelTable tbody td:nth-child(n+13):nth-child(-n+18) { background-color: rgba(46, 204, 113, 0.1); }
+  #muridSdRombelTable tbody td:nth-child(n+19):nth-child(-n+24) { background-color: rgba(155, 89, 182, 0.1); }
+  #muridSdRombelTable tbody td:nth-child(n+25):nth-child(-n+30) { background-color: rgba(241, 196, 15, 0.1); }
+  #muridSdRombelTable tbody td:nth-child(n+31):nth-child(-n+36) { background-color: rgba(230, 126, 34, 0.1); }
+  #muridSdRombelTable tbody td:nth-child(n+37):nth-child(-n+42) { background-color: rgba(26, 188, 156, 0.1); }
+  #muridSdRombelTable tbody td:nth-child(43) { background-color: rgba(231, 76, 60, 0.1); }
 
   /* 9. Pastikan efek hover tetap berfungsi di atas warna latar */
   #muridSdRombelTable tbody tr:hover td {

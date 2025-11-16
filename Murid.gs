@@ -21,71 +21,86 @@ function getMuridPaudJenisKelaminData() {
 }
 
 function getMuridPaudJumlahBulananData() {
-  // Data bulanan mungkin lebih sering berubah, tapi kita tetap cache selama 1 jam (3600 detik)
-  const cacheKey = 'murid_paud_bulanan_v1';
-  return getCachedData(cacheKey, () => {
-    try {
-      return getDataFromSheet('MURID_PAUD_BULANAN');
-    } catch (e) {
-      throw new Error(`Gagal memuat data Murid PAUD Bulanan: ${e.message}`);
-    }
-  }, 3600); 
+  try {
+    // 1. Panggil fungsi getDataFromSheet, yang sudah mengambil data mentah 2D Array
+    // dari SPREADSHEET_CONFIG.MURID_PAUD_BULANAN
+    const allData = getDataFromSheet('MURID_PAUD_BULANAN'); 
+    
+    // 2. Langsung kembalikan data mentah tersebut (termasuk 2 baris header)
+    return allData; 
+    
+  } catch (e) {
+    // 3. Tangani error jika terjadi
+    return handleError('getMuridPaudJumlahBulananData', e);
+  }
 }
 
 function getMuridSdKelasData() {
-  const cacheKey = 'murid_sd_kelas_v1';
-  return getCachedData(cacheKey, () => {
-    try {
-      return getDataFromSheet('MURID_SD_KELAS');
-    } catch (e) {
-      throw new Error(`Gagal memuat data Murid SD Kelas: ${e.message}`);
-    }
-  });
+  try {
+    // 1. Panggil fungsi getDataFromSheet, yang mengambil data mentah 2D Array
+    const allData = getDataFromSheet('MURID_SD_KELAS'); 
+    
+    // 2. Langsung kembalikan data mentah tersebut (termasuk header)
+    return allData; 
+    
+  } catch (e) {
+    // 3. Tangani error jika terjadi
+    return handleError('getMuridSdKelasData', e);
+  }
 }
 
 function getMuridSdRombelData() {
-  const cacheKey = 'murid_sd_rombel_v1';
-  return getCachedData(cacheKey, () => {
-    try {
-      return getDataFromSheet('MURID_SD_ROMBEL');
-    } catch (e) {
-      throw new Error(`Gagal memuat data Murid SD Rombel: ${e.message}`);
-    }
-  });
+  try {
+    // 1. Ambil data mentah (2D Array)
+    const allData = getDataFromSheet('MURID_SD_ROMBEL'); 
+    
+    // 2. Langsung kembalikan data mentah tersebut (termasuk 2 baris header)
+    return allData; 
+    
+  } catch (e) {
+    // 3. Tangani error jika terjadi
+    return handleError('getMuridSdRombelData', e);
+  }
 }
 
 function getMuridSdJenisKelaminData() {
-  const cacheKey = 'murid_sd_jk_v1';
-  return getCachedData(cacheKey, () => {
-    try {
-      return getDataFromSheet('MURID_SD_JK');
-    } catch (e) {
-      throw new Error(`Gagal memuat data Murid SD JK: ${e.message}`);
-    }
-  });
+  try {
+    // 1. Ambil data mentah (2D Array)
+    const allData = getDataFromSheet('MURID_SD_JK'); 
+    
+    // 2. Langsung kembalikan data mentah tersebut (termasuk 2 baris header)
+    return allData; 
+    
+  } catch (e) {
+    // 3. Tangani error jika terjadi
+    return handleError('getMuridSdJenisKelaminData', e);
+  }
 }
 
 function getMuridSdAgamaData() {
-  const cacheKey = 'murid_sd_agama_v1';
-  return getCachedData(cacheKey, () => {
-    try {
-      return getDataFromSheet('MURID_SD_AGAMA');
-    } catch (e) {
-      throw new Error(`Gagal memuat data Murid SD Agama: ${e.message}`);
-    }
-  });
+  try {
+    // 1. Ambil data mentah (2D Array)
+    const allData = getDataFromSheet('MURID_SD_AGAMA'); 
+    
+    // 2. Langsung kembalikan data mentah tersebut (termasuk 2 baris header)
+    return allData; 
+    
+  } catch (e) {
+    // 3. Tangani error jika terjadi
+    return handleError('getMuridSdAgamaData', e);
+  }
 }
 
 function getMuridSdJumlahBulananData() {
-  const cacheKey = 'murid_sd_bulanan_v1';
-  return getCachedData(cacheKey, () => {
-    try {
-      const config = SPREADSHEET_CONFIG.MURID_SD_BULANAN;
-      const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-      if (!sheet) throw new Error("Sheet tidak ditemukan");
-      return sheet.getDataRange().getValues(); // Menggunakan getValues() untuk angka
-    } catch (e) {
-      throw new Error(`Gagal memuat data Murid SD Bulanan: ${e.message}`);
-    }
-  }, 3600); // Cache selama 1 jam
+  try {
+    // 1. Ambil data mentah (2D Array)
+    const allData = getDataFromSheet('MURID_SD_BULANAN'); 
+    
+    // 2. Langsung kembalikan data mentah tersebut (termasuk 2 baris header)
+    return allData; 
+    
+  } catch (e) {
+    // 3. Tangani error jika terjadi
+    return handleError('getMuridSdJumlahBulananData', e);
+  }
 }

@@ -61,7 +61,7 @@
     vertical-align: middle;
   }
   #muridSdKelasTable td:nth-child(2),
-  #muridSdKelasTable td:nth-child(3) {
+  #muridSdKelasTable td:nth-child(4) {
     text-align: left; /* Kolom Nama Sekolah & NPSN rata kiri */
   }
   #muridSdKelasTable th {
@@ -86,7 +86,7 @@
     bottom: 0;
     background-color: #101E26; /* Warna solid untuk footer */
     z-index: 2;
-    border-top: 2px solid rgba(0, 195, 255, 0.5); /* <-- TAMBAHKAN BARIS INI */
+    border-top: 2px solid rgba(0, 195, 255, 0.5); 
   }
   #muridSdKelasTable thead th { top: 0; }
   #muridSdKelasTable tfoot td { bottom: 0; }
@@ -120,4 +120,28 @@
   #muridSdKelasTable tbody tr:hover td:nth-child(2) {
     background-color: #2a4152;
   }
+  
+  /* =================================================================== */
+  /* ====== TAMBAHAN BARU: PEWARNAAN ISI KOLOM ====== */
+  /* =================================================================== */
+  
+  /* 6. Beri warna pada grup kolom Kelas (Biru) */
+  #muridSdKelasTable tbody td:nth-child(n+7):nth-child(-n+12) { 
+    background-color: rgba(52, 152, 219, 0.1); 
+  }
+  
+  /* 7. Beri warna pada grup kolom Jumlah (Hijau) */
+  #muridSdKelasTable tbody td:nth-child(13) { 
+    background-color: rgba(46, 204, 113, 0.1); 
+  }
+
+  /* 8. Pastikan efek hover tetap berfungsi di atas warna latar */
+  #muridSdKelasTable tbody tr:hover td {
+    background-color: rgba(255, 255, 255, 0.15) !important;
+  }
+  #muridSdKelasTable tbody tr:hover td:nth-child(1),
+  #muridSdKelasTable tbody tr:hover td:nth-child(2) {
+    background-color: #2a4152 !important;
+  }
+  
 </style>

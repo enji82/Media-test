@@ -793,29 +793,75 @@ function getKebutuhanGuruData() {
   }
 }
 
-function deletePtkSdData(rowIndex, source, deleteCode) {
+function deletePtkSdData(rowIndex, source, deleteCode, alasan) {
   try {
+    // 1. Validasi Kode Hapus
     const todayCode = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd");
     if (String(deleteCode).trim() !== todayCode) throw new Error("Kode Hapus salah.");
+    if (!alasan || String(alasan).trim() === "") throw new Error("Alasan tidak boleh kosong.");
 
-    const ss = SpreadsheetApp.openById(SPREADSHEET_CONFIG.PTK_SD_DB.id);
-    let sheet;
+    // 2. Buka Spreadsheet (ID yang sama untuk semua sheet PTK SD)
+    const config = SPREADSHEET_CONFIG.PTK_SD_DB; //
+    const ss = SpreadsheetApp.openById(config.id);
+    
+    // 3. Tentukan Sheet Sumber berdasarkan 'source'
+    let sheetSumber;
     if (source === 'SDN') {
-      sheet = ss.getSheetByName("PTK SDN");
+      sheetSumber = ss.getSheetByName("PTK SDN");
     } else if (source === 'SDS') {
-      sheet = ss.getSheetByName("PTK SDS");
+      sheetSumber = ss.getSheetByName("PTK SDS");
     } else {
       throw new Error("Sumber data tidak valid: " + source);
     }
-
-    if (!sheet) throw new Error("Sheet sumber '" + source + "' tidak ditemukan.");
     
-    const maxRows = sheet.getLastRow();
-    if (isNaN(rowIndex) || rowIndex < 2 || rowIndex > maxRows) throw new Error("Nomor baris tidak valid.");
+    // 4. Tentukan Sheet Target
+    const sheetTarget = ss.getSheetByName("PTK Tidak Aktif");
+    
+    if (!sheetSumber || !sheetTarget) throw new Error("Sheet 'PTK SDN/SDS' atau 'PTK Tidak Aktif' tidak ditemukan.");
 
-    sheet.deleteRow(rowIndex);
-    return "Data PTK berhasil dihapus.";
+    // 5. Ambil Headers dari kedua sheet (bersihkan spasi)
+    const headersSumber = sheetSumber.getRange(1, 1, 1, sheetSumber.getLastColumn()).getDisplayValues()[0].map(h => String(h).trim());
+    const headersTarget = sheetTarget.getRange(1, 1, 1, sheetTarget.getLastColumn()).getDisplayValues()[0].map(h => String(h).trim());
+
+    // 6. Ambil data baris yang akan 'dihapus' (mentah, untuk menjaga format tanggal)
+    const dataBarisSumber = sheetSumber.getRange(rowIndex, 1, 1, headersSumber.length).getValues()[0];
+
+    // 7. Bangun baris baru untuk sheet "Tidak Aktif"
+    const barisBaruTarget = headersTarget.map(headerTarget => {
+        if (headerTarget === 'Alasan') {
+            return alasan; // Masukkan alasan
+        }
+        if (headerTarget === 'Update') {
+            return new Date(); // Masukkan waktu pemindahan
+        }
+        
+        // Cari data yang cocok dari sheet sumber
+        const indexDiSumber = headersSumber.indexOf(headerTarget);
+        if (indexDiSumber !== -1) {
+            return dataBarisSumber[indexDiSumber]; // Salin data
+        }
+        return ""; // Kolom ada di target tapi tidak di sumber
+    });
+
+    // 8. Tambahkan baris baru ke sheet target (di baris 2, di bawah header)
+    sheetTarget.insertRowAfter(1);
+    sheetTarget.getRange(2, 1, 1, barisBaruTarget.length).setValues([barisBaruTarget]);
+
+    // 9. (Opsional tapi Direkomendasikan) Format Ulang Tanggal di Baris 2
+    const tmtIndex = headersTarget.indexOf('TMT');
+    const tglInputIndex = headersTarget.indexOf('Input'); // Ganti 'Tanggal Input' jika namanya beda
+    const updateIndex = headersTarget.indexOf('Update');
+    
+    if (tmtIndex !== -1) sheetTarget.getRange(2, tmtIndex + 1).setNumberFormat("dd-MM-yyyy");
+    if (tglInputIndex !== -1) sheetTarget.getRange(2, tglInputIndex + 1).setNumberFormat("dd/MM/yyyy HH:mm:ss");
+    if (updateIndex !== -1) sheetTarget.getRange(2, updateIndex + 1).setNumberFormat("dd/MM/yyyy HH:mm:ss");
+
+    // 10. Hapus baris asli dari sheet sumber ("PTK SDN" atau "PTK SDS")
+    sheetSumber.deleteRow(rowIndex);
+    
+    return "Data PTK berhasil dinonaktifkan dan dipindah ke arsip.";
   } catch (e) {
-    throw new Error(`Gagal menghapus data: ${e.message}`);
+    // Kirim pesan error yang spesifik ke client
+    return handleError('deletePtkSdData', e);
   }
 }
