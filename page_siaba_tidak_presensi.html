@@ -1,5 +1,5 @@
 <header>
-  <h2>DAFTAR ASN TIDAK PRESENSI</h2>
+  <h2>DAFTAR ASN TIDAK PRESENSI SIABA</h2>
 </header>
 
 <div class="filter-container">
@@ -15,10 +15,7 @@
     <label for="filterUnitKerja">Unit Kerja:</label>
     <select id="filterUnitKerja"></select>
   </div>
-  <button id="terapkanFilterBtn" class="submit-btn" style="width: auto; padding: 10px 20px;">
-    Tampilkan
-  </button>
-</div>
+  </div>
 
 <main class="table-view-container">
   <div id="loadingStatus" class="loading-container">
@@ -30,82 +27,12 @@
   
   <div id="tableWrapper" style="display:none;">
     <div class="table-container">
-        <table id="tidakPresensiTable" class="data-table">
+        <table id="tidakPresensiTable" class="data-table freeze-pane-table">
           <thead></thead>
           <tbody></tbody>
         </table>
     </div>
+    <div id="pagination-container" class="pagination-container"></div>
   </div>
-</main>
-
-<style>
-  .main-content { overflow-y: hidden; }
-  main.table-view-container, #tableWrapper {
-    flex-grow: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
-  #tableWrapper .table-container {
-    overflow: auto;
-    flex-grow: 1;
-  }
   
-  /* --- BLOK FREEZE PANE STABIL --- */
-
-  #tidakPresensiTable th:nth-child(1),
-  #tidakPresensiTable td:nth-child(1) {
-    min-width: 50px;
-    max-width: 50px;
-  }
-  #tidakPresensiTable th:nth-child(2),
-  #tidakPresensiTable td:nth-child(2) {
-    min-width: 250px;
-  }
-  #tidakPresensiTable thead th {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-  }
-  #tidakPresensiTable tbody td:nth-child(1),
-  #tidakPresensiTable tbody td:nth-child(2) {
-    position: sticky;
-    background-color: #1c2e3a;
-  }
-  #tidakPresensiTable thead th:nth-child(1), 
-  #tidakPresensiTable tbody td:nth-child(1) { 
-    left: 0; 
-  }
-  #tidakPresensiTable thead th:nth-child(2), 
-  #tidakPresensiTable tbody td:nth-child(2) { 
-    left: 50px;
-  }
-  #tidakPresensiTable tbody td { z-index: 1; }
-  #tidakPresensiTable thead th:nth-child(1),
-  #tidakPresensiTable thead th:nth-child(2) {
-    z-index: 3;
-  }
-  #tidakPresensiTable tbody tr:hover td:nth-child(1),
-  #tidakPresensiTable tbody tr:hover td:nth-child(2) {
-    background-color: #2a4152;
-  }
-
-  /* --- Pengaturan Konten Sel & Header --- */
-
-  #tidakPresensiTable td {
-    text-align: center;
-    vertical-align: middle;
-    white-space: nowrap;
-  }
-  #tidakPresensiTable th {
-    text-align: center;
-    vertical-align: middle;
-    white-space: normal;
-  }
-
-  /* --- ATURAN PERATAAN TEKS YANG DIPERBARUI --- */
-  #tidakPresensiTable td:nth-child(2), /* Kolom kedua (Nama) */
-  #tidakPresensiTable td:last-child {    /* Kolom terakhir (Keterangan) */
-    text-align: left;
-  }
-</style>
+</main>

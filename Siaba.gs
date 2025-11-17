@@ -68,14 +68,20 @@ function getSiabaPresensiData(filters) {
        return { headers: [], rows: [] };
     }
 
-    // 3. Ambil data mentah (Logika ini sudah benar)
+    // 3. Ambil data mentah (Bersihkan header dari spasi)
     const allData = sheet.getDataRange().getDisplayValues();
-    const headers = allData[0].map(h => String(h).trim()); // <-- Tambahkan .trim() untuk kebersihan
+    const headers = allData[0].map(h => String(h).trim()); // <-- .trim() penting
     const dataRows = allData.slice(1);
 
-    // 4. Terapkan filter 'unitKerja' (Logika ini sudah benar)
-    // Asumsi 'Unit Kerja' ada di data mentah di indeks 2
-    const unitKerjaIndex = 2; 
+    // 4. Tentukan Indeks Kolom "Unit Kerja" (Kolom BO = Indeks 66)
+    // (Berdasarkan konfirmasi Anda)
+    const unitKerjaIndex = 66; 
+    
+    if (dataRows.length > 0 && dataRows[0].length <= unitKerjaIndex) {
+      throw new Error(`Gagal memfilter: Sheet "WebData" hanya memiliki ${dataRows[0].length} kolom, tetapi kode mencoba membaca kolom BO (indeks 66).`);
+    }
+
+    // 5. Terapkan filter 'unitKerja' (Logika "Semua" tetap ada)
     const filteredRows = dataRows.filter(row => {
         const matchUnitKerja = (unitKerja === "Semua") || (String(row[unitKerjaIndex]) === String(unitKerja));
         return matchUnitKerja;
@@ -83,8 +89,7 @@ function getSiabaPresensiData(filters) {
 
     // --- PERBAIKAN UTAMA DIMULAI DI SINI ---
 
-    // 5. Tentukan Header yang Anda Inginkan (SESUAI URUTAN TABEL LAMA ANDA)
-    // (Saya ambil dari page_siaba_daftar_presensi.html)
+    // 6. Tentukan Header yang Anda Inginkan (SESUAI DAFTAR DARI ANDA)
     const desiredHeaders = [
         "NAMA ASN", "NIP", "TP", "HK", "H", "HA", "APL", 
         "TAp", "HU", "U", "TU", "CT", "CAP", "CS", "CM", "DD", "DL", 
@@ -98,40 +103,41 @@ function getSiabaPresensiData(filters) {
         "31D", "31P"
     ];
 
-    // 6. Buat "Peta Indeks"
-    // Ini memetakan nama header yang Anda inginkan ke posisi kolomnya di "WebData"
+    // 7. Buat "Peta Indeks"
     const headerMap = {};
     headers.forEach((headerName, index) => {
         headerMap[headerName] = index;
     });
+    
+    // Periksa apakah "NAMA ASN" ada di WebData, jika tidak, coba "Nama"
+    if (!headerMap.hasOwnProperty("NAMA ASN") && headerMap.hasOwnProperty("Nama")) {
+      headerMap["NAMA ASN"] = headerMap["Nama"]; // Buat alias
+    }
 
-    // 7. Susun Ulang Data (Transformasi)
+    // 8. Susun Ulang Data (Transformasi)
     const displayRows = filteredRows.map(row => {
-        // Buat baris baru HANYA berisi data yang kita inginkan, SESUAI URUTAN
         const newRow = [];
         for (const desiredHeader of desiredHeaders) {
             const indexDiWebData = headerMap[desiredHeader];
             
             if (indexDiWebData !== undefined) {
-                // Ambil data dari "WebData" menggunakan indeks yang benar
                 newRow.push(row[indexDiWebData]);
             } else {
-                // Jika kolom tidak ditemukan di "WebData", isi dengan strip
-                newRow.push('-'); 
+                newRow.push('-'); // Kolom tidak ditemukan di WebData
             }
         }
         return newRow;
     });
     
-    // --- AKHIR PERBAIKAN UTAMA ---
-
-    // 8. Logika Sorting (Sekarang menggunakan desiredHeaders)
+    // 9. Logika Sorting (PERBAIKAN: Menggunakan "NAMA ASN")
     const tpIndex = desiredHeaders.indexOf('TP');
     const taIndex = desiredHeaders.indexOf('TA');
     const plaIndex = desiredHeaders.indexOf('PLA');
     const tapIndex = desiredHeaders.indexOf('TAp');
     const tuIndex = desiredHeaders.indexOf('TU');
-    const namaIndex = desiredHeaders.indexOf('Nama'); // <-- Ini sekarang di indeks 0
+    const namaIndex = desiredHeaders.indexOf('NAMA ASN'); // <-- PERBAIKAN
+
+    // --- AKHIR PERBAIKAN UTAMA ---
 
     if (tpIndex !== -1) {
       displayRows.sort((a, b) => {
@@ -158,7 +164,7 @@ function getSiabaPresensiData(filters) {
       });
     }
 
-    // 9. Kembalikan data (Sekarang menggunakan desiredHeaders)
+    // 10. Kembalikan data
     return { headers: desiredHeaders, rows: displayRows };
     
   } catch (e) {
@@ -244,45 +250,120 @@ function getSiabaTidakPresensiFilterOptions() {
 function getSiabaTidakPresensiData(filters) {
   try {
     const { tahun, bulan, unitKerja } = filters;
+    
     if (!tahun || !bulan) throw new Error("Filter Tahun dan Bulan wajib diisi.");
+    if (!unitKerja) throw new Error("Filter Unit Kerja wajib diisi.");
 
-    const config = SPREADSHEET_CONFIG.SIABA_TIDAK_PRESENSI;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    if (!sheet || sheet.getLastRow() < 2) return { headers: [], rows: [] };
+    // 1. Cari ID Spreadsheet bulanan (Logika ini sudah benar)
+    const targetSheetId = _findSiabaSpreadsheetId(tahun, bulan);
+    
+    if (!targetSheetId) {
+      Logger.log(`Tidak ada Spreadsheet_ID ditemukan untuk ${bulan} ${tahun} di sheet 'Lookup SIABA'.`);
+      return { headers: [], rows: [] };
+    }
 
+    // 2. Buka Spreadsheet dan Sheet "WebData" (Logika ini sudah benar)
+    let ss;
+    try {
+      ss = SpreadsheetApp.openById(targetSheetId);
+    } catch (e) {
+      throw new Error(`Gagal membuka Spreadsheet ID: ${targetSheetId}. Pastikan ID di 'Lookup SIABA' benar.`);
+    }
+
+    const sheet = ss.getSheetByName("WebData"); 
+    if (!sheet || sheet.getLastRow() < 2) {
+       Logger.log(`Sheet 'WebData' tidak ditemukan atau kosong di Spreadsheet ID: ${targetSheetId}`);
+       return { headers: [], rows: [] };
+    }
+
+    // 3. Ambil data mentah (Bersihkan header dari spasi)
     const allData = sheet.getDataRange().getDisplayValues();
-    const headers = allData[0];
+    const headers = allData[0].map(h => String(h).trim()); 
     const dataRows = allData.slice(1);
 
+    // 4. Cari Indeks Kolom "Unit Kerja" (Kolom BO = Indeks 66)
+    const unitKerjaIndex = 66; 
+    
+    // 5. Cari Indeks Kolom "TP" (PENTING untuk filter)
+    const tpIndex = headers.indexOf('TP');
+    if (tpIndex === -1) {
+        throw new Error(`Header "TP" tidak ditemukan di sheet "WebData".`);
+    }
+
+    // 6. Terapkan filter 'unitKerja' DAN 'TP > 0'
     const filteredRows = dataRows.filter(row => {
-      const tahunMatch = String(row[0]) === String(tahun);
-      const bulanMatch = String(row[1]) === String(bulan);
-      const unitKerjaMatch = (unitKerja === "Semua") || (String(row[2]) === String(unitKerja));
-      return tahunMatch && bulanMatch && unitKerjaMatch;
+        const matchUnitKerja = (unitKerja === "Semua") || (String(row[unitKerjaIndex]) === String(unitKerja));
+        // Filter tambahan: Hanya tampilkan jika "TP" (Jumlah) lebih dari 0
+        const matchTP = (parseInt(row[tpIndex], 10) || 0) > 0; 
+        
+        return matchUnitKerja && matchTP;
+    });
+
+    // 7. Tentukan Header yang Anda Inginkan (SESUAI PERMINTAAN ANDA)
+    const desiredHeaders = [
+        "Nama ASN", 
+        "NIP", 
+        "Jumlah", 
+        "Lupa Datang", 
+        "Lupa Pulang", 
+        "Tanggal Lupa"
+    ];
+    
+    // 8. Tentukan Header SUMBER (Nama di "WebData")
+    const sourceHeaders = [
+        "NAMA ASN", 
+        "NIP", 
+        "TP", 
+        "LAD", 
+        "LAP", 
+        "TGL LUPA"
+    ];
+
+    // 9. Buat "Peta Indeks"
+    const headerMap = {};
+    headers.forEach((headerName, index) => {
+        headerMap[headerName] = index;
     });
     
-    const startIndex = 3;
-    const endIndex = 8;
+    // Alias untuk "NAMA ASN" jika di WebData namanya "Nama"
+    if (!headerMap.hasOwnProperty("NAMA ASN") && headerMap.hasOwnProperty("Nama")) {
+      headerMap["NAMA ASN"] = headerMap["Nama"]; 
+    }
 
-    const displayHeaders = headers.slice(startIndex, endIndex + 1);
-    const displayRows = filteredRows.map(row => row.slice(startIndex, endIndex + 1));
+    // 10. Susun Ulang Data (Transformasi)
+    const displayRows = filteredRows.map(row => {
+        const newRow = [];
+        for (const sourceHeader of sourceHeaders) {
+            const indexDiWebData = headerMap[sourceHeader];
+            
+            if (indexDiWebData !== undefined) {
+                newRow.push(row[indexDiWebData]);
+            } else {
+                newRow.push('-'); // Kolom tidak ditemukan di WebData
+            }
+        }
+        return newRow;
+    });
     
-    const jumlahIndex = displayHeaders.indexOf('Jumlah');
-    const namaIndex = displayHeaders.indexOf('Nama');
-    
+    // 11. Logika Sorting (Berdasarkan "Jumlah" (TP) descending, lalu "Nama ASN")
+    const sortJumlahIndex = desiredHeaders.indexOf('Jumlah'); // Indeks 2
+    const sortNamaIndex = desiredHeaders.indexOf('Nama ASN');   // Indeks 0
+
     displayRows.sort((a, b) => {
-      const valB_jumlah = (jumlahIndex !== -1) ? (parseInt(b[jumlahIndex], 10) || 0) : 0;
-      const valA_jumlah = (jumlahIndex !== -1) ? (parseInt(a[jumlahIndex], 10) || 0) : 0;
+      const valB_jumlah = (sortJumlahIndex !== -1) ? (parseInt(b[sortJumlahIndex], 10) || 0) : 0;
+      const valA_jumlah = (sortJumlahIndex !== -1) ? (parseInt(a[sortJumlahIndex], 10) || 0) : 0;
       if (valB_jumlah !== valA_jumlah) {
-        return valB_jumlah - valA_jumlah;
+        return valB_jumlah - valA_jumlah; // Urutkan Jumlah (descending)
       }
-      if (namaIndex !== -1) {
-          return (a[namaIndex] || "").localeCompare(b[namaIndex] || "");
+      if (sortNamaIndex !== -1) {
+          return (a[sortNamaIndex] || "").localeCompare(b[sortNamaIndex] || ""); // Urutkan Nama (ascending)
       }
        return 0;
     });
 
-    return { headers: displayHeaders, rows: displayRows };
+    // 12. Kembalikan data
+    return { headers: desiredHeaders, rows: displayRows };
+    
   } catch (e) {
     return handleError('getSiabaTidakPresensiData', e);
   }
