@@ -15,9 +15,9 @@
     <label for="filterUnitKerja">Unit Kerja:</label>
     <select id="filterUnitKerja"></select>
   </div>
-  <button id="terapkanFilterBtn" class="submit-btn" style="width: auto; padding: 10px 20px;">
-    Terapkan
-  </button>
+  <button id="terapkanFilterBtn" class="submit-btn" style="width: auto; padding: 10px 20px;" disabled>
+    Tampilkan
+</button>
 </div>
 
 <main class="table-view-container">
@@ -38,24 +38,30 @@
           <tbody></tbody>
         </table>
     </div>
-    <div class="table-footer-note" style="line-height: 1.6;">
-      <strong>Keterangan:</strong><br>
+  </div> 
+  <div class="table-footer-note" id="keterangan-siaba" style="line-height: 1.6;"> <strong>Keterangan:</strong><br>
       TP: Tidak Presensi, HK: Hari Kerja, H: Hadir, HA: Hari Apel, APL: Apel, TAp: Tidak Apel, HU: Hari Upacara, U: Upacara, TU: Tidak Upacara, CT: Cuti Tahunan, CAP: Cuti Alasan Penting, CS: Cuti Sakit, CM: Cuti Melahirkan, DD: Dinas Dalam, DL: Dinas Luar, TA: Terlambat, PLA: Pulang Awal, LA: Lupa Absen
     </div>
-  </div>
+  
+  <div id="pagination-container" class="pagination-container"></div>
 </main>
 
 <style>
-  /* CSS tidak berubah, tetap sama seperti sebelumnya */
   .main-content {
-    overflow-y: hidden;
-  }
-  main.table-view-container, #tableWrapper {
-    flex-grow: 1;
-    min-height: 0;
-    display: flex;
-    flex-direction: column;
-  }
+  overflow-y: hidden;
+}
+main.table-view-container { /* <-- HANYA main yang 'grow' */
+  flex-grow: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+#tableWrapper { /* <-- tableWrapper TIDAK 'grow' */
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
   #tableWrapper .table-container {
     overflow: auto;
     flex-grow: 1;

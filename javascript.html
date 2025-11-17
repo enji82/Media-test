@@ -6261,18 +6261,31 @@ function initMuridSdJumlahBulananPage() {
 }
 
 function initSiabaDaftarPresensiPage() {
+    // 1. Referensi Elemen
     const filterTahun = document.getElementById('filterTahun');
     const filterBulan = document.getElementById('filterBulan');
     const filterUnitKerja = document.getElementById('filterUnitKerja');
     const terapkanBtn = document.getElementById('terapkanFilterBtn');
     const loadingStatus = document.getElementById('loadingStatus');
     const tableWrapper = document.getElementById('tableWrapper');
-    const tableHead = document.getElementById('presensiTable').querySelector('thead');
-    const tableBody = document.getElementById('presensiTable').querySelector('tbody');
+    const table = document.getElementById('presensiTable'); 
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+    const paginationContainer = document.getElementById('pagination-container');
+    const keteranganSiaba = document.getElementById('keterangan-siaba');
 
-    let allMonthlyData = [];
-    let displayHeaders = [];
+    // Cek Kritis: Pastikan semua elemen penting ada
+    if (!table || !loadingStatus || !tableWrapper || !paginationContainer || !keteranganSiaba) {
+        console.error("Inisialisasi Siaba Presensi Gagal: Satu atau lebih elemen HTML inti (tabel, loading, wrapper, paginasi, keterangan) tidak ditemukan.");
+        if(loadingStatus) loadingStatus.innerHTML = "<p style='color:red;'>Error Kritis: Elemen HTML halaman rusak.</p>";
+        return;
+    }
 
+    // Simpan HTML spinner asli
+    const originalSpinnerHTML = loadingStatus.innerHTML; 
+    const promptMessageHTML = '<p>Silakan pilih filter dan klik "Tampilkan".</p>';
+
+    // Variabel untuk pewarnaan
     const backgroundMap = {
         'HA': 'cell-bg-cream', 'APL': 'cell-bg-cream', 'TAp': 'cell-bg-cream',
         'HU': 'cell-bg-cream', 'U': 'cell-bg-cream', 'TU': 'cell-bg-cream',
@@ -6281,129 +6294,198 @@ function initSiabaDaftarPresensiPage() {
         'TA': 'cell-bg-yellow', 'Waktu TA': 'cell-bg-yellow', 'PLA': 'cell-bg-yellow', 'Waktu PLA': 'cell-bg-yellow',
         'LA': 'cell-bg-purple'
     };
-
     const fontColorMap = {
         'CT': 'font-green', 'CAP': 'font-green', 'CS': 'font-green', 'CM': 'font-green',
         'DD': 'font-blue', 'DL': 'font-blue',
         'DP': 'font-brown'
     };
-    
     const redFontColumns = ['TAp', 'TU', 'TA', 'PLA', 'LA'];
+    
+    let displayHeaders = [];
+    
+    // Variabel Paginasi
+    let currentFilteredRows = []; 
+    let currentPage = 1;
+    let rowsPerPage = 15; 
 
+    // 2. Fungsi Helper
     function populateSelect(selectElement, options, defaultValue = null) {
         selectElement.innerHTML = '';
         if (selectElement.id === 'filterUnitKerja') {
-            selectElement.add(new Option('Semua', 'Semua'));
+            selectElement.add(new Option("-- Pilih Unit Kerja --", ""));
+            selectElement.add(new Option("Semua Unit Kerja", "Semua"));
         }
         options.forEach(opt => {
             selectElement.add(new Option(opt, opt));
         });
         if (defaultValue && options.includes(defaultValue)) {
             selectElement.value = defaultValue;
-        } else if (options.length > 0 && selectElement.id !== 'filterUnitKerja') {
-             selectElement.selectedIndex = 0;
         }
     }
-
-    function renderTable() {
-        const selectedUnitKerja = filterUnitKerja.value;
+    
+    // Fungsi Paginasi
+    const calculateRowsPerPage = () => {
+        // --- PERBAIKAN BUG FATAL ---
+        // Kita gunakan 'tableWrapper' yang sudah kita temukan (punya ID)
+        // untuk mengukur posisinya. Ini jauh lebih aman.
+        if (!tableWrapper) return 15; // Failsafe
         
-        const filteredRows = (selectedUnitKerja === "Semua")
-            ? allMonthlyData
-            : allMonthlyData.filter(row => row[0] === selectedUnitKerja);
+        const footerNoteHeight = keteranganSiaba ? keteranganSiaba.offsetHeight : 0;
+        const paginationHeight = paginationContainer ? paginationContainer.offsetHeight : 0; 
+
+        const bottomOffset = footerNoteHeight + (paginationHeight || 50) + 40; 
+        const rowHeight = 38; 
+        
+        // Ambil posisi 'tableWrapper'
+        const rect = tableWrapper.getBoundingClientRect();
+        // Jika rect.top adalah 0 (karena display:none), gunakan posisi loadingStatus sebagai gantinya
+        const topPosition = rect.top > 0 ? rect.top : (loadingStatus ? loadingStatus.getBoundingClientRect().top : 150);
+        
+        const availableHeight = window.innerHeight - topPosition - bottomOffset; 
+        // --- AKHIR PERBAIKAN ---
+
+        return Math.max(5, Math.floor(availableHeight / rowHeight));
+    };
+
+    const setupPagination = () => {
+        const pageCount = Math.ceil(currentFilteredRows.length / rowsPerPage) || 1;
+        
+        if (pageCount <= 1) {
+            paginationContainer.style.display = 'none';
+            return;
+        }
+        
+        paginationContainer.style.display = 'flex';
+        const pageInfo = `<span class="page-info">Halaman ${currentPage} dari ${pageCount}</span>`;
+        const prevBtn = `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="App.changePage_SiabaPresensi(-1)">«</button>`;
+        const nextBtn = `<button class="page-btn" ${currentPage === pageCount ? 'disabled' : ''} onclick="App.changePage_SiabaPresensi(1)">»</button>`;
+        paginationContainer.innerHTML = prevBtn + pageInfo + nextBtn;
+    };
+
+    App.changePage_SiabaPresensi = (direction) => {
+        currentPage += direction;
+        renderTable(); 
+    };
+
+    // 3. Fungsi Render (Dengan Paginasi)
+    function renderTable() { 
+        if (!tableBody) return; 
         
         tableBody.innerHTML = '';
-        if (!filteredRows || filteredRows.length === 0) {
-            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}">Tidak ada data untuk unit kerja ini.</td></tr>`;
-        } else {
-            const tpIndex = displayHeaders.indexOf('TP');
-            const dayStartIndex = displayHeaders.indexOf('1D');
-            const dayEndIndex = displayHeaders.indexOf('31P');
+        
+        rowsPerPage = calculateRowsPerPage(); // <-- PANGGIL FUNGSI YANG SUDAH DIPERBAIKI
+        const pageCount = Math.ceil(currentFilteredRows.length / rowsPerPage) || 1;
+        currentPage = Math.min(currentPage, pageCount) || 1;
+        const start = (currentPage - 1) * rowsPerPage;
+        const paginatedRows = currentFilteredRows.slice(start, start + rowsPerPage);
+        
+        setupPagination(); 
 
-            filteredRows.forEach((row, index) => {
-                const rowData = row.slice(1); 
-                const tr = document.createElement('tr');
-                
-                let rowHTML = `<td>${index + 1}</td>`;
-                rowData.forEach((cell, cellIndex) => {
-                    const header = displayHeaders[cellIndex];
-                    let classes = [];
-                    const isNumericValuePositive = parseInt(cell, 10) > 0;
-
-                    if (backgroundMap[header]) {
-                        classes.push(backgroundMap[header]);
-                    }
-                    
-                    if (dayStartIndex !== -1 && cellIndex >= dayStartIndex && cellIndex <= dayEndIndex) {
-                        if (cell === '' || cell === null || cell === undefined) {
-                            classes.push('cell-bg-red');
-                        } else if (cell === '-') {
-                            classes.push('cell-bg-gray');
-                        } else if (fontColorMap[cell]) {
-                            classes.push(fontColorMap[cell]);
-                        }
-                    }
-
-                    if (cellIndex === tpIndex && isNumericValuePositive) {
-                        classes.push('cell-negative');
-                    }
-                    
-                    if (redFontColumns.includes(header) && isNumericValuePositive) {
-                        classes.push('font-red');
-                    }
-                    
-                    const classString = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
-                    const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
-                    rowHTML += `<td${classString}>${cellContent}</td>`;
-                });
-
-                tr.innerHTML = rowHTML;
-                tableBody.appendChild(tr);
-            });
-        }
-    }
-
-    function fetchData() {
-        const filters = {
-            tahun: filterTahun.value,
-            bulan: filterBulan.value
-        };
-
-        if (!filters.tahun || !filters.bulan) {
-            App.showAppModal('info', 'Silakan pilih Tahun dan Bulan terlebih dahulu.');
+        if (paginatedRows.length === 0) { 
+            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
             return;
         }
 
+        const tpIndex = displayHeaders.indexOf('TP');
+        const dayStartIndex = displayHeaders.indexOf('1D');
+        const dayEndIndex = displayHeaders.indexOf('31P');
+
+        paginatedRows.forEach((rowData, index) => { 
+            const tr = document.createElement('tr');
+            const rowNumber = (currentPage - 1) * rowsPerPage + index + 1;
+            let rowHTML = `<td>${rowNumber}</td>`;
+            
+            rowData.forEach((cell, cellIndex) => {
+                const header = displayHeaders[cellIndex];
+                let classes = [];
+                const isNumericValuePositive = parseInt(cell, 10) > 0;
+
+                if (backgroundMap[header]) {
+                    classes.push(backgroundMap[header]);
+                }
+                
+                if (dayStartIndex !== -1 && cellIndex >= dayStartIndex && cellIndex <= dayEndIndex) {
+                    if (cell === '' || cell === null || cell === undefined) {
+                        classes.push('cell-bg-red');
+                    } else if (cell === '-') {
+                        classes.push('cell-bg-gray');
+                    } else if (fontColorMap[cell]) {
+                        classes.push(fontColorMap[cell]);
+                    }
+                }
+
+                if (cellIndex === tpIndex && isNumericValuePositive) {
+                    classes.push('cell-negative');
+                }
+                
+                if (redFontColumns.includes(header) && isNumericValuePositive) {
+                    classes.push('font-red');
+                }
+                
+                const classString = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
+                const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
+                rowHTML += `<td${classString}>${cellContent}</td>`;
+            });
+
+            tr.innerHTML = rowHTML;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 4. Fungsi Fetch Data (Sekarang menyimpan ke currentFilteredRows)
+    function fetchData() {
+        if (filterUnitKerja.value === "") {
+            App.showAppModal('error', 'Harap pilih "Unit Kerja" terlebih dahulu.');
+            return;
+        }
+
+        const filters = {
+            tahun: filterTahun.value,
+            bulan: filterBulan.value,
+            unitKerja: filterUnitKerja.value 
+        };
+
+        loadingStatus.innerHTML = originalSpinnerHTML; 
         loadingStatus.style.display = 'flex';
         tableWrapper.style.display = 'none';
+        paginationContainer.style.display = 'none'; 
+        if (keteranganSiaba) keteranganSiaba.style.display = 'none'; 
 
         google.script.run
             .withSuccessHandler(result => {
-                loadingStatus.style.display = 'none';
+                loadingStatus.style.display = 'none'; 
                 if (result.error) {
                      loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat data: ${result.error}</p>`;
                      loadingStatus.style.display = 'flex';
                      return;
                 }
-
-                allMonthlyData = result.rows; 
-                displayHeaders = result.headers.slice(1);
-
+                
+                displayHeaders = result.headers;
                 tableHead.innerHTML = '';
                 const headerRow = document.createElement('tr');
                 headerRow.innerHTML = '<th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('');
                 tableHead.appendChild(headerRow);
                 
+                currentFilteredRows = result.rows; 
+                currentPage = 1;
+                
                 tableWrapper.style.display = 'flex';
-                renderTable();
+                if (keteranganSiaba) keteranganSiaba.style.display = 'block'; 
+                renderTable(); 
             })
             .withFailureHandler(err => {
-                loadingStatus.style.display = 'none';
+                loadingStatus.style.display = 'none'; 
                 loadingStatus.innerHTML = `<p style="color:red;">Gagal menghubungi server: ${err.message}</p>`;
                 loadingStatus.style.display = 'flex';
-            })
-            .getSiabaPresensiData(filters);
+            });
     }
+
+    // 5. Logika Inisialisasi Halaman (UTAMA)
+    loadingStatus.style.display = 'flex'; 
+    loadingStatus.innerHTML = promptMessageHTML; 
+    tableWrapper.style.display = 'none';
+    paginationContainer.style.display = 'none'; 
+    if (keteranganSiaba) keteranganSiaba.style.display = 'none'; 
 
     google.script.run
         .withSuccessHandler(options => {
@@ -6413,14 +6495,21 @@ function initSiabaDaftarPresensiPage() {
 
             populateSelect(filterTahun, options['Tahun'], currentYear);
             populateSelect(filterBulan, options['Bulan'], currentMonth);
-            populateSelect(filterUnitKerja, options['Unit Kerja'], 'Semua');
+            populateSelect(filterUnitKerja, options['Unit Kerja'], ""); 
 
             terapkanBtn.addEventListener('click', fetchData);
-            filterUnitKerja.addEventListener('change', renderTable);
-            fetchData();
+            
+            filterUnitKerja.addEventListener('change', function() {
+                if (filterUnitKerja.value !== "") {
+                    terapkanBtn.disabled = false;
+                } else {
+                    terapkanBtn.disabled = true;
+                }
+            });
         })
         .withFailureHandler(err => {
             loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat filter. Error: ${err.message}</p>`;
+            loadingStatus.style.display = 'flex'; 
         })
         .getSiabaFilterOptions();
 }
