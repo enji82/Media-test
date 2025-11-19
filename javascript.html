@@ -6265,27 +6265,20 @@ function initSiabaDaftarPresensiPage() {
     const filterTahun = document.getElementById('filterTahun');
     const filterBulan = document.getElementById('filterBulan');
     const filterUnitKerja = document.getElementById('filterUnitKerja');
-    const terapkanBtn = document.getElementById('terapkanFilterBtn');
-    const loadingStatus = document.getElementById('loadingStatus');
+    const loadingStatus = document.getElementById('loadingStatus'); // Container lama
     const tableWrapper = document.getElementById('tableWrapper');
     const table = document.getElementById('presensiTable'); 
     const tableHead = table.querySelector('thead');
     const tableBody = table.querySelector('tbody');
-    const paginationContainer = document.getElementById('pagination-container');
     const keteranganSiaba = document.getElementById('keterangan-siaba');
 
-    // Cek Kritis: Pastikan semua elemen penting ada
-    if (!table || !loadingStatus || !tableWrapper || !paginationContainer || !keteranganSiaba) {
-        console.error("Inisialisasi Siaba Presensi Gagal: Satu atau lebih elemen HTML inti (tabel, loading, wrapper, paginasi, keterangan) tidak ditemukan.");
-        if(loadingStatus) loadingStatus.innerHTML = "<p style='color:red;'>Error Kritis: Elemen HTML halaman rusak.</p>";
+    // Cek Kritis
+    if (!table || !loadingStatus || !tableWrapper || !keteranganSiaba) {
+        console.error("Inisialisasi Siaba Presensi Gagal: Elemen HTML halaman rusak.");
         return;
     }
-
-    // Simpan HTML spinner asli
-    const originalSpinnerHTML = loadingStatus.innerHTML; 
-    const promptMessageHTML = '<p>Silakan pilih filter dan klik "Tampilkan".</p>';
-
-    // Variabel untuk pewarnaan
+    
+    // Variabel Pewarnaan
     const backgroundMap = {
         'HA': 'cell-bg-cream', 'APL': 'cell-bg-cream', 'TAp': 'cell-bg-cream',
         'HU': 'cell-bg-cream', 'U': 'cell-bg-cream', 'TU': 'cell-bg-cream',
@@ -6302,96 +6295,85 @@ function initSiabaDaftarPresensiPage() {
     const redFontColumns = ['TAp', 'TU', 'TA', 'PLA', 'LA'];
     
     let displayHeaders = [];
-    
-    // Variabel Paginasi
     let currentFilteredRows = []; 
-    let currentPage = 1;
-    let rowsPerPage = 15; 
 
-    // 2. Fungsi Helper
+    // 2. Fungsi Helper (populateSelect)
     function populateSelect(selectElement, options, defaultValue = null) {
         selectElement.innerHTML = '';
+        
+        // Logika Khusus Unit Kerja: Tambahkan opsi "Semua"
         if (selectElement.id === 'filterUnitKerja') {
-            selectElement.add(new Option("-- Pilih Unit Kerja --", ""));
             selectElement.add(new Option("Semua Unit Kerja", "Semua"));
         }
+        
         options.forEach(opt => {
             selectElement.add(new Option(opt, opt));
         });
-        if (defaultValue && options.includes(defaultValue)) {
+        
+        // Set Default Value
+        // Kita cek apakah defaultValue ada di options ATAU jika defaultValue adalah "Semua" (untuk Unit Kerja)
+        if (defaultValue && (options.includes(defaultValue) || defaultValue === "Semua")) {
             selectElement.value = defaultValue;
         }
     }
     
-    // Fungsi Paginasi
-    const calculateRowsPerPage = () => {
-        try {
-            if (!tableWrapper) return 15; 
-            
-            const footerNoteHeight = keteranganSiaba ? keteranganSiaba.offsetHeight : 0;
-            const paginationHeight = paginationContainer ? paginationContainer.offsetHeight : 0; 
+    // 3. Fungsi Helper Visual: TAMPILKAN SPINNER DI DALAM TABEL
+    function showTableLoader(message = "Memuat data presensi...") {
+         // Pastikan container lama sembunyi, wrapper tabel tampil
+         loadingStatus.style.display = 'none';
+         tableWrapper.style.display = 'flex';
+         
+         // Sembunyikan footer keterangan saat loading
+         if (keteranganSiaba) keteranganSiaba.style.display = 'none';
 
-            const bottomOffset = footerNoteHeight + (paginationHeight || 50) + 40; 
-            const rowHeight = 38; 
-            
-            const rect = tableWrapper.getBoundingClientRect();
-            const topPosition = rect.top > 0 ? rect.top : (loadingStatus ? loadingStatus.getBoundingClientRect().top : 150);
-            
-            const availableHeight = window.innerHeight - topPosition - bottomOffset; 
+         // Hitung jumlah kolom agar spinner di tengah (Default 6 jika header belum ada)
+         const hasHeader = tableHead.querySelectorAll('th').length > 0;
+         const colCount = hasHeader ? tableHead.querySelectorAll('th').length : 6;
+         
+         const cleanSpinnerHTML = `
+            <div class="spinner-container">
+                <div class="spinner-bar"></div><div class="spinner-bar"></div>
+                <div class="spinner-bar"></div><div class="spinner-bar"></div>
+            </div>
+        `;
 
-            return Math.max(5, Math.floor(availableHeight / rowHeight));
-        } catch (e) {
-            console.error("Error saat menghitung rowsPerPage:", e.message);
-            return 15; 
-        }
-    };
-
-    const setupPagination = () => {
-        const pageCount = Math.ceil(currentFilteredRows.length / rowsPerPage) || 1;
-        
-        if (pageCount <= 1) {
-            paginationContainer.style.display = 'none';
-            return;
-        }
-        
-        paginationContainer.style.display = 'flex';
-        const pageInfo = `<span class="page-info">Halaman ${currentPage} dari ${pageCount}</span>`;
-        const prevBtn = `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="App.changePage_SiabaPresensi(-1)">«</button>`;
-        const nextBtn = `<button class="page-btn" ${currentPage === pageCount ? 'disabled' : ''} onclick="App.changePage_SiabaPresensi(1)">»</button>`;
-        paginationContainer.innerHTML = prevBtn + pageInfo + nextBtn;
-    };
-
-    App.changePage_SiabaPresensi = (direction) => {
-        currentPage += direction;
-        renderTable(); 
-    };
-
-    // 3. Fungsi Render (Dengan Paginasi)
+         // Masukkan spinner ke body tabel
+         tableBody.innerHTML = `
+            <tr class="loading-row">
+                <td colspan="${colCount}" style="padding: 0; height: 300px; background-color: transparent; border: none;">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
+                        ${cleanSpinnerHTML}
+                        <div style="margin-top: 15px; color: #bdc3c7; font-size: 1em; font-weight: 500; letter-spacing: 0.5px;">
+                            ${message}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+    
+    // 4. Fungsi Render Data
     function renderTable() { 
         if (!tableBody) return; 
-        
         tableBody.innerHTML = '';
         
-        rowsPerPage = calculateRowsPerPage(); 
-        const pageCount = Math.ceil(currentFilteredRows.length / rowsPerPage) || 1;
-        currentPage = Math.min(currentPage, pageCount) || 1;
-        const start = (currentPage - 1) * rowsPerPage;
-        const paginatedRows = currentFilteredRows.slice(start, start + rowsPerPage);
-        
-        setupPagination(); 
-
-        if (paginatedRows.length === 0) { 
-            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
+        // Data Kosong
+        if (currentFilteredRows.length === 0) { 
+            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding:20px;">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
+            if (keteranganSiaba) keteranganSiaba.style.display = 'none';
             return;
         }
+        
+        // Data Ada: Tampilkan keterangan
+        if (keteranganSiaba) keteranganSiaba.style.display = 'block';
 
         const tpIndex = displayHeaders.indexOf('TP');
         const dayStartIndex = displayHeaders.indexOf('1D');
         const dayEndIndex = displayHeaders.indexOf('31P');
 
-        paginatedRows.forEach((rowData, index) => { 
+        currentFilteredRows.forEach((rowData, index) => { 
             const tr = document.createElement('tr');
-            const rowNumber = (currentPage - 1) * rowsPerPage + index + 1;
+            const rowNumber = index + 1;
             let rowHTML = `<td>${rowNumber}</td>`;
             
             rowData.forEach((cell, cellIndex) => {
@@ -6399,9 +6381,7 @@ function initSiabaDaftarPresensiPage() {
                 let classes = [];
                 const isNumericValuePositive = parseInt(cell, 10) > 0;
 
-                if (backgroundMap[header]) {
-                    classes.push(backgroundMap[header]);
-                }
+                if (backgroundMap[header]) classes.push(backgroundMap[header]);
                 
                 if (dayStartIndex !== -1 && cellIndex >= dayStartIndex && cellIndex <= dayEndIndex) {
                     if (cell === '' || cell === null || cell === undefined) {
@@ -6413,13 +6393,8 @@ function initSiabaDaftarPresensiPage() {
                     }
                 }
 
-                if (cellIndex === tpIndex && isNumericValuePositive) {
-                    classes.push('cell-negative');
-                }
-                
-                if (redFontColumns.includes(header) && isNumericValuePositive) {
-                    classes.push('font-red');
-                }
+                if (cellIndex === tpIndex && isNumericValuePositive) classes.push('cell-negative');
+                if (redFontColumns.includes(header) && isNumericValuePositive) classes.push('font-red');
                 
                 const classString = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
                 const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
@@ -6431,97 +6406,74 @@ function initSiabaDaftarPresensiPage() {
         });
     }
 
-    // 4. Fungsi Fetch Data (Sekarang menyimpan ke currentFilteredRows)
+    // 5. Fungsi Fetch Data (DIPANGGIL SAAT FILTER BERUBAH)
     function fetchData() {
-        if (filterUnitKerja.value === "") {
-            App.showAppModal('error', 'Harap pilih "Unit Kerja" terlebih dahulu.');
-            return;
-        }
-
         const filters = {
             tahun: filterTahun.value,
             bulan: filterBulan.value,
             unitKerja: filterUnitKerja.value 
         };
 
-        loadingStatus.innerHTML = originalSpinnerHTML; 
-        loadingStatus.style.display = 'flex';
-        tableWrapper.style.display = 'none';
-        paginationContainer.style.display = 'none'; 
-        if (keteranganSiaba) keteranganSiaba.style.display = 'none'; 
+        // --- PERBAIKAN: Panggil loader DI SINI agar muncul saat ganti filter ---
+        // Cek apakah ini refresh (header sudah ada) atau load awal
+        const msg = tableHead.querySelectorAll('th').length > 0 ? "Memperbarui data presensi..." : "Memuat data presensi...";
+        showTableLoader(msg);
 
         google.script.run
             .withSuccessHandler(result => {
                 try {
-                    loadingStatus.style.display = 'none'; 
                     if (result.error) {
-                         loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat data: ${result.error}</p>`;
-                         loadingStatus.style.display = 'flex';
+                         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
                          return;
                     }
                     
                     displayHeaders = result.headers;
+                    
+                    // Render Header Ulang (Penting jika jumlah hari/kolom berubah)
                     tableHead.innerHTML = '';
                     const headerRow = document.createElement('tr');
                     headerRow.innerHTML = '<th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('');
                     tableHead.appendChild(headerRow);
                     
                     currentFilteredRows = result.rows; 
-                    currentPage = 1;
-                    
-                    tableWrapper.style.display = 'flex';
-                    if (keteranganSiaba) keteranganSiaba.style.display = 'block'; 
-                    
                     renderTable(); 
 
                 } catch (e) {
                     console.error("Error fatal di withSuccessHandler:", e);
-                    loadingStatus.innerHTML = `<p style='color:red;'>Error JavaScript Klien: ${e.message}</p>`;
-                    loadingStatus.style.display = 'flex';
-                    tableWrapper.style.display = 'none';
+                    tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Error Klien: ${e.message}</td></tr>`;
                 }
             })
             .withFailureHandler(err => {
-                loadingStatus.style.display = 'none'; 
-                loadingStatus.innerHTML = `<p style="color:red;">Gagal menghubungi server: ${err.message}</p>`;
-                loadingStatus.style.display = 'flex';
+                tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Server Error: ${err.message}</td></tr>`;
             })
-            // --- INI ADALAH PERBAIKANNYA ---
-            // Saya lupa meneruskan (filters) di sini.
             .getSiabaPresensiData(filters); 
-            // --- AKHIR PERBAIKAN ---
     }
 
-    // 5. Logika Inisialisasi Halaman (UTAMA)
-    loadingStatus.style.display = 'flex'; 
-    loadingStatus.innerHTML = promptMessageHTML; 
-    tableWrapper.style.display = 'none';
-    paginationContainer.style.display = 'none'; 
-    if (keteranganSiaba) keteranganSiaba.style.display = 'none'; 
+    // 6. Logika Inisialisasi Halaman (UTAMA)
+    // Tampilkan loader awal segera saat halaman dibuka
+    showTableLoader("Menyiapkan data...");
 
     google.script.run
         .withSuccessHandler(options => {
             const now = new Date();
-            const currentYear = now.getFullYear().toString();
-            const currentMonth = now.toLocaleString('id-ID', { month: 'long' });
+            const defaultTahun = now.getFullYear().toString();
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const defaultBulan = monthNames[now.getMonth()];
 
-            populateSelect(filterTahun, options['Tahun'], currentYear);
-            populateSelect(filterBulan, options['Bulan'], currentMonth);
-            populateSelect(filterUnitKerja, options['Unit Kerja'], ""); 
+            populateSelect(filterTahun, options['Tahun'], defaultTahun);
+            populateSelect(filterBulan, options['Bulan'], defaultBulan);
+            populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
 
-            terapkanBtn.addEventListener('click', fetchData);
+            // Tambahkan Event Listeners untuk Auto-Filter
+            filterTahun.addEventListener('change', fetchData);
+            filterBulan.addEventListener('change', fetchData);
+            filterUnitKerja.addEventListener('change', fetchData);
             
-            filterUnitKerja.addEventListener('change', function() {
-                if (filterUnitKerja.value !== "") {
-                    terapkanBtn.disabled = false;
-                } else {
-                    terapkanBtn.disabled = true;
-                }
-            });
+            // Langsung muat data dengan filter default
+            fetchData();
         })
         .withFailureHandler(err => {
-            loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat filter. Error: ${err.message}</p>`;
-            loadingStatus.style.display = 'flex'; 
+            tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal memuat filter: ${err.message}</td></tr>`;
         })
         .getSiabaFilterOptions();
 }
@@ -6531,121 +6483,94 @@ function initSiabaTidakPresensiPage() {
     const filterTahun = document.getElementById('filterTahun');
     const filterBulan = document.getElementById('filterBulan');
     const filterUnitKerja = document.getElementById('filterUnitKerja');
-    const loadingStatus = document.getElementById('loadingStatus');
+    const loadingStatus = document.getElementById('loadingStatus'); // Container lama (akan kita sembunyikan selamanya)
     const tableWrapper = document.getElementById('tableWrapper');
     const table = document.getElementById('tidakPresensiTable'); 
     const tableHead = table.querySelector('thead');
     const tableBody = table.querySelector('tbody');
-    const paginationContainer = document.getElementById('pagination-container');
     
     // Cek Kritis
-    if (!table || !loadingStatus || !tableWrapper || !paginationContainer) { 
+    if (!table || !loadingStatus || !tableWrapper) { 
         console.error("Inisialisasi Siaba Tidak Presensi Gagal: Elemen HTML halaman rusak.");
-        if(loadingStatus) loadingStatus.innerHTML = "<p style='color:red;'>Error Kritis: Elemen HTML halaman rusak.</p>";
         return;
     }
-
-    const originalSpinnerHTML = loadingStatus.innerHTML; 
-    let displayHeaders = [];
     
-    // Variabel Paginasi
+    let displayHeaders = [];
     let currentFilteredRows = []; 
-    let currentPage = 1;
-    let rowsPerPage = 15; 
 
-    // 2. Fungsi Helper
+    // 2. Fungsi Helper (populateSelect)
     function populateSelect(selectElement, options, defaultValue = null) {
         selectElement.innerHTML = '';
         if (selectElement.id === 'filterUnitKerja') {
             selectElement.add(new Option("Semua Unit Kerja", "Semua"));
-        }
+        } 
         options.forEach(opt => {
             selectElement.add(new Option(opt, opt));
         });
-        if (defaultValue && options.includes(defaultValue)) {
+        if (defaultValue && (defaultValue === "Semua" || options.includes(defaultValue))) {
             selectElement.value = defaultValue;
         }
     }
     
-    // Fungsi Paginasi
-    const calculateRowsPerPage = () => {
-        try {
-            const tableContainer = table.closest('.table-container');
-            if (!tableContainer) return 15;
-            
-            const paginationHeight = paginationContainer ? paginationContainer.offsetHeight : 0; 
-            const bottomOffset = (paginationHeight || 50) + 40; 
-            const rowHeight = 38; 
-            
-            // --- PERBAIKAN BUG: Ukur dari 'loadingStatus' jika tabel tersembunyi ---
-            const rect = tableWrapper.getBoundingClientRect();
-            const topPosition = rect.top > 0 ? rect.top : (loadingStatus ? loadingStatus.getBoundingClientRect().top : 150);
-            
-            const availableHeight = window.innerHeight - topPosition - bottomOffset; 
+    // 3. Fungsi Helper Visual: TAMPILKAN LOADER (TRANSPARAN & BERSIH)
+    function showTableLoader(message = "Memuat data...") {
+         // 1. Sembunyikan loader eksternal
+         loadingStatus.style.display = 'none';
+         
+         // 2. Tampilkan wrapper tabel
+         tableWrapper.style.display = 'flex';
 
-            return Math.max(5, Math.floor(availableHeight / rowHeight));
-        } catch (e) {
-            console.error("Error saat menghitung rowsPerPage:", e.message);
-            return 15; 
-        }
-    };
+         // 3. Cek header
+         const hasHeader = tableHead.querySelectorAll('th').length > 0;
+         const colCount = hasHeader ? tableHead.querySelectorAll('th').length : 1;
+         
+         // 4. HTML Spinner
+         const cleanSpinnerHTML = `
+            <div class="spinner-container">
+                <div class="spinner-bar"></div><div class="spinner-bar"></div>
+                <div class="spinner-bar"></div><div class="spinner-bar"></div>
+            </div>
+        `;
 
-    const setupPagination = () => {
-        const pageCount = Math.ceil(currentFilteredRows.length / rowsPerPage) || 1;
-        
-        if (pageCount <= 1) {
-            paginationContainer.style.display = 'none';
-            return;
-        }
-        
-        paginationContainer.style.display = 'flex';
-        const pageInfo = `<span class="page-info">Halaman ${currentPage} dari ${pageCount}</span>`;
-        const prevBtn = `<button class="page-btn" ${currentPage === 1 ? 'disabled' : ''} onclick="App.changePage_SiabaTidakPresensi(-1)">«</button>`;
-        const nextBtn = `<button class="page-btn" ${currentPage === pageCount ? 'disabled' : ''} onclick="App.changePage_SiabaTidakPresensi(1)">»</button>`;
-        paginationContainer.innerHTML = prevBtn + pageInfo + nextBtn;
-    };
-
-    App.changePage_SiabaTidakPresensi = (direction) => {
-        currentPage += direction;
-        renderTable(); 
-    };
-
-    // 3. Fungsi Render (Dengan Paginasi)
+         // 5. Masukkan ke body tabel (BACKGROUND TRANSPARAN)
+         tableBody.innerHTML = `
+            <tr class="loading-row"> 
+                <td colspan="${colCount}" style="padding: 0; height: 300px; background-color: transparent; border: none;">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
+                        ${cleanSpinnerHTML}
+                        <div style="margin-top: 15px; color: #bdc3c7; font-size: 1em; font-weight: 500; letter-spacing: 0.5px;">
+                            ${message}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+    
+    // 4. Fungsi Render Data (Saat Sukses)
     function renderTable() { 
         if (!tableBody) return; 
-        
         tableBody.innerHTML = '';
-        
-        rowsPerPage = calculateRowsPerPage(); 
-        const pageCount = Math.ceil(currentFilteredRows.length / rowsPerPage) || 1;
-        currentPage = Math.min(currentPage, pageCount) || 1;
-        const start = (currentPage - 1) * rowsPerPage;
-        const paginatedRows = currentFilteredRows.slice(start, start + rowsPerPage);
-        
-        setupPagination(); 
 
-        if (paginatedRows.length === 0) { 
-            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
+        if (currentFilteredRows.length === 0) { 
+            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding: 20px;">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
             return;
         }
-
-        paginatedRows.forEach((rowData, index) => { 
+        currentFilteredRows.forEach((rowData, index) => { 
             const tr = document.createElement('tr');
-            const rowNumber = (currentPage - 1) * rowsPerPage + index + 1;
+            const rowNumber = index + 1; 
             let rowHTML = `<td>${rowNumber}</td>`;
-            
             rowData.forEach((cell, cellIndex) => {
                 const classString = ''; 
                 const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
                 rowHTML += `<td${classString}>${cellContent}</td>`;
             });
-
             tr.innerHTML = rowHTML;
             tableBody.appendChild(tr);
         });
     }
 
-    // 4. Fungsi Fetch Data (Otomatis)
+    // 5. Fungsi Fetch Data
     function fetchData() {
         const filters = {
             tahun: filterTahun.value,
@@ -6653,73 +6578,64 @@ function initSiabaTidakPresensiPage() {
             unitKerja: filterUnitKerja.value 
         };
 
-        loadingStatus.innerHTML = originalSpinnerHTML; 
-        loadingStatus.style.display = 'flex';
-        tableWrapper.style.display = 'none';
+        // Panggil Loader Konsisten (Cek apakah ini refresh atau awal)
+        const msg = tableHead.querySelectorAll('th').length > 0 ? "Memperbarui data..." : "Memuat data...";
+        showTableLoader(msg);
         
         google.script.run
             .withSuccessHandler(result => {
                 try {
-                    loadingStatus.style.display = 'none'; 
                     if (result.error) {
-                         loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat data: ${result.error}</p>`;
-                         loadingStatus.style.display = 'flex';
+                         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
                          return;
                     }
                     
                     displayHeaders = result.headers;
+                    
+                    // Render Header Ulang
                     tableHead.innerHTML = '';
                     const headerRow = document.createElement('tr');
                     headerRow.innerHTML = '<th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('');
                     tableHead.appendChild(headerRow);
                     
                     currentFilteredRows = result.rows; 
-                    currentPage = 1;
-                    
-                    tableWrapper.style.display = 'flex';
                     renderTable(); 
-
                 } catch (e) {
                     console.error("Error fatal di withSuccessHandler:", e);
-                    loadingStatus.innerHTML = `<p style='color:red;'>Error JavaScript Klien: ${e.message}</p>`;
-                    loadingStatus.style.display = 'flex';
-                    tableWrapper.style.display = 'none';
                 }
             })
             .withFailureHandler(err => {
-                loadingStatus.style.display = 'none'; 
-                loadingStatus.innerHTML = `<p style="color:red;">Gagal menghubungi server: ${err.message}</p>`;
-                loadingStatus.style.display = 'flex';
+                tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Server Error: ${err.message}</td></tr>`;
             })
             .getSiabaTidakPresensiData(filters); 
     }
 
-    // 5. Logika Inisialisasi Halaman (UTAMA)
-    loadingStatus.style.display = 'flex'; 
-    tableWrapper.style.display = 'none';
+    // 6. Logika Inisialisasi Halaman (UTAMA)
+    
+    // --- LANGKAH 1: Langsung Tampilkan Kotak Tabel dengan Spinner ---
+    showTableLoader("Menyiapkan tabel...");
 
     google.script.run
         .withSuccessHandler(options => {
-            // --- LOGIKA BARU: DEFAULT BULAN INI ---
             const now = new Date();
             const defaultTahun = now.getFullYear().toString();
             const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            const defaultBulan = monthNames[now.getMonth()]; // <-- PERUBAHAN
-            // --- AKHIR PERUBAHAN ---
+            const defaultBulan = monthNames[now.getMonth()]; 
 
             populateSelect(filterTahun, options['Tahun'], defaultTahun);
             populateSelect(filterBulan, options['Bulan'], defaultBulan);
-            populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua Unit Kerja"); 
+            populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
 
+            // Event Listeners
             filterTahun.addEventListener('change', fetchData);
             filterBulan.addEventListener('change', fetchData);
             filterUnitKerja.addEventListener('change', fetchData);
             
+            // --- LANGKAH 2: Lanjut ke Fetch Data (Spinner tidak putus) ---
             fetchData();
         })
         .withFailureHandler(err => {
-            loadingStatus.innerHTML = `<p style="color:red;">Gagal memuat filter. Error: ${err.message}</p>`;
-            loadingStatus.style.display = 'flex'; 
+             tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal inisialisasi: ${err.message}</td></tr>`;
         })
         .getSiabaFilterOptions(); 
 }

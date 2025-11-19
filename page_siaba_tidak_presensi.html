@@ -15,7 +15,7 @@
     <label for="filterUnitKerja">Unit Kerja:</label>
     <select id="filterUnitKerja"></select>
   </div>
-  </div>
+</div>
 
 <main class="table-view-container">
   <div id="loadingStatus" class="loading-container">
@@ -32,7 +32,75 @@
           <tbody></tbody>
         </table>
     </div>
-    <div id="pagination-container" class="pagination-container"></div>
   </div>
   
-</main>
+  </main>
+
+<style>
+  /* 1. Paksa halaman (#main-content) untuk TIDAK scroll (body diam) */
+  #main-content {
+    overflow-y: hidden !important;
+  }
+
+  /* 2. Paksa <main> untuk mengisi sisa ruang */
+  main.table-view-container {
+    flex-grow: 1 !important;
+    min-height: 0 !important; 
+    display: flex !important;
+    flex-direction: column !important;
+  }
+
+  /* 3. Paksa #tableWrapper mengisi sisa ruang di dalam <main> */
+  #tableWrapper {
+    flex-grow: 1 !important;
+    min-height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    /* Tambahan: Margin bawah sedikit agar tidak terlalu mepet layar */
+    margin-bottom: 5px; 
+  }
+
+  /* 4. INTI: Aktifkan scroll di SINI */
+  #tableWrapper .table-container {
+    flex-grow: 1 !important;
+    overflow-y: auto !important; /* Scroll atas-bawah */
+    overflow-x: auto !important; /* Scroll kiri-kanan */
+    
+    /* Kosmetik: Sudut membulat di bawah */
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
+
+  /* 5. PERBAIKAN Z-INDEX (Header Sticky) */
+  #tidakPresensiTable thead tr:first-child th:nth-child(1),
+  #tidakPresensiTable thead tr:first-child th:nth-child(2) {
+    z-index: 7 !important;
+  }
+  
+  /* 6. Format Teks: Rata Kiri untuk Nama & Keterangan */
+  #tidakPresensiTable tbody td:nth-child(2),
+  #tidakPresensiTable tbody td:last-child {
+    text-align: left !important;
+  }
+
+  /* 7. Sembunyikan scrollbar (Opsional, agar lebih bersih) */
+  #tableWrapper .table-container::-webkit-scrollbar {
+    display: none !important; 
+  }
+  #tableWrapper .table-container {
+    scrollbar-width: none !important; 
+    -ms-overflow-style: none !important; 
+  }
+
+  /* 8. Matikan efek hover untuk baris loading/spinner */
+  #tidakPresensiTable tbody tr:hover td:has(.spinner-container) {
+    background-color: transparent !important;
+    cursor: default;
+  }
+  
+  /* Fallback untuk browser lama yang tidak mendukung :has() */
+  #tidakPresensiTable tbody tr.loading-row:hover td {
+    background-color: transparent !important;
+    cursor: default;
+  }
+</style>

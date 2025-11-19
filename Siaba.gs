@@ -217,36 +217,6 @@ function getSiabaFilterOptions() {
   }
 }
 
-// -----------------------------------------------------------------
-// FUNGSI UNTUK "ASN TIDAK PRESENSI" (Biarkan seperti aslinya)
-// -----------------------------------------------------------------
-
-function getSiabaTidakPresensiFilterOptions() {
-  try {
-    const config = SPREADSHEET_CONFIG.SIABA_TIDAK_PRESENSI;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    if (!sheet || sheet.getLastRow() < 2) {
-         throw new Error("Sheet 'Rekap Script' untuk data Tidak Presensi tidak ditemukan atau kosong.");
-    }
-
-    const filterData = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getDisplayValues();
-    const uniqueTahun = [...new Set(filterData.map(row => row[0]))].filter(Boolean).sort().reverse();
-    const uniqueBulan = [...new Set(filterData.map(row => row[1]))].filter(Boolean);
-    const uniqueUnitKerja = [...new Set(filterData.map(row => row[2]))].filter(Boolean).sort();
-    
-    const monthOrder = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-    uniqueBulan.sort((a, b) => monthOrder.indexOf(a) - monthOrder.indexOf(b));
-
-    return {
-      'Tahun': uniqueTahun,
-      'Bulan': uniqueBulan,
-      'Unit Kerja': uniqueUnitKerja
-    };
-  } catch (e) {
-    return handleError('getSiabaTidakPresensiFilterOptions', e);
-  }
-}
-
 function getSiabaTidakPresensiData(filters) {
   try {
     const { tahun, bulan, unitKerja } = filters;
@@ -291,9 +261,36 @@ function getSiabaTidakPresensiData(filters) {
     }
 
     // 6. Terapkan filter 'unitKerja' DAN 'TP > 0'
+    const nipIndex = headers.indexOf('NIP');
+    if (nipIndex === -1) {
+        // Jika kolom NIP tidak ada di "WebData", kita tidak bisa memfilter dengan aman
+        throw new Error(`Header "NIP" tidak ditemukan di sheet "WebData".`);
+    }
+    // --- AKHIR PERBAIKAN BARU ---
+
+    // 7. Terapkan filter 'unitKerja' DAN 'TP > 0' DAN 'NIP valid'
     const filteredRows = dataRows.filter(row => {
+        
+        // --- INI PERBAIKAN BARU ---
+        // Cek 1: Pastikan baris ini punya NIP yang valid
+        const nipString = String(row[nipIndex] || '');
+        
+        // Buang SEMUA karakter non-digit (spasi, petik, huruf, dll.)
+        const nipDigits = nipString.replace(/\D/g, ''); 
+        
+        // NIP valid jika HANYA berisi 18 digit
+        const isNipValid = (nipDigits.length === 18);
+        
+        if (!isNipValid) {
+             // Log ini akan membantu jika masih gagal, dan HANYA log jika BUKAN string kosong
+             if (nipString.trim() !== "") {
+                Logger.log(`Baris data dilewati (NIP tidak valid): ${nipString}`);
+             }
+             return false; // Lewati baris ini (termasuk baris total/kosong)
+        }
+        // --- AKHIR PERBAIKAN BARU ---
+        
         const matchUnitKerja = (unitKerja === "Semua") || (String(row[unitKerjaIndex]) === String(unitKerja));
-        // Filter tambahan: Hanya tampilkan jika "TP" (Jumlah) lebih dari 0
         const matchTP = (parseInt(row[tpIndex], 10) || 0) > 0; 
         
         return matchUnitKerja && matchTP;
@@ -304,9 +301,9 @@ function getSiabaTidakPresensiData(filters) {
         "Nama ASN", 
         "NIP", 
         "Jumlah", 
-        "Lupa Datang", 
-        "Lupa Pulang", 
-        "Tanggal Lupa"
+        "Tidak Datang", 
+        "Tidak Pulang", 
+        "Tanggal Tidak Presensi"
     ];
     
     // 8. Tentukan Header SUMBER (Nama di "WebData")
@@ -330,19 +327,41 @@ function getSiabaTidakPresensiData(filters) {
       headerMap["NAMA ASN"] = headerMap["Nama"]; 
     }
 
-    // 10. Susun Ulang Data (Transformasi)
-    const displayRows = filteredRows.map(row => {
-        const newRow = [];
-        for (const sourceHeader of sourceHeaders) {
-            const indexDiWebData = headerMap[sourceHeader];
-            
-            if (indexDiWebData !== undefined) {
-                newRow.push(row[indexDiWebData]);
-            } else {
-                newRow.push('-'); // Kolom tidak ditemukan di WebData
+    // 10. Susun Ulang Data (Transformasi) - DENGAN TRY...CATCH ANTI-CRASH
+    const displayRows = []; // Buat array kosong baru
+
+    // Dapatkan indeks NAMA ASN untuk logging error
+    let namaIndex = headerMap["NAMA ASN"]; 
+    if (namaIndex === undefined) namaIndex = headerMap["Nama"];
+
+    filteredRows.forEach((row, rowIndex) => {
+        const namaASN = (namaIndex !== undefined) ? row[namaIndex] : `Baris #${rowIndex}`;
+        try {
+            // Coba proses baris ini
+            const newRow = [];
+            for (const sourceHeader of sourceHeaders) { // sourceHeaders = ["NAMA ASN", "NIP", "TP", "LAD", "LAP", "TGL LUPA"]
+                const indexDiWebData = headerMap[sourceHeader];
+                
+                if (indexDiWebData !== undefined) {
+                    const cellValue = row[indexDiWebData];
+                    
+                    // Cek error eksplisit: Google Sheets bisa mengembalikan objek error
+                    if (cellValue instanceof Error) {
+                        newRow.push('#ERROR!'); // Ganti error dengan teks aman
+                    } else {
+                        newRow.push(cellValue); // Salin data sel
+                    }
+                } else {
+                    newRow.push('-'); // Kolom tidak ditemukan di WebData
+                }
             }
+            displayRows.push(newRow); // Tambahkan baris yang berhasil diproses
+        
+        } catch (e) {
+            // Jika ada error saat memproses baris ini,
+            // catat di log server dan lewati baris ini.
+            Logger.log(`Peringatan (getSiabaTidakPresensiData): Gagal memproses data untuk ASN '${namaASN}'. Error: ${e.message}.`);
         }
-        return newRow;
     });
     
     // 11. Logika Sorting (Berdasarkan "Jumlah" (TP) descending, lalu "Nama ASN")
