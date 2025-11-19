@@ -387,3 +387,118 @@ function getSiabaTidakPresensiData(filters) {
     return handleError('getSiabaTidakPresensiData', e);
   }
 }
+
+function getSiabaApelUpacaraData(filters) {
+  try {
+    const { tahun, bulan, unitKerja } = filters;
+    
+    // 1. Cari ID Spreadsheet bulanan
+    const targetSheetId = _findSiabaSpreadsheetId(tahun, bulan);
+    if (!targetSheetId) {
+      return { headers: [], rows: [] }; // Spreadsheet belum ada
+    }
+
+    // 2. Buka Spreadsheet dan Sheet "Draft Rekap Apel"
+    let ss;
+    try {
+      ss = SpreadsheetApp.openById(targetSheetId);
+    } catch (e) {
+      throw new Error(`Gagal membuka Spreadsheet ID: ${targetSheetId}.`);
+    }
+
+    const sheet = ss.getSheetByName("Draft Rekap Apel"); 
+    if (!sheet || sheet.getLastRow() < 2) {
+       // Jika sheet tidak ada, kembalikan kosong
+       return { headers: [], rows: [] };
+    }
+
+    // 3. Ambil data mentah
+    const allData = sheet.getDataRange().getDisplayValues();
+    const headers = allData[0].map(h => String(h).trim()); 
+    const dataRows = allData.slice(1);
+
+    // 4. Cari Indeks Kolom Penting
+    // Cari "Unit Kerja" (bisa bernama "Unit Kerja", "Unit", atau di indeks tertentu)
+    let unitKerjaIndex = headers.indexOf("Unit Kerja");
+    if (unitKerjaIndex === -1) {
+         // Fallback: Coba cari kolom yang isinya mirip unit kerja atau gunakan index 66 (default WebData) 
+         // Namun untuk keamanan, kita coba cari "Nama Unit" atau sejenisnya
+         unitKerjaIndex = headers.findIndex(h => h.toLowerCase().includes("unit kerja"));
+    }
+    
+    // 5. Terapkan Filter Unit Kerja
+    const filteredRows = dataRows.filter(row => {
+        // Jika unitKerjaIndex tidak ketemu, kita loloskan semua (atau bisa throw error)
+        // Asumsi: Jika Unit Kerja "Semua", lolos.
+        if (unitKerja === "Semua") return true;
+        
+        // Jika kolom Unit Kerja ada, cek kecocokan
+        if (unitKerjaIndex !== -1) {
+             return String(row[unitKerjaIndex]) === String(unitKerja);
+        }
+        return true; // Default allow jika kolom tidak ditemukan (hati-hati)
+    });
+
+    // 6. Definisikan Header yang Diinginkan (Target)
+    const dateHeaders = Array.from({length: 31}, (_, i) => String(i + 1)); // "1", "2", ... "31"
+    const desiredHeaders = [
+        "Nama ASN", "NIP", 
+        "HA", "A", "TA", 
+        "HU", "U", "TU", 
+        ...dateHeaders
+    ];
+    
+    // 7. Mapping Header Sumber (Sheet) ke Target
+    const headerMap = {};
+    headers.forEach((headerName, index) => {
+        headerMap[headerName] = index;
+    });
+    // Alias mapping jika nama di sheet berbeda
+    if (!headerMap.hasOwnProperty("Nama ASN") && headerMap.hasOwnProperty("Nama")) headerMap["Nama ASN"] = headerMap["Nama"];
+
+    // 8. Transformasi Data (Anti-Crash)
+    const displayRows = [];
+    
+    // Dapatkan indeks NAMA ASN untuk logging
+    let namaIndex = headerMap["Nama ASN"];
+
+    filteredRows.forEach((row, rowIndex) => {
+        const namaASN = (namaIndex !== undefined) ? row[namaIndex] : `Baris #${rowIndex}`;
+        try {
+            const newRow = [];
+            for (const targetHeader of desiredHeaders) {
+                const sourceIndex = headerMap[targetHeader];
+                
+                if (sourceIndex !== undefined) {
+                    const cellValue = row[sourceIndex];
+                    if (cellValue instanceof Error) {
+                        newRow.push('#ERROR!'); 
+                    } else {
+                        newRow.push(cellValue); 
+                    }
+                } else {
+                    newRow.push('-'); // Kolom tidak ditemukan
+                }
+            }
+            
+            // Filter Tambahan: Hanya masukkan jika Nama ASN ada (Membersihkan baris kosong/total)
+            // Cek kolom ke-0 (Nama ASN)
+            if (newRow[0] && newRow[0] !== '-' && newRow[0].trim() !== '') {
+                 displayRows.push(newRow);
+            }
+            
+        } catch (e) {
+            Logger.log(`Peringatan (getSiabaApelUpacaraData): Gagal baris '${namaASN}'. Error: ${e.message}.`);
+        }
+    });
+    
+    // Sorting: Nama ASN (Ascending)
+    const sortNamaIndex = 0; // Index kolom Nama ASN di desiredHeaders
+    displayRows.sort((a, b) => (a[sortNamaIndex] || "").localeCompare(b[sortNamaIndex] || ""));
+
+    return { headers: desiredHeaders, rows: displayRows };
+
+  } catch (e) {
+    return handleError('getSiabaApelUpacaraData', e);
+  }
+}

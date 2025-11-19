@@ -6640,6 +6640,198 @@ function initSiabaTidakPresensiPage() {
         .getSiabaFilterOptions(); 
 }
 
+function initSiabaApelUpacaraPage() {
+    // 1. Referensi Elemen
+    const filterTahun = document.getElementById('filterTahunApel');
+    const filterBulan = document.getElementById('filterBulanApel');
+    const filterUnitKerja = document.getElementById('filterUnitKerjaApel');
+    const loadingStatus = document.getElementById('loadingStatusApel');
+    const tableWrapper = document.getElementById('tableWrapperApel');
+    const table = document.getElementById('apelUpacaraTable'); 
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+    const keterangan = document.getElementById('keterangan-apel');
+
+    // Cek Kritis
+    if (!table || !loadingStatus || !tableWrapper) {
+        console.error("Inisialisasi Apel Gagal: Elemen tidak ditemukan.");
+        return;
+    }
+    
+    const redFontColumns = ['TA', 'TU'];
+    let displayHeaders = [];
+    let currentFilteredRows = []; 
+
+    // 2. Helper: Populate Select
+    function populateSelect(selectElement, options, defaultValue = null) {
+        selectElement.innerHTML = '';
+        
+        // Tambahkan Opsi "Semua" untuk Unit Kerja
+        if (selectElement.id === 'filterUnitKerjaApel') {
+            selectElement.add(new Option("Semua Unit Kerja", "Semua"));
+        }
+        
+        options.forEach(opt => {
+            selectElement.add(new Option(opt, opt));
+        });
+        
+        // Set Default Value
+        if (defaultValue) {
+            if (options.includes(defaultValue) || (selectElement.id === 'filterUnitKerjaApel' && defaultValue === "Semua")) {
+                selectElement.value = defaultValue;
+            }
+        }
+    }
+    
+    // 3. Helper Visual: IN-TABLE LOADER (Konsisten & Transparan)
+    function showTableLoader(message = "Memuat data...") {
+         // Sembunyikan loader lama, tampilkan wrapper
+         loadingStatus.style.display = 'none';
+         tableWrapper.style.display = 'flex'; 
+         
+         if (keterangan) keterangan.style.display = 'none';
+
+         // Hitung kolom (Default 6 jika header belum ada, agar spinner tidak gepeng)
+         const hasHeader = tableHead.querySelectorAll('th').length > 0;
+         const colCount = hasHeader ? tableHead.querySelectorAll('th').length : 6;
+         
+         const cleanSpinnerHTML = `
+            <div class="spinner-container">
+                <div class="spinner-bar"></div><div class="spinner-bar"></div>
+                <div class="spinner-bar"></div><div class="spinner-bar"></div>
+            </div>
+        `;
+
+         // Inject ke Tabel dengan class 'loading-row'
+         tableBody.innerHTML = `
+            <tr class="loading-row">
+                <td colspan="${colCount}" style="padding: 0; height: 300px; background-color: transparent; border: none;">
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
+                        ${cleanSpinnerHTML}
+                        <div style="margin-top: 15px; color: #bdc3c7; font-size: 1em; font-weight: 500; letter-spacing: 0.5px;">
+                            ${message}
+                        </div>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+    
+    // 4. Fungsi Render Data
+    function renderTable() { 
+        if (!tableBody) return; 
+        tableBody.innerHTML = '';
+        
+        if (currentFilteredRows.length === 0) { 
+            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding:20px;">Tidak ada data ditemukan.</td></tr>`;
+            if (keterangan) keterangan.style.display = 'none';
+            return;
+        }
+        
+        if (keterangan) keterangan.style.display = 'block';
+
+        const dayStartIndex = 8; // Index kolom tanggal "1"
+
+        currentFilteredRows.forEach((rowData, index) => { 
+            const tr = document.createElement('tr');
+            const rowNumber = index + 1;
+            let rowHTML = `<td>${rowNumber}</td>`;
+            
+            rowData.forEach((cell, cellIndex) => {
+                const header = displayHeaders[cellIndex];
+                let classes = [];
+                const isNumericValuePositive = parseInt(cell, 10) > 0;
+
+                if (redFontColumns.includes(header) && isNumericValuePositive) classes.push('font-red');
+                
+                if (cellIndex >= dayStartIndex) {
+                    const val = String(cell).trim();
+                    if (val === 'TA' || val === 'TU') classes.push('cell-bg-red');
+                    else if (val === 'A' || val === 'U') classes.push('cell-bg-green');
+                    else if (val === 'HA' || val === 'HU') classes.push('cell-bg-cream');
+                }
+
+                const classString = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
+                const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
+                rowHTML += `<td${classString}>${cellContent}</td>`;
+            });
+
+            tr.innerHTML = rowHTML;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    // 5. Fungsi Fetch Data (DIPERBAIKI: Tanpa Pengecekan Blokir)
+    function fetchData() {
+        // PERBAIKAN: Hapus pengecekan if (filterUnitKerja.value === "") return;
+        // Karena default unit kerja sekarang adalah "Semua" (tidak kosong).
+        
+        const filters = {
+            tahun: filterTahun.value,
+            bulan: filterBulan.value,
+            unitKerja: filterUnitKerja.value 
+        };
+
+        // PANGGIL LOADER SEGERA DI SINI
+        const msg = tableHead.querySelectorAll('th').length > 0 ? "Memperbarui data..." : "Memuat data...";
+        showTableLoader(msg);
+
+        google.script.run
+            .withSuccessHandler(result => {
+                try {
+                    if (result.error) {
+                         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
+                         return;
+                    }
+                    
+                    displayHeaders = result.headers;
+                    
+                    // Render Header Ulang
+                    tableHead.innerHTML = '';
+                    const headerRow = document.createElement('tr');
+                    headerRow.innerHTML = '<th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('');
+                    tableHead.appendChild(headerRow);
+                    
+                    currentFilteredRows = result.rows; 
+                    renderTable(); 
+
+                } catch (e) {
+                    console.error("Error fatal:", e);
+                    tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Error Klien: ${e.message}</td></tr>`;
+                }
+            })
+            .withFailureHandler(err => {
+                tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Server Error: ${err.message}</td></tr>`;
+            })
+            .getSiabaApelUpacaraData(filters); 
+    }
+
+    // 6. Logika Inisialisasi Halaman
+    showTableLoader("Menyiapkan data...");
+
+    google.script.run
+        .withSuccessHandler(options => {
+            const now = new Date();
+            const defaultTahun = now.getFullYear().toString();
+            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const defaultBulan = monthNames[now.getMonth()];
+
+            populateSelect(filterTahun, options['Tahun'], defaultTahun);
+            populateSelect(filterBulan, options['Bulan'], defaultBulan);
+            populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
+
+            filterTahun.addEventListener('change', fetchData);
+            filterBulan.addEventListener('change', fetchData);
+            filterUnitKerja.addEventListener('change', fetchData);
+            
+            // Langsung muat data
+            fetchData();
+        })
+        .withFailureHandler(err => {
+            tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal memuat filter: ${err.message}</td></tr>`;
+        })
+        .getSiabaFilterOptions(); 
+}
 
 /**
  * ===================================================================
@@ -6698,7 +6890,7 @@ App.pageInitializers = {
     'siaba_panduan': initMenuPage,
     'siaba_daftar_presensi': initSiabaDaftarPresensiPage,
     'siaba_tidak_presensi': initSiabaTidakPresensiPage,
-    'siaba_apel_upacara': initMenuPage,
+    'siaba_apel_upacara': initSiabaApelUpacaraPage,
     'siaba_lupa_presensi': initMenuPage,
     'siaba_salah_presensi': initMenuPage,
     'siaba_perjalanan_dinas': initMenuPage,

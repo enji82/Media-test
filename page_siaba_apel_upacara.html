@@ -1,6 +1,112 @@
 <header>
-  <h2>APEL DAN UPACARA</h2>
+  <h2>REKAP APEL DAN UPACARA</h2>
 </header>
-<main>
-  <p>Konten untuk halaman Apel dan Upacara akan segera ditambahkan.</p>
+
+<div class="filter-container">
+  <div class="filter-group">
+    <label for="filterTahun">Tahun:</label>
+    <select id="filterTahunApel"></select>
+  </div>
+  <div class="filter-group">
+    <label for="filterBulan">Bulan:</label>
+    <select id="filterBulanApel"></select>
+  </div>
+  <div class="filter-group">
+    <label for="filterUnitKerja">Unit Kerja:</label>
+    <select id="filterUnitKerjaApel"></select>
+  </div>
+</div>
+
+<main class="table-view-container">
+  <div id="loadingStatusApel" class="loading-container">
+      <div class="spinner-container">
+        <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+    </div>
+      <p>Memuat data apel, mohon tunggu...</p>
+  </div>
+  
+  <div id="tableWrapperApel" style="display:none;">
+    <div class="table-container">
+        <table id="apelUpacaraTable" class="data-table freeze-pane-table">
+          <thead></thead>
+          <tbody></tbody>
+        </table>
+    </div>
+  </div> 
+  
+  <div class="table-footer-note" id="keterangan-apel" style="line-height: 1.6; display: none; flex-shrink: 0;"> 
+      <strong>Keterangan:</strong><br>
+      HA = Hari Apel, A = Apel, TA = Tidak Apel, HU = Hari Upacara, U = Upacara, TU = Tidak Upacara
+  </div>
 </main>
+
+<style>
+  /* Layout Utama */
+  #main-content { overflow-y: hidden !important; }
+  main.table-view-container { flex-grow: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; }
+
+  /* Wrapper Tabel */
+  #tableWrapperApel { 
+    flex-grow: 1 !important; 
+    min-height: 0 !important; 
+    display: flex !important; 
+    flex-direction: column !important; 
+    margin-bottom: 0; /* Rapat dengan footer */
+  }
+
+  /* Area Scroll */
+  #tableWrapperApel .table-container {
+    flex-grow: 1 !important;
+    overflow-y: auto !important;
+    overflow-x: auto !important;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-bottom: none;
+  }
+  
+  /* Footer Note */
+  .table-footer-note {
+    border-radius: 0 0 10px 10px;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(0, 0, 0, 0.2);
+    margin-top: 0;
+    padding: 10px 15px;
+    font-size: 0.85em;
+  }
+
+  /* Freeze Pane */
+  #apelUpacaraTable thead th { position: sticky; top: 0; z-index: 5 !important; }
+  #apelUpacaraTable thead tr:first-child th:nth-child(1),
+  #apelUpacaraTable thead tr:first-child th:nth-child(2) { z-index: 7 !important; }
+  
+  /* Scrollbar */
+  #tableWrapperApel .table-container::-webkit-scrollbar { display: none !important; }
+  #tableWrapperApel .table-container { scrollbar-width: none !important; -ms-overflow-style: none !important; }
+
+  /* Rata Kiri Nama */
+  #apelUpacaraTable tbody td:nth-child(2) { text-align: left !important; padding-left: 10px; }
+
+  /* === PEWARNAAN KOLOM === */
+  /* Grup 1: Apel (Kolom 4, 5, 6) */
+  #apelUpacaraTable tbody td:nth-child(n+4):nth-child(-n+6) { background-color: rgba(52, 152, 219, 0.1); }
+  /* Grup 2: Upacara (Kolom 7, 8, 9) */
+  #apelUpacaraTable tbody td:nth-child(n+7):nth-child(-n+9) { background-color: rgba(241, 196, 15, 0.1); }
+
+  /* KONDISIONAL FORMAT */
+  .cell-bg-cream  { background-color: rgba(248, 243, 212, 0.15); }
+  .cell-bg-green  { background-color: rgba(46, 204, 113, 0.15); }
+  .cell-bg-red    { background-color: rgba(231, 76, 60, 0.25); }
+  .font-red   { color: #ff5757 !important; font-weight: bold; }
+
+  /* === ANTI HOVER SPINNER === */
+  /* Matikan hover untuk baris loading */
+  #apelUpacaraTable tbody tr:hover td:has(.spinner-container) { background-color: transparent !important; cursor: default; }
+  #apelUpacaraTable tbody tr.loading-row:hover td { background-color: transparent !important; cursor: default; }
+
+  /* Hover Effect Normal */
+  #apelUpacaraTable tbody tr:not(.loading-row):hover td { background-color: rgba(255, 255, 255, 0.15) !important; }
+  
+  /* Hover Kolom Sticky Normal */
+  #apelUpacaraTable tbody tr:not(.loading-row):hover td:nth-child(1),
+  #apelUpacaraTable tbody tr:not(.loading-row):hover td:nth-child(2) { background-color: #2a4152 !important; }
+</style>
