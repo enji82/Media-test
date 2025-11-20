@@ -440,21 +440,38 @@ function getSiabaApelUpacaraData(filters) {
     });
 
     // 6. Definisikan Header yang Diinginkan (Target)
-    const dateHeaders = Array.from({length: 31}, (_, i) => String(i + 1)); // "1", "2", ... "31"
+    const dateHeaders = Array.from({length: 31}, (_, i) => String(i + 1));
     const desiredHeaders = [
         "Nama ASN", "NIP", 
         "HA", "A", "TA", 
         "HU", "U", "TU", 
         ...dateHeaders
     ];
-    
+
     // 7. Mapping Header Sumber (Sheet) ke Target
     const headerMap = {};
     headers.forEach((headerName, index) => {
         headerMap[headerName] = index;
     });
-    // Alias mapping jika nama di sheet berbeda
-    if (!headerMap.hasOwnProperty("Nama ASN") && headerMap.hasOwnProperty("Nama")) headerMap["Nama ASN"] = headerMap["Nama"];
+
+    // === [BARU] PEMETAAN KOLOM KHUSUS ===
+    // Format: "HEADER_DI_TABEL_WEB": "HEADER_DI_SPREADSHEET_SUMBER"
+    const columnAliases = {
+        "Nama ASN": "Nama",       // Alias Nama
+        "HA": "HARI APEL",        // HA -> HARI APEL
+        "A": "APL",               // A -> APL
+        "TA": "TAPL",             // TA -> TAPL
+        "HU": "HARI U",           // HU -> HARI U
+        "U": "U",                 // U -> U (Sama)
+        "TU": "TUPC"              // TU -> TUPC
+    };
+
+    // Terapkan alias: Jika header target tidak ketemu, cari pakai nama aliasnya
+    for (const [targetKey, sourceKey] of Object.entries(columnAliases)) {
+        if (headerMap[targetKey] === undefined && headerMap[sourceKey] !== undefined) {
+            headerMap[targetKey] = headerMap[sourceKey];
+        }
+    }
 
     // 8. Transformasi Data (Anti-Crash)
     const displayRows = [];
@@ -500,5 +517,265 @@ function getSiabaApelUpacaraData(filters) {
 
   } catch (e) {
     return handleError('getSiabaApelUpacaraData', e);
+  }
+}
+
+function getSiabaLupaOptions() {
+  // Cache selama 1 jam karena database pegawai jarang berubah
+  const cacheKey = 'siaba_lupa_options_v1';
+  return getCachedData(cacheKey, function() {
+    try {
+      const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_DB);
+      const sheet = ss.getSheetByName("Database");
+      if (!sheet) throw new Error("Sheet 'Database' tidak ditemukan.");
+
+      // Ambil data dari baris 2 sampai akhir, kolom A(1) s/d C(3)
+      // Kolom A: NIP, B: Nama ASN, C: Unit Kerja
+      const lastRow = sheet.getLastRow();
+      if (lastRow < 2) return [];
+      
+      const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+      
+      // Format data menjadi array of objects agar mudah diolah di client
+      const formattedData = data.map(row => ({
+        nip: String(row[0]).trim(),
+        nama: String(row[1]).trim(),
+        unit: String(row[2]).trim()
+      })).filter(item => item.nama !== "" && item.unit !== "");
+
+      return formattedData;
+
+    } catch (e) {
+      throw new Error(`Gagal mengambil data pegawai: ${e.message}`);
+    }
+  });
+}
+
+/**
+ * Memproses formulir Lupa Presensi
+ */
+function processSiabaLupaForm(formData) {
+  try {
+    // 1. Validasi Folder Utama
+    const folderId = FOLDER_CONFIG.SIABA_LUPA;
+    if (!folderId || folderId === "GANTI_DENGAN_ID_FOLDER_DRIVE_UNTUK_SIMPAN_SURAT") {
+       throw new Error("Folder penyimpanan belum dikonfigurasi (FOLDER_CONFIG.SIABA_LUPA).");
+    }
+
+    const mainFolder = DriveApp.getFolderById(folderId);
+
+    // 2. Tentukan Folder Bulan (Berdasarkan Tanggal Lupa)
+    // formData.Tanggal formatnya "YYYY-MM-DD"
+    const tanggalLupa = new Date(formData.Tanggal);
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    
+    // Nama Folder: "November 2025"
+    const folderName = `${monthNames[tanggalLupa.getMonth()]} ${tanggalLupa.getFullYear()}`;
+    
+    // Cari atau Buat Folder Bulan tersebut (Menggunakan fungsi helper getOrCreateFolder di Code.gs)
+    const targetFolder = getOrCreateFolder(mainFolder, folderName);
+
+    // 3. Siapkan File
+    const fileData = formData.fileData;
+    const decodedData = Utilities.base64Decode(fileData.data);
+    const blob = Utilities.newBlob(decodedData, fileData.mimeType, fileData.fileName);
+    
+    // 4. Format Nama File: <Unit Kerja> <Nama ASN> <Tanggal Lupa Presensi>.pdf
+    // Kita ubah format tanggal di nama file jadi DD-MM-YYYY agar lebih umum (opsional)
+    const tglParts = formData.Tanggal.split('-'); // [YYYY, MM, DD]
+    const tglFormatted = `${tglParts[2]}-${tglParts[1]}-${tglParts[0]}`; // DD-MM-YYYY
+    
+    const newFileName = `${formData['Unit Kerja']} ${formData['Nama ASN']} ${tglFormatted}.pdf`;
+    
+    // 5. Simpan File ke Folder Bulan
+    const file = targetFolder.createFile(blob).setName(newFileName);
+    const fileUrl = file.getUrl();
+
+    // 6. Simpan Data ke Spreadsheet "Data Lupa"
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_DB);
+    let sheet = ss.getSheetByName("Data Lupa");
+    
+    if (!sheet) {
+       sheet = ss.insertSheet("Data Lupa");
+       sheet.appendRow(["Timestamp", "Unit Kerja", "Nama ASN", "NIP", "Tanggal Lupa", "Jenis Presensi", "Jam", "Komulatif", "Link Dokumen"]);
+    }
+
+    const jamLengkap = `${formData.Jam.toString().padStart(2, '0')}:${formData.Menit.toString().padStart(2, '0')}`;
+
+    const newRow = [
+      new Date(),
+      formData['Unit Kerja'],
+      formData['Nama ASN'],
+      "'" + formData.NIP, 
+      formData.Tanggal, // Di database tetap simpan format YYYY-MM-DD agar mudah disortir
+      formData['Jenis Presensi'],
+      jamLengkap,
+      formData.Komulatif,
+      fileUrl
+    ];
+
+    sheet.appendRow(newRow);
+    
+    return "Data Lupa Presensi berhasil disimpan!";
+
+  } catch (e) {
+    return handleError('processSiabaLupaForm', e);
+  }
+}
+
+function getSiabaLupaOptions() {
+  const cacheKey = 'siaba_lupa_options_v1';
+  return getCachedData(cacheKey, function() {
+    try {
+      const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_DB);
+      const sheet = ss.getSheetByName("Database");
+      if (!sheet) throw new Error("Sheet 'Database' tidak ditemukan.");
+
+      const lastRow = sheet.getLastRow();
+      if (lastRow < 2) return [];
+      
+      // Ambil kolom A(NIP), B(Nama), C(Unit Kerja)
+      const data = sheet.getRange(2, 1, lastRow - 1, 3).getValues();
+      
+      return data.map(row => ({
+        nip: String(row[0]).trim(),
+        nama: String(row[1]).trim(),
+        unit: String(row[2]).trim()
+      })).filter(item => item.nama !== "" && item.unit !== "");
+
+    } catch (e) {
+      throw new Error(`Gagal mengambil data pegawai: ${e.message}`);
+    }
+  });
+}
+
+/**
+ * Memproses Upload Surat Pernyataan
+ * Fitur: Auto-Folder Bulan & Rename File
+ */
+function processSiabaLupaForm(formData) {
+  try {
+    const folderId = FOLDER_CONFIG.SIABA_LUPA;
+    if (!folderId) throw new Error("ID Folder SIABA_LUPA belum dikonfigurasi.");
+
+    const mainFolder = DriveApp.getFolderById(folderId);
+
+    // 1. Tentukan Folder Bulan (Contoh: "November 2025")
+    const tanggalLupa = new Date(formData.Tanggal); // Format YYYY-MM-DD
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const folderName = `${monthNames[tanggalLupa.getMonth()]} ${tanggalLupa.getFullYear()}`;
+    
+    // Cari atau Buat Folder Bulan
+    const targetFolder = getOrCreateFolder(mainFolder, folderName);
+
+    // 2. Proses File
+    const fileData = formData.fileData;
+    const decodedData = Utilities.base64Decode(fileData.data);
+    const blob = Utilities.newBlob(decodedData, fileData.mimeType, fileData.fileName);
+    
+    // 3. Rename File: <Unit Kerja> <Nama ASN> <Tanggal>.pdf
+    const tglParts = formData.Tanggal.split('-'); // [YYYY, MM, DD]
+    const tglFile = `${tglParts[2]}-${tglParts[1]}-${tglParts[0]}`; // DD-MM-YYYY
+    const newFileName = `${formData['Unit Kerja']} ${formData['Nama ASN']} ${tglFile}.pdf`;
+    
+    // Simpan ke Drive
+    const file = targetFolder.createFile(blob).setName(newFileName);
+    const fileUrl = file.getUrl();
+
+    // 4. Simpan Data ke Spreadsheet
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_DB);
+    let sheet = ss.getSheetByName("Data Lupa");
+    
+    if (!sheet) {
+       sheet = ss.insertSheet("Data Lupa");
+       sheet.appendRow(["Timestamp", "Unit Kerja", "Nama ASN", "NIP", "Tanggal Lupa", "Jenis Presensi", "Jam", "Komulatif", "Link Dokumen"]);
+    }
+
+    const jamLengkap = `${formData.Jam.toString().padStart(2, '0')}:${formData.Menit.toString().padStart(2, '0')}`;
+
+    const newRow = [
+      new Date(),
+      formData['Unit Kerja'],
+      formData['Nama ASN'],
+      "'" + formData.NIP, 
+      formData.Tanggal,
+      formData['Jenis Presensi'],
+      jamLengkap,
+      formData.Komulatif,
+      fileUrl
+    ];
+
+    sheet.appendRow(newRow);
+    
+    return "Berhasil! Surat pernyataan telah disimpan.";
+
+  } catch (e) {
+    return handleError('processSiabaLupaForm', e);
+  }
+}
+
+function getSiabaCutiData(filters) {
+  try {
+    const { tahun, bulan, unitKerja } = filters;
+    
+    // 1. Cari ID Spreadsheet
+    const targetSheetId = _findSiabaSpreadsheetId(tahun, bulan);
+    if (!targetSheetId) return { headers: [], rows: [] };
+
+    // 2. Buka Data
+    const ss = SpreadsheetApp.openById(targetSheetId);
+    const sheet = ss.getSheetByName("WebData");
+    if (!sheet) return { headers: [], rows: [] };
+
+    const allData = sheet.getDataRange().getDisplayValues();
+    const headers = allData[0].map(h => String(h).trim());
+    const dataRows = allData.slice(1);
+
+    // 3. Mapping Kolom
+    const colMap = {};
+    headers.forEach((h, i) => colMap[h] = i);
+    
+    // Alias Nama
+    if (colMap["NAMA ASN"] === undefined && colMap["Nama"] !== undefined) colMap["NAMA ASN"] = colMap["Nama"];
+    
+    // Indeks Penting
+    const idxUnit = 66; // Asumsi kolom Unit Kerja sama dgn presensi (index 66)
+    const idxCT = colMap['CT'];
+    const idxCS = colMap['CS'];
+    const idxCAP = colMap['CAP'];
+    const idxCM = colMap['CM'];
+
+    // 4. Filter Data (Hanya yang punya nilai Cuti > 0)
+    const filteredRows = dataRows.filter(row => {
+        const matchUnit = (unitKerja === "Semua") || (String(row[idxUnit]) === String(unitKerja));
+        if (!matchUnit) return false;
+        
+        // Cek apakah ada cuti apapun
+        const valCT = parseInt(row[idxCT] || 0, 10);
+        const valCS = parseInt(row[idxCS] || 0, 10);
+        const valCAP = parseInt(row[idxCAP] || 0, 10);
+        const valCM = parseInt(row[idxCM] || 0, 10);
+        
+        return (valCT + valCS + valCAP + valCM) > 0;
+    });
+
+    // 5. Susun Output
+    const outputHeaders = ["Nama ASN", "NIP", "Cuti Tahunan", "Cuti Sakit", "Cuti Alasan Penting", "Cuti Melahirkan"];
+    const outputRows = filteredRows.map(row => [
+        row[colMap["NAMA ASN"]] || '-',
+        row[colMap["NIP"]] || '-',
+        row[idxCT] || '-',
+        row[idxCS] || '-',
+        row[idxCAP] || '-',
+        row[idxCM] || '-'
+    ]);
+    
+    // Sort by Nama
+    outputRows.sort((a, b) => a[0].localeCompare(b[0]));
+
+    return { headers: outputHeaders, rows: outputRows };
+
+  } catch (e) {
+    return handleError('getSiabaCutiData', e);
   }
 }

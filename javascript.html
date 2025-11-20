@@ -6265,217 +6265,126 @@ function initSiabaDaftarPresensiPage() {
     const filterTahun = document.getElementById('filterTahun');
     const filterBulan = document.getElementById('filterBulan');
     const filterUnitKerja = document.getElementById('filterUnitKerja');
-    const loadingStatus = document.getElementById('loadingStatus'); // Container lama
+    
+    // loadingStatus sudah dihapus dari HTML
     const tableWrapper = document.getElementById('tableWrapper');
-    const table = document.getElementById('presensiTable'); 
-    const tableHead = table.querySelector('thead');
-    const tableBody = table.querySelector('tbody');
+    const tableOverlay = document.getElementById('tableOverlayLoader'); // Overlay Spinner
+    const table = document.getElementById('presensiTable');
     const keteranganSiaba = document.getElementById('keterangan-siaba');
 
-    // Cek Kritis
-    if (!table || !loadingStatus || !tableWrapper || !keteranganSiaba) {
-        console.error("Inisialisasi Siaba Presensi Gagal: Elemen HTML halaman rusak.");
-        return;
-    }
-    
-    // Variabel Pewarnaan
-    const backgroundMap = {
-        'HA': 'cell-bg-cream', 'APL': 'cell-bg-cream', 'TAp': 'cell-bg-cream',
-        'HU': 'cell-bg-cream', 'U': 'cell-bg-cream', 'TU': 'cell-bg-cream',
-        'CT': 'cell-bg-green', 'CAP': 'cell-bg-green', 'CS': 'cell-bg-green', 'CM': 'cell-bg-green',
-        'DD': 'cell-bg-blue', 'DL': 'cell-bg-blue',
-        'TA': 'cell-bg-yellow', 'Waktu TA': 'cell-bg-yellow', 'PLA': 'cell-bg-yellow', 'Waktu PLA': 'cell-bg-yellow',
-        'LA': 'cell-bg-purple'
-    };
-    const fontColorMap = {
-        'CT': 'font-green', 'CAP': 'font-green', 'CS': 'font-green', 'CM': 'font-green',
-        'DD': 'font-blue', 'DL': 'font-blue',
-        'DP': 'font-brown'
-    };
+    if (!table || !tableWrapper || !tableOverlay) return;
+
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+
+    // Warna & Format
+    const backgroundMap = { 'HA': 'cell-bg-cream', 'APL': 'cell-bg-cream', 'TAp': 'cell-bg-cream', 'HU': 'cell-bg-cream', 'U': 'cell-bg-cream', 'TU': 'cell-bg-cream', 'CT': 'cell-bg-green', 'CAP': 'cell-bg-green', 'CS': 'cell-bg-green', 'CM': 'cell-bg-green', 'DD': 'cell-bg-blue', 'DL': 'cell-bg-blue', 'TA': 'cell-bg-yellow', 'Waktu TA': 'cell-bg-yellow', 'PLA': 'cell-bg-yellow', 'Waktu PLA': 'cell-bg-yellow', 'LA': 'cell-bg-purple' };
+    const fontColorMap = { 'CT': 'font-green', 'CAP': 'font-green', 'CS': 'font-green', 'CM': 'font-green', 'DD': 'font-blue', 'DL': 'font-blue' };
     const redFontColumns = ['TAp', 'TU', 'TA', 'PLA', 'LA'];
-    
+
     let displayHeaders = [];
-    let currentFilteredRows = []; 
+    let currentFilteredRows = [];
 
-    // 2. Fungsi Helper (populateSelect)
-    function populateSelect(selectElement, options, defaultValue = null) {
-        selectElement.innerHTML = '';
-        
-        // Logika Khusus Unit Kerja: Tambahkan opsi "Semua"
-        if (selectElement.id === 'filterUnitKerja') {
-            selectElement.add(new Option("Semua Unit Kerja", "Semua"));
-        }
-        
-        options.forEach(opt => {
-            selectElement.add(new Option(opt, opt));
-        });
-        
-        // Set Default Value
-        // Kita cek apakah defaultValue ada di options ATAU jika defaultValue adalah "Semua" (untuk Unit Kerja)
-        if (defaultValue && (options.includes(defaultValue) || defaultValue === "Semua")) {
-            selectElement.value = defaultValue;
+    function populateSelect(el, opts, def) {
+        el.innerHTML = '';
+        if (el.id === 'filterUnitKerja') el.add(new Option("Semua Unit Kerja", "Semua"));
+        if(opts) opts.forEach(o => el.add(new Option(o, o)));
+        if (def && (opts.includes(def) || def === "Semua")) el.value = def;
+    }
+
+    // --- KONTROL LOADER ---
+    function toggleLoader(show) {
+        // Karena loadingStatus sudah dihapus, kita hanya mainkan Overlay
+        if (show) {
+            tableOverlay.style.display = 'flex'; // Tampilkan Spinner di atas tabel
+            // Pastikan keterangan sembunyi agar tidak aneh
+            if (keteranganSiaba) keteranganSiaba.style.display = 'none';
+        } else {
+            tableOverlay.style.display = 'none'; // Sembunyikan Spinner
         }
     }
-    
-    // 3. Fungsi Helper Visual: TAMPILKAN SPINNER DI DALAM TABEL
-    function showTableLoader(message = "Memuat data presensi...") {
-         // Pastikan container lama sembunyi, wrapper tabel tampil
-         loadingStatus.style.display = 'none';
-         tableWrapper.style.display = 'flex';
-         
-         // Sembunyikan footer keterangan saat loading
-         if (keteranganSiaba) keteranganSiaba.style.display = 'none';
 
-         // Hitung jumlah kolom agar spinner di tengah (Default 6 jika header belum ada)
-         const hasHeader = tableHead.querySelectorAll('th').length > 0;
-         const colCount = hasHeader ? tableHead.querySelectorAll('th').length : 6;
-         
-         const cleanSpinnerHTML = `
-            <div class="spinner-container">
-                <div class="spinner-bar"></div><div class="spinner-bar"></div>
-                <div class="spinner-bar"></div><div class="spinner-bar"></div>
-            </div>
-        `;
-
-         // Masukkan spinner ke body tabel
-         tableBody.innerHTML = `
-            <tr class="loading-row">
-                <td colspan="${colCount}" style="padding: 0; height: 300px; background-color: transparent; border: none;">
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
-                        ${cleanSpinnerHTML}
-                        <div style="margin-top: 15px; color: #bdc3c7; font-size: 1em; font-weight: 500; letter-spacing: 0.5px;">
-                            ${message}
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }
-    
-    // 4. Fungsi Render Data
-    function renderTable() { 
-        if (!tableBody) return; 
+    function renderTable() {
         tableBody.innerHTML = '';
         
-        // Data Kosong
-        if (currentFilteredRows.length === 0) { 
-            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding:20px;">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
+        // Matikan loader
+        toggleLoader(false);
+
+        if (!currentFilteredRows || currentFilteredRows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding:30px;">Tidak ada data ditemukan.</td></tr>`;
             if (keteranganSiaba) keteranganSiaba.style.display = 'none';
             return;
         }
         
-        // Data Ada: Tampilkan keterangan
         if (keteranganSiaba) keteranganSiaba.style.display = 'block';
-
         const tpIndex = displayHeaders.indexOf('TP');
-        const dayStartIndex = displayHeaders.indexOf('1D');
-        const dayEndIndex = displayHeaders.indexOf('31P');
+        const dayStart = displayHeaders.indexOf('1D');
+        const dayEnd = displayHeaders.indexOf('31P');
 
-        currentFilteredRows.forEach((rowData, index) => { 
+        currentFilteredRows.forEach((row, i) => {
             const tr = document.createElement('tr');
-            const rowNumber = index + 1;
-            let rowHTML = `<td>${rowNumber}</td>`;
-            
-            rowData.forEach((cell, cellIndex) => {
-                const header = displayHeaders[cellIndex];
-                let classes = [];
-                const isNumericValuePositive = parseInt(cell, 10) > 0;
-
-                if (backgroundMap[header]) classes.push(backgroundMap[header]);
-                
-                if (dayStartIndex !== -1 && cellIndex >= dayStartIndex && cellIndex <= dayEndIndex) {
-                    if (cell === '' || cell === null || cell === undefined) {
-                        classes.push('cell-bg-red');
-                    } else if (cell === '-') {
-                        classes.push('cell-bg-gray');
-                    } else if (fontColorMap[cell]) {
-                        classes.push(fontColorMap[cell]);
-                    }
+            let html = `<td>${i + 1}</td>`;
+            row.forEach((cell, idx) => {
+                const header = displayHeaders[idx];
+                let cls = [];
+                const isPos = parseInt(cell, 10) > 0;
+                if (backgroundMap[header]) cls.push(backgroundMap[header]);
+                if (dayStart !== -1 && idx >= dayStart && idx <= dayEnd) {
+                    if (!cell) cls.push('cell-bg-red');
+                    else if (cell === '-') cls.push('cell-bg-gray');
+                    else if (fontColorMap[cell]) cls.push(fontColorMap[cell]);
                 }
-
-                if (cellIndex === tpIndex && isNumericValuePositive) classes.push('cell-negative');
-                if (redFontColumns.includes(header) && isNumericValuePositive) classes.push('font-red');
-                
-                const classString = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
-                const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
-                rowHTML += `<td${classString}>${cellContent}</td>`;
+                if (idx === tpIndex && isPos) cls.push('cell-negative');
+                if (redFontColumns.includes(header) && isPos) cls.push('font-red');
+                html += `<td class="${cls.join(' ')}">${(cell === '' || cell == null || cell === '0') ? '-' : cell}</td>`;
             });
-
-            tr.innerHTML = rowHTML;
+            tr.innerHTML = html;
             tableBody.appendChild(tr);
         });
     }
 
-    // 5. Fungsi Fetch Data (DIPANGGIL SAAT FILTER BERUBAH)
     function fetchData() {
-        const filters = {
-            tahun: filterTahun.value,
-            bulan: filterBulan.value,
-            unitKerja: filterUnitKerja.value 
-        };
+        const filters = { tahun: filterTahun.value, bulan: filterBulan.value, unitKerja: filterUnitKerja.value };
+        
+        // Nyalakan Spinner (untuk awal maupun ganti filter)
+        toggleLoader(true);
 
-        // --- PERBAIKAN: Panggil loader DI SINI agar muncul saat ganti filter ---
-        // Cek apakah ini refresh (header sudah ada) atau load awal
-        const msg = tableHead.querySelectorAll('th').length > 0 ? "Memperbarui data presensi..." : "Memuat data presensi...";
-        showTableLoader(msg);
-
-        google.script.run
-            .withSuccessHandler(result => {
-                try {
-                    if (result.error) {
-                         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
-                         return;
-                    }
-                    
-                    displayHeaders = result.headers;
-                    
-                    // Render Header Ulang (Penting jika jumlah hari/kolom berubah)
-                    tableHead.innerHTML = '';
-                    const headerRow = document.createElement('tr');
-                    headerRow.innerHTML = '<th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('');
-                    tableHead.appendChild(headerRow);
-                    
-                    currentFilteredRows = result.rows; 
-                    renderTable(); 
-
-                } catch (e) {
-                    console.error("Error fatal di withSuccessHandler:", e);
-                    tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Error Klien: ${e.message}</td></tr>`;
+        // Timeout kecil untuk memastikan UI ter-render sebelum network freeze
+        setTimeout(() => {
+            google.script.run.withSuccessHandler(res => {
+                if (res.error) {
+                    tableBody.innerHTML = `<tr><td style="text-align:center; color:red; padding:20px;">Error: ${res.error}</td></tr>`;
+                    toggleLoader(false);
+                    return;
                 }
-            })
-            .withFailureHandler(err => {
-                tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Server Error: ${err.message}</td></tr>`;
-            })
-            .getSiabaPresensiData(filters); 
+                displayHeaders = res.headers || [];
+                if (displayHeaders.length) tableHead.innerHTML = '<tr><th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('') + '</tr>';
+                currentFilteredRows = res.rows || [];
+                renderTable();
+            }).withFailureHandler(err => {
+                tableBody.innerHTML = `<tr><td style="text-align:center; color:red; padding:20px;">Server Error: ${err.message}</td></tr>`;
+                toggleLoader(false);
+            }).getSiabaPresensiData(filters);
+        }, 50);
     }
 
-    // 6. Logika Inisialisasi Halaman (UTAMA)
-    // Tampilkan loader awal segera saat halaman dibuka
-    showTableLoader("Menyiapkan data...");
+    // --- INIT ---
+    // Nyalakan spinner segera saat inisialisasi fungsi
+    toggleLoader(true);
+    
+    google.script.run.withSuccessHandler(opts => {
+        const now = new Date();
+        const mNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+        populateSelect(filterTahun, opts['Tahun'], now.getFullYear().toString());
+        populateSelect(filterBulan, opts['Bulan'], mNames[now.getMonth()]);
+        populateSelect(filterUnitKerja, opts['Unit Kerja'], "Semua");
 
-    google.script.run
-        .withSuccessHandler(options => {
-            const now = new Date();
-            const defaultTahun = now.getFullYear().toString();
-            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            const defaultBulan = monthNames[now.getMonth()];
-
-            populateSelect(filterTahun, options['Tahun'], defaultTahun);
-            populateSelect(filterBulan, options['Bulan'], defaultBulan);
-            populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
-
-            // Tambahkan Event Listeners untuk Auto-Filter
-            filterTahun.addEventListener('change', fetchData);
-            filterBulan.addEventListener('change', fetchData);
-            filterUnitKerja.addEventListener('change', fetchData);
-            
-            // Langsung muat data dengan filter default
-            fetchData();
-        })
-        .withFailureHandler(err => {
-            tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal memuat filter: ${err.message}</td></tr>`;
-        })
-        .getSiabaFilterOptions();
+        [filterTahun, filterBulan, filterUnitKerja].forEach(el => el.addEventListener('change', fetchData));
+        fetchData();
+    }).withFailureHandler(err => {
+        tableBody.innerHTML = `<tr><td style="text-align:center; color:red;">Gagal Init: ${err.message}</td></tr>`;
+        toggleLoader(false);
+    }).getSiabaFilterOptions();
 }
 
 function initSiabaTidakPresensiPage() {
@@ -6483,354 +6392,497 @@ function initSiabaTidakPresensiPage() {
     const filterTahun = document.getElementById('filterTahun');
     const filterBulan = document.getElementById('filterBulan');
     const filterUnitKerja = document.getElementById('filterUnitKerja');
-    const loadingStatus = document.getElementById('loadingStatus'); // Container lama (akan kita sembunyikan selamanya)
+    
     const tableWrapper = document.getElementById('tableWrapper');
+    const tableOverlay = document.getElementById('tableOverlayLoaderTidakPresensi'); 
     const table = document.getElementById('tidakPresensiTable'); 
+    
+    if (!table || !tableWrapper || !tableOverlay) return;
+    
     const tableHead = table.querySelector('thead');
     const tableBody = table.querySelector('tbody');
-    
-    // Cek Kritis
-    if (!table || !loadingStatus || !tableWrapper) { 
-        console.error("Inisialisasi Siaba Tidak Presensi Gagal: Elemen HTML halaman rusak.");
-        return;
-    }
     
     let displayHeaders = [];
     let currentFilteredRows = []; 
 
-    // 2. Fungsi Helper (populateSelect)
-    function populateSelect(selectElement, options, defaultValue = null) {
-        selectElement.innerHTML = '';
-        if (selectElement.id === 'filterUnitKerja') {
-            selectElement.add(new Option("Semua Unit Kerja", "Semua"));
-        } 
-        options.forEach(opt => {
-            selectElement.add(new Option(opt, opt));
-        });
-        if (defaultValue && (defaultValue === "Semua" || options.includes(defaultValue))) {
-            selectElement.value = defaultValue;
+    // Helper: Isi Dropdown & Set Default dengan Robust
+    function populateSelect(el, opts, def) {
+        el.innerHTML = '';
+        
+        // Tambah opsi default khusus Unit Kerja
+        if (el.id === 'filterUnitKerja') {
+            el.add(new Option("Semua Unit Kerja", "Semua"));
+        }
+        
+        if (opts && Array.isArray(opts)) {
+            opts.forEach(o => {
+                // Pastikan nilai string dan bersih dari spasi
+                const val = String(o).trim();
+                el.add(new Option(val, val));
+            });
+        }
+        
+        // Logika Set Default Value
+        if (def) {
+            const defString = String(def).trim();
+            
+            // Coba set value langsung
+            el.value = defString;
+            
+            // Cek apakah berhasil terset? Jika tidak (karena case sensitive atau format beda), cari manual
+            if (el.value !== defString) {
+                for (let i = 0; i < el.options.length; i++) {
+                    if (el.options[i].value.toLowerCase() === defString.toLowerCase()) {
+                        el.selectedIndex = i;
+                        break;
+                    }
+                }
+            }
+        }
+        
+        // Fallback untuk Unit Kerja: Jika "Semua" tidak terpilih, paksa pilih index 0
+        if (el.id === 'filterUnitKerja' && !el.value) {
+            el.selectedIndex = 0;
         }
     }
     
-    // 3. Fungsi Helper Visual: TAMPILKAN LOADER (TRANSPARAN & BERSIH)
-    function showTableLoader(message = "Memuat data...") {
-         // 1. Sembunyikan loader eksternal
-         loadingStatus.style.display = 'none';
-         
-         // 2. Tampilkan wrapper tabel
-         tableWrapper.style.display = 'flex';
-
-         // 3. Cek header
-         const hasHeader = tableHead.querySelectorAll('th').length > 0;
-         const colCount = hasHeader ? tableHead.querySelectorAll('th').length : 1;
-         
-         // 4. HTML Spinner
-         const cleanSpinnerHTML = `
-            <div class="spinner-container">
-                <div class="spinner-bar"></div><div class="spinner-bar"></div>
-                <div class="spinner-bar"></div><div class="spinner-bar"></div>
-            </div>
-        `;
-
-         // 5. Masukkan ke body tabel (BACKGROUND TRANSPARAN)
-         tableBody.innerHTML = `
-            <tr class="loading-row"> 
-                <td colspan="${colCount}" style="padding: 0; height: 300px; background-color: transparent; border: none;">
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
-                        ${cleanSpinnerHTML}
-                        <div style="margin-top: 15px; color: #bdc3c7; font-size: 1em; font-weight: 500; letter-spacing: 0.5px;">
-                            ${message}
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        `;
+    // --- KONTROL LOADER (Overlay Only) ---
+    function toggleLoader(show) {
+        if (show) {
+            tableWrapper.style.display = 'flex';
+            tableOverlay.style.display = 'flex';
+        } else {
+            tableOverlay.style.display = 'none';
+        }
     }
     
-    // 4. Fungsi Render Data (Saat Sukses)
     function renderTable() { 
-        if (!tableBody) return; 
         tableBody.innerHTML = '';
+        toggleLoader(false); // Matikan spinner
 
-        if (currentFilteredRows.length === 0) { 
+        if (!currentFilteredRows || currentFilteredRows.length === 0) { 
             tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding: 20px;">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
             return;
         }
+
         currentFilteredRows.forEach((rowData, index) => { 
             const tr = document.createElement('tr');
             const rowNumber = index + 1; 
             let rowHTML = `<td>${rowNumber}</td>`;
             rowData.forEach((cell, cellIndex) => {
-                const classString = ''; 
                 const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
-                rowHTML += `<td${classString}>${cellContent}</td>`;
+                rowHTML += `<td>${cellContent}</td>`;
             });
             tr.innerHTML = rowHTML;
             tableBody.appendChild(tr);
         });
     }
 
-    // 5. Fungsi Fetch Data
     function fetchData() {
-        const filters = {
-            tahun: filterTahun.value,
-            bulan: filterBulan.value,
-            unitKerja: filterUnitKerja.value 
-        };
+        // Ambil nilai LANGSUNG dari DOM saat fungsi dijalankan (Live Value)
+        const valTahun = document.getElementById('filterTahun').value;
+        const valBulan = document.getElementById('filterBulan').value;
+        const valUnit = document.getElementById('filterUnitKerja').value;
 
-        // Panggil Loader Konsisten (Cek apakah ini refresh atau awal)
-        const msg = tableHead.querySelectorAll('th').length > 0 ? "Memperbarui data..." : "Memuat data...";
-        showTableLoader(msg);
+        const filters = { tahun: valTahun, bulan: valBulan, unitKerja: valUnit };
+
+        // Nyalakan overlay
+        toggleLoader(true);
         
-        google.script.run
-            .withSuccessHandler(result => {
-                try {
-                    if (result.error) {
-                         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
-                         return;
-                    }
-                    
-                    displayHeaders = result.headers;
-                    
-                    // Render Header Ulang
-                    tableHead.innerHTML = '';
-                    const headerRow = document.createElement('tr');
-                    headerRow.innerHTML = '<th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('');
-                    tableHead.appendChild(headerRow);
-                    
-                    currentFilteredRows = result.rows; 
-                    renderTable(); 
-                } catch (e) {
-                    console.error("Error fatal di withSuccessHandler:", e);
+        // Timeout kecil untuk rendering UI
+        setTimeout(() => {
+            google.script.run.withSuccessHandler(result => {
+                if (result.error) {
+                     tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
+                     toggleLoader(false);
+                     return;
                 }
+                
+                displayHeaders = result.headers;
+                if (displayHeaders.length) tableHead.innerHTML = '<tr><th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('') + '</tr>';
+                currentFilteredRows = result.rows; 
+                renderTable(); 
             })
             .withFailureHandler(err => {
                 tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Server Error: ${err.message}</td></tr>`;
+                toggleLoader(false);
             })
-            .getSiabaTidakPresensiData(filters); 
+            .getSiabaTidakPresensiData(filters);
+        }, 50);
     }
 
-    // 6. Logika Inisialisasi Halaman (UTAMA)
-    
-    // --- LANGKAH 1: Langsung Tampilkan Kotak Tabel dengan Spinner ---
-    showTableLoader("Menyiapkan tabel...");
+    // --- INIT AWAL ---
+    toggleLoader(true); // Tampilkan spinner segera
 
-    google.script.run
-        .withSuccessHandler(options => {
-            const now = new Date();
-            const defaultTahun = now.getFullYear().toString();
-            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            const defaultBulan = monthNames[now.getMonth()]; 
+    google.script.run.withSuccessHandler(options => {
+        const now = new Date();
+        const mNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
 
-            populateSelect(filterTahun, options['Tahun'], defaultTahun);
-            populateSelect(filterBulan, options['Bulan'], defaultBulan);
-            populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
+        // Hitung Default (Tahun Ini & Bulan Ini)
+        const currentYear = now.getFullYear().toString();
+        const currentMonth = mNames[now.getMonth()];
 
-            // Event Listeners
-            filterTahun.addEventListener('change', fetchData);
-            filterBulan.addEventListener('change', fetchData);
-            filterUnitKerja.addEventListener('change', fetchData);
-            
-            // --- LANGKAH 2: Lanjut ke Fetch Data (Spinner tidak putus) ---
-            fetchData();
-        })
-        .withFailureHandler(err => {
-             tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal inisialisasi: ${err.message}</td></tr>`;
-        })
-        .getSiabaFilterOptions(); 
+        // Isi Dropdown dengan Default Value
+        populateSelect(filterTahun, options['Tahun'], currentYear);
+        populateSelect(filterBulan, options['Bulan'], currentMonth);
+        populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
+
+        // Pasang Event Listener (Langsung, tanpa cloneNode)
+        // Karena App.loadPage sudah mereset DOM, kita tidak perlu khawatir duplikasi listener
+        filterTahun.addEventListener('change', fetchData);
+        filterBulan.addEventListener('change', fetchData);
+        filterUnitKerja.addEventListener('change', fetchData);
+        
+        // Panggil data pertama kali
+        fetchData();
+
+    }).withFailureHandler(err => {
+         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal inisialisasi filter: ${err.message}</td></tr>`;
+         toggleLoader(false);
+    }).getSiabaFilterOptions(); 
 }
 
 function initSiabaApelUpacaraPage() {
-    // 1. Referensi Elemen
+    // 1. Referensi Elemen (Perhatikan ID khusus '...Apel')
     const filterTahun = document.getElementById('filterTahunApel');
     const filterBulan = document.getElementById('filterBulanApel');
     const filterUnitKerja = document.getElementById('filterUnitKerjaApel');
-    const loadingStatus = document.getElementById('loadingStatusApel');
+    
     const tableWrapper = document.getElementById('tableWrapperApel');
+    const tableOverlay = document.getElementById('tableOverlayLoaderApel'); 
     const table = document.getElementById('apelUpacaraTable'); 
-    const tableHead = table.querySelector('thead');
-    const tableBody = table.querySelector('tbody');
     const keterangan = document.getElementById('keterangan-apel');
 
-    // Cek Kritis
-    if (!table || !loadingStatus || !tableWrapper) {
-        console.error("Inisialisasi Apel Gagal: Elemen tidak ditemukan.");
-        return;
-    }
+    if (!table || !tableWrapper || !tableOverlay) return;
     
-    const redFontColumns = ['TA', 'TU'];
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+
     let displayHeaders = [];
     let currentFilteredRows = []; 
+    const redFontColumns = ['TA', 'TU'];
 
-    // 2. Helper: Populate Select
-    function populateSelect(selectElement, options, defaultValue = null) {
-        selectElement.innerHTML = '';
+    // Helper: Populate & Default
+    function populateSelect(el, opts, def) {
+        el.innerHTML = '';
+        if (el.id === 'filterUnitKerjaApel') el.add(new Option("Semua Unit Kerja", "Semua"));
+        if(opts) opts.forEach(o => el.add(new Option(o, o)));
         
-        // Tambahkan Opsi "Semua" untuk Unit Kerja
-        if (selectElement.id === 'filterUnitKerjaApel') {
-            selectElement.add(new Option("Semua Unit Kerja", "Semua"));
-        }
-        
-        options.forEach(opt => {
-            selectElement.add(new Option(opt, opt));
-        });
-        
-        // Set Default Value
-        if (defaultValue) {
-            if (options.includes(defaultValue) || (selectElement.id === 'filterUnitKerjaApel' && defaultValue === "Semua")) {
-                selectElement.value = defaultValue;
-            }
+        if (def) {
+             let exists = false;
+             for (let i = 0; i < el.options.length; i++) {
+                 if (el.options[i].value == def) {
+                     el.selectedIndex = i;
+                     exists = true;
+                     break;
+                 }
+             }
         }
     }
     
-    // 3. Helper Visual: IN-TABLE LOADER (Konsisten & Transparan)
-    function showTableLoader(message = "Memuat data...") {
-         // Sembunyikan loader lama, tampilkan wrapper
-         loadingStatus.style.display = 'none';
-         tableWrapper.style.display = 'flex'; 
-         
-         if (keterangan) keterangan.style.display = 'none';
-
-         // Hitung kolom (Default 6 jika header belum ada, agar spinner tidak gepeng)
-         const hasHeader = tableHead.querySelectorAll('th').length > 0;
-         const colCount = hasHeader ? tableHead.querySelectorAll('th').length : 6;
-         
-         const cleanSpinnerHTML = `
-            <div class="spinner-container">
-                <div class="spinner-bar"></div><div class="spinner-bar"></div>
-                <div class="spinner-bar"></div><div class="spinner-bar"></div>
-            </div>
-        `;
-
-         // Inject ke Tabel dengan class 'loading-row'
-         tableBody.innerHTML = `
-            <tr class="loading-row">
-                <td colspan="${colCount}" style="padding: 0; height: 300px; background-color: transparent; border: none;">
-                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; width: 100%;">
-                        ${cleanSpinnerHTML}
-                        <div style="margin-top: 15px; color: #bdc3c7; font-size: 1em; font-weight: 500; letter-spacing: 0.5px;">
-                            ${message}
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        `;
+    // --- KONTROL LOADER (Overlay) ---
+    function toggleLoader(show) {
+        if (show) {
+            tableWrapper.style.display = 'flex';
+            tableOverlay.style.display = 'flex';
+            if(keterangan) keterangan.style.display = 'none';
+        } else {
+            tableOverlay.style.display = 'none';
+        }
     }
     
-    // 4. Fungsi Render Data
     function renderTable() { 
-        if (!tableBody) return; 
         tableBody.innerHTML = '';
-        
+        toggleLoader(false);
+
         if (currentFilteredRows.length === 0) { 
-            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding:20px;">Tidak ada data ditemukan.</td></tr>`;
-            if (keterangan) keterangan.style.display = 'none';
+            tableBody.innerHTML = `<tr><td colspan="${displayHeaders.length + 1}" style="text-align:center; padding: 20px;">Tidak ada data ditemukan untuk filter ini.</td></tr>`;
             return;
         }
         
-        if (keterangan) keterangan.style.display = 'block';
+        if(keterangan) keterangan.style.display = 'block';
 
-        const dayStartIndex = 8; // Index kolom tanggal "1"
+        // Indeks Kolom Tanggal (Mulai dari kolom ke-9, index 8)
+        // Headers: [Nama, NIP, HA, A, TA, HU, U, TU, 1, 2, ... 31]
+        const dayStartIndex = 8; 
 
         currentFilteredRows.forEach((rowData, index) => { 
             const tr = document.createElement('tr');
-            const rowNumber = index + 1;
+            const rowNumber = index + 1; 
             let rowHTML = `<td>${rowNumber}</td>`;
             
             rowData.forEach((cell, cellIndex) => {
                 const header = displayHeaders[cellIndex];
                 let classes = [];
-                const isNumericValuePositive = parseInt(cell, 10) > 0;
+                const cellStr = String(cell).trim();
+                const isPositive = parseInt(cell, 10) > 0;
 
-                if (redFontColumns.includes(header) && isNumericValuePositive) classes.push('font-red');
-                
+                // 1. Highlight Angka Merah di Kolom Ringkasan (TA, TU)
+                if (redFontColumns.includes(header) && isPositive) {
+                    classes.push('font-red');
+                }
+
+                // 2. Warna Background di Kolom Tanggal
                 if (cellIndex >= dayStartIndex) {
-                    const val = String(cell).trim();
-                    if (val === 'TA' || val === 'TU') classes.push('cell-bg-red');
-                    else if (val === 'A' || val === 'U') classes.push('cell-bg-green');
-                    else if (val === 'HA' || val === 'HU') classes.push('cell-bg-cream');
+                    if (cellStr === 'TA' || cellStr === 'TU') classes.push('cell-bg-red');
+                    else if (cellStr === 'A' || cellStr === 'U') classes.push('cell-bg-green');
+                    else if (cellStr === 'HA' || cellStr === 'HU') classes.push('cell-bg-cream');
                 }
 
                 const classString = classes.length > 0 ? ` class="${classes.join(' ')}"` : '';
                 const cellContent = (cell === '' || cell === null || cell === undefined || cell === '0') ? '-' : cell;
+                
                 rowHTML += `<td${classString}>${cellContent}</td>`;
             });
-
             tr.innerHTML = rowHTML;
             tableBody.appendChild(tr);
         });
     }
 
-    // 5. Fungsi Fetch Data (DIPERBAIKI: Tanpa Pengecekan Blokir)
     function fetchData() {
-        // PERBAIKAN: Hapus pengecekan if (filterUnitKerja.value === "") return;
-        // Karena default unit kerja sekarang adalah "Semua" (tidak kosong).
+        // Ambil Live Value
+        const valTahun = document.getElementById('filterTahunApel').value;
+        const valBulan = document.getElementById('filterBulanApel').value;
+        const valUnit = document.getElementById('filterUnitKerjaApel').value;
+
+        const filters = { tahun: valTahun, bulan: valBulan, unitKerja: valUnit };
+
+        toggleLoader(true);
         
-        const filters = {
-            tahun: filterTahun.value,
-            bulan: filterBulan.value,
-            unitKerja: filterUnitKerja.value 
-        };
-
-        // PANGGIL LOADER SEGERA DI SINI
-        const msg = tableHead.querySelectorAll('th').length > 0 ? "Memperbarui data..." : "Memuat data...";
-        showTableLoader(msg);
-
-        google.script.run
-            .withSuccessHandler(result => {
-                try {
-                    if (result.error) {
-                         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
-                         return;
-                    }
-                    
-                    displayHeaders = result.headers;
-                    
-                    // Render Header Ulang
-                    tableHead.innerHTML = '';
-                    const headerRow = document.createElement('tr');
-                    headerRow.innerHTML = '<th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('');
-                    tableHead.appendChild(headerRow);
-                    
-                    currentFilteredRows = result.rows; 
-                    renderTable(); 
-
-                } catch (e) {
-                    console.error("Error fatal:", e);
-                    tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Error Klien: ${e.message}</td></tr>`;
+        setTimeout(() => {
+            google.script.run.withSuccessHandler(result => {
+                if (result.error) {
+                     tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal: ${result.error}</td></tr>`;
+                     toggleLoader(false);
+                     return;
                 }
+                
+                displayHeaders = result.headers;
+                if (displayHeaders.length) tableHead.innerHTML = '<tr><th>No.</th>' + displayHeaders.map(h => `<th>${h}</th>`).join('') + '</tr>';
+                currentFilteredRows = result.rows; 
+                renderTable(); 
             })
             .withFailureHandler(err => {
                 tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Server Error: ${err.message}</td></tr>`;
+                toggleLoader(false);
             })
-            .getSiabaApelUpacaraData(filters); 
+            .getSiabaApelUpacaraData(filters);
+        }, 50);
     }
 
-    // 6. Logika Inisialisasi Halaman
-    showTableLoader("Menyiapkan data...");
+    // --- INIT AWAL ---
+    toggleLoader(true);
 
+    google.script.run.withSuccessHandler(options => {
+        const now = new Date();
+        const mNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+
+        populateSelect(filterTahun, options['Tahun'], now.getFullYear().toString());
+        populateSelect(filterBulan, options['Bulan'], mNames[now.getMonth()]);
+        populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
+
+        // Pasang Listener
+        const filters = [filterTahun, filterBulan, filterUnitKerja];
+        filters.forEach(el => {
+             el.addEventListener('change', fetchData);
+        });
+        
+        fetchData();
+
+    }).withFailureHandler(err => {
+         tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal inisialisasi: ${err.message}</td></tr>`;
+         toggleLoader(false);
+    }).getSiabaFilterOptions(); 
+}
+
+function initSiabaLupaUnggahPage() {
+    const form = document.getElementById('lupaPresensiForm');
+    const skeleton = document.getElementById('skeleton-loader');
+    const unitSelect = document.getElementById('unitKerja');
+    const namaSelect = document.getElementById('namaAsn');
+    const nipInput = document.getElementById('nip');
+
+    if (!form) return;
+
+    // Tampilkan Skeleton
+    skeleton.style.display = 'block';
+    form.style.display = 'none';
+
+    // Variabel lokal untuk menyimpan data mentah pegawai
+    let employeeData = [];
+
+    // 1. Ambil Data Pegawai dari Server
     google.script.run
-        .withSuccessHandler(options => {
-            const now = new Date();
-            const defaultTahun = now.getFullYear().toString();
-            const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
-            const defaultBulan = monthNames[now.getMonth()];
+        .withSuccessHandler(data => {
+            employeeData = data;
 
-            populateSelect(filterTahun, options['Tahun'], defaultTahun);
-            populateSelect(filterBulan, options['Bulan'], defaultBulan);
-            populateSelect(filterUnitKerja, options['Unit Kerja'], "Semua"); 
-
-            filterTahun.addEventListener('change', fetchData);
-            filterBulan.addEventListener('change', fetchData);
-            filterUnitKerja.addEventListener('change', fetchData);
+            // Ambil Unit Kerja Unik & Sortir
+            const units = [...new Set(data.map(item => item.unit))].sort();
             
-            // Langsung muat data
-            fetchData();
+            unitSelect.innerHTML = '<option value="" disabled selected>-- Pilih Unit Kerja --</option>';
+            units.forEach(u => unitSelect.add(new Option(u, u)));
+
+            // Sembunyikan Skeleton, Tampilkan Form
+            skeleton.style.display = 'none';
+            form.style.display = 'block';
         })
         .withFailureHandler(err => {
-            tableBody.innerHTML = `<tr><td style="text-align:center; padding:20px; color:red;">Gagal memuat filter: ${err.message}</td></tr>`;
+            skeleton.style.display = 'none';
+            document.getElementById('main-content').innerHTML = `<div class="error-box"><h3>Gagal Memuat Data</h3><p>${err.message}</p></div>`;
         })
-        .getSiabaFilterOptions(); 
+        .getSiabaLupaOptions();
+
+    // 2. Logika Dropdown Bertingkat: Unit Kerja -> Nama ASN
+    unitSelect.addEventListener('change', function() {
+        const selectedUnit = this.value;
+        
+        // Filter nama berdasarkan unit
+        const filteredEmployees = employeeData.filter(item => item.unit === selectedUnit);
+        
+        // Sortir nama
+        filteredEmployees.sort((a, b) => a.nama.localeCompare(b.nama));
+
+        // Isi Dropdown Nama
+        namaSelect.innerHTML = '<option value="" disabled selected>-- Pilih Nama --</option>';
+        filteredEmployees.forEach(emp => {
+            // Simpan NIP di atribut data agar mudah diambil
+            const opt = new Option(emp.nama, emp.nama);
+            opt.dataset.nip = emp.nip; 
+            namaSelect.add(opt);
+        });
+        
+        namaSelect.disabled = false;
+        nipInput.value = ""; // Reset NIP
+    });
+
+    // 3. Logika Autofill: Nama ASN -> NIP
+    namaSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        const nip = selectedOption.dataset.nip;
+        if (nip) {
+            nipInput.value = nip;
+        }
+    });
+
+    // 4. Handle Submit
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submitBtn');
+        const fileInput = document.getElementById('fileSurat');
+        const file = fileInput.files[0];
+        const MAX_SIZE = 100 * 1024; // 100 KB
+
+        // Validasi File
+        if (file.size > MAX_SIZE) {
+            App.showAppModal('error', 'Ukuran file melebihi batas 100 KB. Mohon kompres file PDF Anda.');
+            return;
+        }
+
+        submitBtn.disabled = true;
+        App.showAppModal('loading', 'Mengirim data surat pernyataan...');
+
+        // Siapkan Payload
+        const formData = Object.fromEntries(new FormData(form));
+        
+        // Baca File & Kirim
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            formData.fileData = {
+                fileName: file.name,
+                mimeType: file.type,
+                data: event.target.result.split(',')[1]
+            };
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res && res.error) {
+                        App.showAppModal('error', res.error);
+                        submitBtn.disabled = false;
+                    } else {
+                        App.showAppModal('success', res, 'siaba_lupa_presensi'); // Redirect ke menu utama lupa presensi
+                    }
+                })
+                .withFailureHandler(err => {
+                    App.showAppModal('error', `Gagal mengirim: ${err.message}`);
+                    submitBtn.disabled = false;
+                })
+                .processSiabaLupaForm(formData);
+        };
+        reader.readAsDataURL(file);
+    });
+}
+
+function initSiabaCutiPage() {
+    const filterTahun = document.getElementById('filterTahun');
+    const filterBulan = document.getElementById('filterBulan');
+    const filterUnitKerja = document.getElementById('filterUnitKerja');
+    
+    // Setup Generik menggunakan helper Anda (pastikan helper ini ada di file Anda)
+    // Jika Anda ingin menggunakan pola yang sama persis dengan Presensi agar spinnernya custom:
+    
+    const loadingStatus = document.getElementById('loadingStatus');
+    const tableWrapper = document.getElementById('tableWrapper');
+    const tableBody = document.getElementById('cutiTable').querySelector('tbody');
+    const tableHead = document.getElementById('cutiTable').querySelector('thead');
+
+    function showLoader() {
+        loadingStatus.style.display = 'none';
+        tableWrapper.style.display = 'flex';
+        tableBody.innerHTML = `
+            <tr class="loading-row"><td colspan="6" style="height:200px; text-align:center;">
+                <div class="spinner-container" style="display:inline-flex;"><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div></div>
+                <div style="margin-top:10px; color:#ccc;">Memuat data cuti...</div>
+            </td></tr>`;
+    }
+
+    function fetchData() {
+        const filters = {
+            tahun: filterTahun.value,
+            bulan: filterBulan.value,
+            unitKerja: filterUnitKerja.value
+        };
+        showLoader();
+        google.script.run.withSuccessHandler(res => {
+            if(res.error) { tableBody.innerHTML = `<tr><td colspan="6" style="color:red; text-align:center;">${res.error}</td></tr>`; return; }
+            
+            tableHead.innerHTML = '<tr><th>No.</th>' + res.headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+            tableBody.innerHTML = '';
+            
+            if(res.rows.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="${res.headers.length + 1}" style="text-align:center;">Tidak ada data cuti.</td></tr>`;
+                return;
+            }
+
+            res.rows.forEach((row, idx) => {
+                const tr = document.createElement('tr');
+                let html = `<td>${idx + 1}</td>`;
+                row.forEach((cell, i) => {
+                    // Highlight jika ada angka > 0 (kolom index 2 ke atas adalah jumlah cuti)
+                    const cls = (i >= 2 && parseInt(cell) > 0) ? 'class="bg-cuti"' : '';
+                    html += `<td ${cls}>${cell}</td>`;
+                });
+                tr.innerHTML = html;
+                tableBody.appendChild(tr);
+            });
+        }).getSiabaCutiData(filters);
+    }
+
+    // Init Filters
+    google.script.run.withSuccessHandler(opts => {
+        const now = new Date();
+        // ... (Gunakan logika populateSelect yang sama dengan presensi) ...
+        // Sederhananya:
+        filterTahun.innerHTML = opts['Tahun'].map(t => `<option value="${t}">${t}</option>`).join('');
+        filterTahun.value = now.getFullYear();
+        filterBulan.innerHTML = opts['Bulan'].map(b => `<option value="${b}">${b}</option>`).join('');
+        // Set bulan default...
+        filterUnitKerja.innerHTML = '<option value="Semua">Semua Unit Kerja</option>' + opts['Unit Kerja'].map(u => `<option value="${u}">${u}</option>`).join('');
+        
+        // Listener
+        [filterTahun, filterBulan, filterUnitKerja].forEach(el => el.addEventListener('change', fetchData));
+        fetchData();
+    }).getSiabaFilterOptions();
 }
 
 /**
@@ -6892,9 +6944,13 @@ App.pageInitializers = {
     'siaba_tidak_presensi': initSiabaTidakPresensiPage,
     'siaba_apel_upacara': initSiabaApelUpacaraPage,
     'siaba_lupa_presensi': initMenuPage,
+    'siaba_lupa_unggah': initSiabaLupaUnggahPage, // Placeholder sementara
+    'siaba_lupa_cek': initMenuPage,    // Placeholder sementara
+    'siaba_lupa_rekap': initMenuPage,  // Placeholder sementara
+    'siaba_lupa_unduh': initMenuPage,  // Placeholder sementara
     'siaba_salah_presensi': initMenuPage,
     'siaba_perjalanan_dinas': initMenuPage,
-    'siaba_cuti': initMenuPage,
+    'siaba_cuti': initSiabaCutiPage,
     'siaba_rekap_terlambat': initMenuPage,
     'siaba_rekap_pulang_awal': initMenuPage,
     'siaba_unduh_rekap': initMenuPage,
