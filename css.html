@@ -72,7 +72,7 @@ padding-top: 15px;
 .submenu-icon { transition: transform 0.3s ease; font-size: 0.8em !important; }
 .has-submenu.open > a .submenu-icon { transform: rotate(90deg); }
 .submenu { list-style: none; padding-left: 20px; max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out; }
-.has-submenu.open > .submenu { max-height: 500px; margin-top: 5px; }
+.has-submenu.open > .submenu { max-height: 2000px; margin-top: 5px; }
 .submenu a { padding-left: 22px; font-size: 0.95em; }
 .sidebar-footer { padding: 15px; text-align: center; font-size: 0.8em; color: #bdc3c7; border-top: 1px solid rgba(255, 255, 255, 0.1); flex-shrink: 0; }
 
@@ -1145,49 +1145,26 @@ flex-grow: 1;
   }
 
 /* =================================================================== */
-/* ==================== GAYA ELLIPSIS SIDEBAR ======================== */
+/* ============ 3. CUSTOM SIDEBAR STYLES (REVISI VISUAL) ============= */
 /* =================================================================== */
 
-/* 1. Pastikan Link Menu adalah Flex Container */
-.sidebar-menu a {
-  display: flex;
-  align-items: center;
-  gap: 12px;             /* Jarak antar ikon dan teks */
-  width: 100%;           /* Lebar penuh */
-  padding: 12px 15px;    /* Padding standar */
-  box-sizing: border-box;
-  overflow: hidden;      /* Cegah konten keluar batas */
-  text-decoration: none;
-  color: #e0e0e0;
+/* --- 1. SCROLLBAR HIDDEN (Masalah #1) --- */
+.sidebar-menu {
+  list-style: none;
+  padding: 15px;
+  margin: 0;
+  flex-grow: 1;
+  overflow-y: auto;
+  /* Sembunyikan Scrollbar untuk Firefox */
+  scrollbar-width: none;  
+  /* Sembunyikan Scrollbar untuk IE dan Edge */
+  -ms-overflow-style: none;  
 }
 
-/* 2. Ikon Utama (Kiri): Ukuran Tetap & Tidak Boleh Mengecil */
-.sidebar-menu a > i:first-child {
-  flex-shrink: 0;        /* Dilarang mengecil */
-  width: 20px;           /* Lebar tetap agar rapi */
-  text-align: center;
-  font-size: 1.1em;
+/* Sembunyikan Scrollbar untuk Chrome, Safari, dan Opera */
+.sidebar-menu::-webkit-scrollbar {
+  display: none;
 }
-
-/* 3. Teks Menu (Tengah): Mengisi Sisa Ruang & Terpotong (...) */
-.sidebar-menu a > span {
-  flex-grow: 1;          /* Mengambil sisa ruang kosong */
-  white-space: nowrap;   /* Dilarang turun baris */
-  overflow: hidden;      /* Sembunyikan teks yang kepanjangan */
-  text-overflow: ellipsis; /* Tambahkan '...' di akhir */
-  min-width: 0;          /* Trik Flexbox wajib agar ellipsis berfungsi */
-}
-
-/* 4. Ikon Panah (Kanan): Tidak Boleh Mengecil */
-.sidebar-menu a .submenu-icon {
-  flex-shrink: 0;        /* Dilarang mengecil */
-  margin-left: auto;     /* Dorong ke paling kanan (opsional) */
-  font-size: 0.8em;
-}
-
-/* =================================================================== */
-/* ================= 3. CUSTOM SIDEBAR STYLES (FINAL v2) ============= */
-/* =================================================================== */
 
 /* --- A. LAYOUT ITEM MENU --- */
 .sidebar-menu a {
@@ -1195,7 +1172,6 @@ flex-grow: 1;
   align-items: center;
   gap: 12px;
   width: 100%;
-  /* Padding default (Level 1) */
   padding: 12px 15px; 
   box-sizing: border-box;
   overflow: hidden;
@@ -1203,7 +1179,7 @@ flex-grow: 1;
   color: #e0e0e0;
   transition: background-color 0.2s, color 0.2s, padding-left 0.2s;
   position: relative;
-  border-left: 4px solid transparent; /* Persiapan untuk border aktif */
+  border-left: 4px solid transparent;
 }
 
 /* --- B. TEKS (ELLIPSIS) --- */
@@ -1214,11 +1190,11 @@ flex-grow: 1;
   text-overflow: ellipsis;
   min-width: 0;
   display: block;
-  font-size: 0.95em;
+  /* Ukuran font default Level 1 */
+  font-size: 1em; 
 }
 
 /* --- C. IKON --- */
-/* Ikon Utama (Kiri) - Hanya untuk Menu Utama */
 .sidebar-menu > li > a > i:first-child {
   flex-shrink: 0;
   width: 20px;
@@ -1226,75 +1202,83 @@ flex-grow: 1;
   font-size: 1.1em;
 }
 
-/* Ikon Panah (Kanan) - Wajib Tampil */
 .sidebar-menu a .submenu-icon {
   flex-shrink: 0;
   margin-left: auto;
   font-size: 0.8em;
   transition: transform 0.3s ease;
-  display: block !important; /* PAKSA TAMPIL */
+  display: block !important;
 }
 
-/* Rotasi Panah saat menu terbuka */
 .has-submenu.open > a .submenu-icon {
   transform: rotate(90deg);
 }
 
-
-/* --- D. HIRARKI VISUAL (WARNA & INDENTASI) --- */
+/* --- D. HIRARKI VISUAL (WARNA, INDENTASI, FONT) --- */
 
 /* === LEVEL 1: MENU UTAMA === */
-/* Default: Transparan */
 .sidebar-menu > li > a:hover {
   background-color: rgba(255, 255, 255, 0.1);
 }
-/* Aktif: Biru Terang */
+
+/* Aktif Level 1: Warna Terang (#34495e) */
 .sidebar-menu > li > a.active {
-  background-color: #34495e; /* Warna Dasar Terang */
-  border-left-color: #00c3ff; /* Garis Aksen Neon */
+  background-color: #34495e; 
+  border-left-color: #00c3ff;
   color: #ffffff;
   font-weight: 600;
 }
 
 /* === LEVEL 2: SUBMENU (Anak Pertama) === */
 .sidebar-menu .submenu > li > a {
-  padding-left: 45px; /* Indentasi Masuk */
-  background-color: rgba(0, 0, 0, 0.2); /* Agak Gelap */
-  font-size: 0.9em;
+  /* Masalah #2: Mengurangi indentasi dari 45px ke 35px */
+  padding-left: 15px; 
+  
+  /* Masalah #4: Memperbesar font dari 0.9em ke 0.95em */
+  font-size: 0.95em; 
+  
+  background-color: rgba(0, 0, 0, 0.2);
 }
+
 .sidebar-menu .submenu > li > a:hover {
   background-color: rgba(255, 255, 255, 0.05);
 }
-/* Aktif Level 2 */
+
+/* Masalah #3: Aktif Level 2 (Lebih Gelap dari Level 1 -> #243442) */
 .sidebar-menu .submenu > li > a.active {
-  background-color: #2c3e50; /* Lebih Gelap dari Level 1 */
-  border-left-color: #f1c40f; /* Aksen Kuning/Emas */
+  background-color: #243442; 
+  border-left-color: #f1c40f; /* Aksen Kuning */
   color: #ffffff;
+  font-weight: 500; /* Sedikit lebih tebal */
 }
 
-/* === LEVEL 3: SUB-SUBMENU (Anak Kedua - Lupa Presensi) === */
+/* === LEVEL 3: SUB-SUBMENU (Anak Kedua - Cth: Unggah Surat) === */
 .sidebar-menu .submenu .submenu > li > a {
-  padding-left: 70px; /* Indentasi Lebih Dalam Lagi */
-  background-color: rgba(0, 0, 0, 0.4); /* Paling Gelap */
-  font-size: 0.85em;
+  /* Masalah #2: Mengurangi indentasi drastis dari 70px ke 50px */
+  padding-left: 15px; 
+  
+  /* Masalah #4: Memperbesar font dari 0.85em ke 0.9em */
+  font-size: 0.9em; 
+  
+  background-color: rgba(0, 0, 0, 0.3);
   border-bottom: 1px solid rgba(255, 255, 255, 0.03);
 }
+
 .sidebar-menu .submenu .submenu > li > a:hover {
   background-color: rgba(255, 255, 255, 0.05);
 }
-/* Aktif Level 3 */
+
+/* Masalah #3: Aktif Level 3 (Paling Gelap -> #151d25) */
 .sidebar-menu .submenu .submenu > li > a.active {
-  background-color: #1a252f !important; /* Sangat Gelap */
+  background-color: #151d25 !important; 
   border-left-color: #e74c3c; /* Aksen Merah */
   color: #dbe9f4;
   font-weight: normal;
 }
 
-/* Sembunyikan ikon kiri HANYA pada submenu (Kecuali submenu-icon panah) */
-/* Selektor ini menarget ikon pertama di dalam link submenu */
+/* Sembunyikan ikon kiri pada submenu */
 .sidebar-menu .submenu a > i:not(.submenu-icon) {
   display: none; 
-  
 }
 
 </style>

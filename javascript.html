@@ -20,6 +20,19 @@
     </div>
 </div>
 
+<div id="previewModal" class="modal-overlay">
+    <div class="modal-content" style="width: 90%; max-width: 1000px; height: 85vh; display: flex; flex-direction: column; padding: 0; overflow: hidden; background: #2c3e50;">
+        <div style="padding: 12px 20px; display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.3); border-bottom: 1px solid rgba(255,255,255,0.1);">
+            <h3 style="margin: 0; color: white; font-size: 1.1em;"><i class="fas fa-file-pdf" style="margin-right:8px; color:#e74c3c;"></i>Pratinjau Dokumen</h3>
+            <button onclick="App.closePreview()" style="background: none; border: none; color: #bdc3c7; font-size: 1.5em; cursor: pointer; transition: color 0.2s;">&times;</button>
+        </div>
+        <div style="flex-grow: 1; position: relative; background: #fff;">
+            <iframe id="previewFrame" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+            <div id="previewLoading" style="position: absolute; top:0; left:0; width:100%; height:100%; display:flex; justify-content:center; align-items:center; background:rgba(255,255,255,0.8); color:#333;">Memuat dokumen...</div>
+        </div>
+    </div>
+</div>
+
 <script>
 /**
  * ===================================================================
@@ -29,6 +42,61 @@
  
 // DEKLARASI NAMESPACE UTAMA
 const App = {};
+
+// Helper Validasi Tanggal Dinas
+// Aturan: Mulai >= SPT, Selesai >= Mulai
+function setupDateValidation(idSpt, idMulai, idSelesai) {
+    const elSpt = document.getElementById(idSpt);
+    const elMulai = document.getElementById(idMulai);
+    const elSelesai = document.getElementById(idSelesai);
+
+    if (!elSpt || !elMulai || !elSelesai) return;
+
+    // 1. Saat Tanggal SPT berubah
+    elSpt.addEventListener('change', () => {
+        if (elSpt.value) {
+            // Set batas minimal Tanggal Mulai = Tanggal SPT
+            elMulai.min = elSpt.value;
+            
+            // Jika Tanggal Mulai yang sudah dipilih ternyata lebih kecil, reset
+            if (elMulai.value && elMulai.value < elSpt.value) {
+                elMulai.value = elSpt.value;
+                // Picu event change di Mulai agar Selesai juga menyesuaikan
+                elMulai.dispatchEvent(new Event('change')); 
+            }
+        }
+    });
+
+    // 2. Saat Tanggal Mulai berubah
+    elMulai.addEventListener('change', () => {
+        if (elMulai.value) {
+            // Validasi Mundur: Mulai tidak boleh < SPT
+            if (elSpt.value && elMulai.value < elSpt.value) {
+                App.showAppModal('error', 'Tanggal Mulai tidak boleh sebelum Tanggal SPT.');
+                elMulai.value = elSpt.value;
+            }
+            
+            // Set batas minimal Tanggal Selesai = Tanggal Mulai
+            elSelesai.min = elMulai.value;
+            
+            // Jika Tanggal Selesai yang sudah dipilih lebih kecil, reset
+            if (elSelesai.value && elSelesai.value < elMulai.value) {
+                elSelesai.value = elMulai.value;
+            }
+        }
+    });
+
+    // 3. Saat Tanggal Selesai berubah
+    elSelesai.addEventListener('change', () => {
+        if (elSelesai.value && elMulai.value) {
+            // Validasi: Selesai tidak boleh < Mulai
+            if (elSelesai.value < elMulai.value) {
+                App.showAppModal('error', 'Tanggal Selesai tidak boleh sebelum Tanggal Mulai.');
+                elSelesai.value = elMulai.value;
+            }
+        }
+    });
+}
 
 App.showAppModal = (state, message, redirectPage = null) => {
     const modal = document.getElementById('appModal');
@@ -101,36 +169,34 @@ App.loadPage = (event, pageName, params = {}) => {
 };
 
 App.updateActiveMenu = (pageName) => {
+    // 1. Reset: Hapus semua kelas active dan open
     document.querySelectorAll('.sidebar-menu a').forEach(el => el.classList.remove('active'));
     document.querySelectorAll('.sidebar-menu .has-submenu').forEach(el => el.classList.remove('open'));
 
-    let activeLink = document.querySelector(`.sidebar-menu a[data-page="${pageName}"]`);
-    let startElement = null;
+    // 2. Cari link yang sesuai dengan pageName saat ini
+    const activeLink = document.querySelector(`.sidebar-menu a[data-page="${pageName}"]`);
 
     if (activeLink) {
+        // Tandai link ini sebagai aktif
         activeLink.classList.add('active');
-        startElement = activeLink;
-    } else {
-        const parentPageName = pageName.split('_').slice(0, -1).join('_');
-        const parentLink = document.querySelector(`.sidebar-menu a[data-page-parent="${parentPageName}"]`);
+
+        // 3. Buka semua induk (Parent Menu) dari link ini
+        let parentItem = activeLink.closest('.has-submenu');
         
-        if (parentLink) {
-            parentLink.classList.add('active');
-            parentLink.parentElement.classList.add('open');
-            startElement = parentLink;
-        }
-    }
+        while (parentItem) {
+            // Tambahkan kelas open ke <li> parent
+            parentItem.classList.add('open');
+            
+            // Cari <a> milik parent tersebut (judul menu utama) dan aktifkan warnanya
+            // Kita cari <a> pertama yang merupakan anak langsung dari parentItem
+            const parentLink = parentItem.querySelector('a'); 
+            if (parentLink) {
+                parentLink.classList.add('active');
+            }
 
-    if (!startElement) return;
-
-    let parent = startElement.closest('.has-submenu');
-    while (parent) {
-        parent.classList.add('open');
-        const parentAnchor = parent.querySelector('a[data-page-parent]');
-        if (parentAnchor) {
-            parentAnchor.classList.add('active');
+            // Lanjut naik ke atas (jika ada level 3, dia akan naik ke level 2, lalu level 1)
+            parentItem = parentItem.parentElement.closest('.has-submenu');
         }
-        parent = parent.parentElement.closest('.has-submenu');
     }
 };
 
@@ -344,12 +410,15 @@ App.initializeGenericTablePage = (config) => {
                     const td = document.createElement('td');
                     if (header === 'Dokumen' && String(cellData).startsWith('http')) {
                         td.className = 'view-btn-container';
-                        const link = document.createElement('a');
-                        link.href = cellData;
-                        link.target = '_blank';
-                        link.className = 'action-btn view-btn';
-                        link.innerHTML = '<i class="fas fa-eye"></i> Lihat';
-                        td.appendChild(link);
+                        const btn = document.createElement('button');
+                        btn.className = 'action-btn view-btn';
+                        btn.innerHTML = '<i class="fas fa-eye"></i> Lihat';
+                        // Panggil fungsi preview yang sudah kita buat
+                        btn.onclick = (e) => {
+                            e.preventDefault();
+                            App.showFilePreview(cellData);
+                        };
+                        td.appendChild(btn);
                     } else if (header === 'Aksi') {
                         const rowIndex = row._rowIndex;
                         const source = row._source;
@@ -795,6 +864,14 @@ App.showDeleteConfirmation = (button) => {
                     </div>`;
         deleteFunction = App.processDeletionLapbul;
         reloadPage = 'lapbul_kelola';
+    } else if (rowInfo._source === 'DINAS') { 
+        infoHtml = `<p>Apakah Anda yakin ingin menghapus Data Perjalanan Dinas ini?</p>
+                    <div style="font-weight: bold; margin: 15px 0; background:rgba(0,0,0,0.1); padding: 10px; border-radius: 5px; line-height: 1.5; text-align: left;">
+                       Nama ASN: ${rowInfo['Nama']}<br>
+                       Nomor SPT: ${rowInfo['Nomor SPT'] || '-'}
+                    </div>`;
+        deleteFunction = App.processDeletionDinas; // Fungsi baru yang akan kita buat
+        reloadPage = 'siaba_dinas_cek';
     } else {
         App.showAppModal('error', 'Gagal: Jenis data untuk dihapus tidak teridentifikasi.');
         return;
@@ -929,6 +1006,27 @@ App.processDeletionLapbul = (rowInfo, reloadPage) => {
         .withFailureHandler(error => App.showAppModal('error', error.message))
         .deleteLapbulData(rowInfo._rowIndex, rowInfo._source, deleteCode);
 };
+
+App.processDeletionDinas = (rowInfo, reloadPage) => {
+    const deleteCode = document.getElementById('kodeHapusInput').value;
+    if (!deleteCode) { App.showAppModal('error', 'Kode hapus tidak boleh kosong.'); return; }
+    
+    App.showAppModal('loading', 'Menghapus data...');
+    
+    google.script.run
+        .withSuccessHandler(response => {
+            document.getElementById('deleteModal').classList.remove('show');
+            // Cek error object
+            if (response && response.error) {
+                App.showAppModal('error', response.error);
+            } else {
+                App.showAppModal('success', response, reloadPage);
+            }
+        })
+        .withFailureHandler(error => App.showAppModal('error', error.message))
+        .deleteSiabaDinasData(rowInfo._rowIndex, deleteCode);
+};
+
 // ========================================================
 // ===== AKHIR DARI BLOK FUNGSI HAPUS =====
 // ========================================================
@@ -6771,11 +6869,11 @@ function initSiabaLupaUnggahPage() {
         const submitBtn = document.getElementById('submitBtn');
         const fileInput = document.getElementById('fileSurat');
         const file = fileInput.files[0];
-        const MAX_SIZE = 100 * 1024; // 100 KB
+        const MAX_SIZE = 200 * 1024; // 200 KB
 
         // Validasi File
         if (file.size > MAX_SIZE) {
-            App.showAppModal('error', 'Ukuran file melebihi batas 100 KB. Mohon kompres file PDF Anda.');
+            App.showAppModal('error', 'Ukuran file melebihi batas 200 KB. Mohon kompres file PDF Anda.');
             return;
         }
 
@@ -6800,7 +6898,7 @@ function initSiabaLupaUnggahPage() {
                         App.showAppModal('error', res.error);
                         submitBtn.disabled = false;
                     } else {
-                        App.showAppModal('success', res, 'siaba_lupa_presensi'); // Redirect ke menu utama lupa presensi
+                        App.showAppModal('success', res, 'siaba_lupa_cek'); // Redirect ke menu utama lupa presensi
                     }
                 })
                 .withFailureHandler(err => {
@@ -6811,6 +6909,356 @@ function initSiabaLupaUnggahPage() {
         };
         reader.readAsDataURL(file);
     });
+}
+
+function initSiabaLupaCekPage() {
+    const filterTahun = document.getElementById('filterTahunCek');
+    const filterBulan = document.getElementById('filterBulanCek');
+    const filterUnitKerja = document.getElementById('filterUnitKerjaCek');
+    
+    const tableWrapper = document.getElementById('tableWrapperCek');
+    const tableOverlay = document.getElementById('tableOverlayLoaderCek');
+    const table = document.getElementById('lupaCekTable');
+
+    if (!table || !tableWrapper || !tableOverlay) return;
+
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+
+    function populateSelect(el, opts, def) {
+        if (!el) return;
+        el.innerHTML = '';
+        if (el.id === 'filterUnitKerjaCek') el.add(new Option("Semua Unit Kerja", "Semua"));
+        
+        if (opts && Array.isArray(opts)) {
+            opts.forEach(o => el.add(new Option(o, o)));
+        }
+        
+        if (def) {
+             el.value = def;
+             if (el.value !== def) {
+                 for (let i = 0; i < el.options.length; i++) {
+                     if (el.options[i].value == def) { el.selectedIndex = i; break; }
+                 }
+             }
+        }
+    }
+
+    function toggleLoader(show) {
+        if (show) {
+            if(tableWrapper) tableWrapper.style.display = 'flex';
+            if(tableOverlay) tableOverlay.style.display = 'flex';
+        } else {
+            if(tableOverlay) tableOverlay.style.display = 'none';
+        }
+    }
+
+    function renderTable(headers, rows) {
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '';
+        
+        if (headers && headers.length > 0) {
+             tableHead.innerHTML = '<tr><th>No.</th>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+        }
+
+        if (!rows || rows.length === 0) {
+             const colSpan = (headers && headers.length > 0) ? headers.length + 1 : 1;
+             tableBody.innerHTML = `<tr><td colspan="${colSpan}" style="text-align:center; padding: 30px;">Tidak ada data untuk filter ini.</td></tr>`;
+             return;
+        }
+
+        rows.forEach((rowObj, index) => {
+            const tr = document.createElement('tr');
+            let html = `<td>${index + 1}</td>`;
+            
+            if (headers) {
+                headers.forEach(key => {
+                    let val = rowObj[key];
+                    
+                    // --- LOGIKA STATUS "CEK" (BARU) ---
+                    if (key === 'Cek') {
+                        const statusStr = String(val).trim();
+                        
+                        // 1. Disetujui (✅ atau Diterima)
+                        if (statusStr.includes('✅') || statusStr.toLowerCase() === 'diterima') {
+                            val = '<span class="status-ok"><i class="fas fa-check-circle"></i> Disetujui</span>';
+                        } 
+                        // 2. Ditolak (❌ atau Ditolak)
+                        else if (statusStr.includes('❌') || statusStr.toLowerCase() === 'ditolak') {
+                            val = '<span class="status-tolak"><i class="fas fa-times-circle"></i> Ditolak</span>';
+                        } 
+                        // 3. Kosong / Lainnya -> Diproses
+                        else {
+                            val = '<span class="status-proses"><i class="fas fa-hourglass-half"></i> Diproses</span>';
+                        }
+                    }
+                    // -----------------------------------
+
+                    // Logika Tombol Lihat Dokumen
+                    if (key === 'Dokumen') {
+                        if (val && String(val).startsWith('http')) {
+                            val = `<button class="view-doc-btn" onclick="App.showFilePreview('${val}')" style="cursor:pointer;"><i class="fas fa-eye"></i> Lihat</button>`;
+                        } else {
+                            val = '<span style="color:#aaa;">-</span>';
+                        }
+                    }
+
+                    html += `<td>${val || '-'}</td>`;
+                });
+            }
+            tr.innerHTML = html;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        if(!filterTahun || !filterBulan || !filterUnitKerja) return;
+
+        const filters = {
+            tahun: filterTahun.value,
+            bulan: filterBulan.value,
+            unitKerja: filterUnitKerja.value
+        };
+
+        toggleLoader(true);
+
+        google.script.run
+            .withSuccessHandler(res => {
+                try {
+                    if (res.error) {
+                        tableBody.innerHTML = `<tr><td colspan="12" style="color:red; text-align:center; padding:20px;">Error: ${res.error}</td></tr>`;
+                    } else {
+                        renderTable(res.headers, res.rows);
+                    }
+                } catch (e) {
+                    console.error("Render Error:", e);
+                } finally {
+                    toggleLoader(false);
+                }
+            })
+            .withFailureHandler(err => {
+                tableBody.innerHTML = `<tr><td colspan="12" style="color:red; text-align:center; padding:20px;">Server Error: ${err.message}</td></tr>`;
+                toggleLoader(false);
+            })
+            .getSiabaLupaCekData(filters);
+    }
+
+    // Init
+    toggleLoader(true);
+
+    google.script.run
+        .withSuccessHandler(opts => {
+            try {
+                if (opts.error) throw new Error(opts.error);
+
+                const now = new Date();
+                const mNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+                
+                const curYear = now.getFullYear().toString();
+                const curMonth = mNames[now.getMonth()];
+
+                populateSelect(filterTahun, opts['Tahun'], curYear);
+                populateSelect(filterBulan, opts['Bulan'], curMonth);
+                populateSelect(filterUnitKerja, opts['Unit Kerja'], "Semua");
+
+                [filterTahun, filterBulan, filterUnitKerja].forEach(el => {
+                    if(el) {
+                        el.removeEventListener('change', fetchData);
+                        el.addEventListener('change', fetchData);
+                    }
+                });
+
+                fetchData();
+            } catch (e) {
+                if(App.showAppModal) App.showAppModal('error', 'Gagal init filter: ' + e.message);
+                toggleLoader(false);
+            }
+        })
+        .withFailureHandler(err => {
+             if(App.showAppModal) App.showAppModal('error', 'Gagal memuat filter: ' + err.message);
+             toggleLoader(false);
+        })
+        .getSiabaFilterOptions();
+}
+
+function initSiabaLupaRekapPage() {
+    const filterTahun = document.getElementById('filterTahunRekap');
+    const filterUnit = document.getElementById('filterUnitKerjaRekap');
+    const tableWrapper = document.getElementById('tableWrapperRekap');
+    const tableOverlay = document.getElementById('tableOverlayLoaderRekap');
+    const table = document.getElementById('lupaRekapTable');
+
+    if (!table) return;
+    const tbody = table.querySelector('tbody');
+    const tfoot = table.querySelector('tfoot');
+
+    function toggleLoader(show) {
+        if (show) {
+            tableWrapper.style.display = 'flex';
+            tableOverlay.style.display = 'flex';
+        } else {
+            tableOverlay.style.display = 'none';
+        }
+    }
+
+    // Render Tabel & Hitung Total di Klien
+    function renderTable(rows) {
+        tbody.innerHTML = '';
+        tfoot.innerHTML = '';
+
+        if (!rows || rows.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="16" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>';
+            return;
+        }
+
+        // Array untuk menyimpan total per kolom (Jan-Des + Jumlah) -> 13 kolom
+        const colTotals = new Array(13).fill(0); 
+
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            let html = `<td>${idx + 1}</td>`; // No.
+            
+            // Nama & NIP
+            html += `<td>${row[0]}</td><td>${row[1]}</td>`;
+
+            // Bulan Jan-Des (Index 2-13) + Jumlah (Index 14)
+            for (let i = 2; i <= 14; i++) {
+                const val = parseInt(row[i]) || 0;
+                const displayVal = val === 0 ? '-' : val;
+                
+                // Update Total (untuk footer)
+                colTotals[i - 2] += val; 
+
+                let style = "";
+                
+                // Kolom Jumlah (Index 14) biarkan CSS yang menangani (Font Oranye)
+                if (i === 14) {
+                    style = ""; 
+                } else {
+                    // --- LOGIKA PEWARNAAN BULAN (Jan-Des) ---
+                    if (val === 5) {
+                        // Merah jika nilainya 5 (Peringatan)
+                        style = 'style="font-weight:bold; color:#e74c3c;"'; 
+                    } else if (val > 0) {
+                        // Putih Terang jika ada isinya (selain 5)
+                        style = 'style="font-weight:bold; color:#e0e0e0;"'; 
+                    } else {
+                        // Abu-abu jika kosong/0
+                        style = 'style="color:#888;"';
+                    }
+                }
+                
+                html += `<td ${style}>${displayVal}</td>`;
+            }
+            tr.innerHTML = html;
+            tbody.appendChild(tr);
+        });
+
+        // Render Footer
+        let footerHtml = '<tr>';
+        footerHtml += '<td>-</td><td style="text-align:left;">JUMLAH</td><td>-</td>'; // No, Nama, NIP
+        
+        colTotals.forEach(total => {
+            const displayTotal = total === 0 ? '-' : total;
+            footerHtml += `<td>${displayTotal}</td>`;
+        });
+        footerHtml += '</tr>';
+        tfoot.innerHTML = footerHtml;
+    }
+
+    function fetchData() {
+        const filters = {
+            tahun: filterTahun.value,
+            unitKerja: filterUnit.value
+        };
+        toggleLoader(true);
+        google.script.run
+            .withSuccessHandler(data => {
+                renderTable(data);
+                toggleLoader(false);
+            })
+            .withFailureHandler(err => {
+                tbody.innerHTML = `<tr><td colspan="16" style="color:red; text-align:center;">Error: ${err.message}</td></tr>`;
+                toggleLoader(false);
+            })
+            .getSiabaLupaRekapData(filters);
+    }
+
+    // Init Awal
+    toggleLoader(true);
+    google.script.run
+        .withSuccessHandler(opts => {
+            if (opts.error) {
+                App.showAppModal('error', opts.error);
+                toggleLoader(false);
+                return;
+            }
+
+            // Setup Filter Tahun
+            filterTahun.innerHTML = '';
+            opts.tahun.forEach(t => filterTahun.add(new Option(t, t)));
+            const currentYear = new Date().getFullYear().toString();
+            if (opts.tahun.includes(currentYear)) {
+                filterTahun.value = currentYear;
+            }
+
+            // Setup Filter Unit Kerja
+            filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+            opts.unit.forEach(u => filterUnit.add(new Option(u, u)));
+
+            // Listener
+            filterTahun.addEventListener('change', fetchData);
+            filterUnit.addEventListener('change', fetchData);
+
+            // Load Data
+            fetchData();
+        })
+        .withFailureHandler(err => {
+            App.showAppModal('error', 'Gagal init: ' + err.message);
+            toggleLoader(false);
+        })
+        .getSiabaLupaRekapOptions();
+}
+
+function initSiabaLupaUnduhPage() {
+    // 1. Jalankan animasi masuk untuk tombol menu
+    initMenuPage(); 
+
+    // 2. Ambil elemen tombol dan konten info
+    const btn = document.getElementById('infoBtnSiaba');
+    const content = document.getElementById('infoContentSiaba');
+
+    // 3. Pastikan elemen ada sebelum memanipulasinya
+    if (btn && content) {
+        // Isi teks informasi
+        const infoText = [
+            "Klik tombol di atas untuk mengunduh format Surat Pernyataan Lupa Presensi dalam format Microsoft Word (.docx).",
+            "Isi formulir tersebut, tanda tangani, lalu scan menjadi file PDF (maks. 200 KB) untuk diunggah."
+        ];
+        
+        // Render HTML list
+        content.innerHTML = `<ul style="text-align: left; padding: 15px 20px 15px 35px; line-height: 1.6; margin: 0; color: #e0e0e0;">
+            ${infoText.map(t => `<li>${t}</li>`).join('')}
+        </ul>`;
+
+        // 4. Pasang Event Listener Klik (Manual & Langsung)
+        // Kita gunakan arrow function agar 'this' tidak membingungkan, dan akses elemen langsung lewat variabel
+        btn.onclick = (e) => {
+            e.preventDefault(); // Mencegah perilaku default tombol
+            e.stopPropagation(); // Mencegah event bubbling yang tidak perlu
+            
+            const isActive = btn.classList.toggle('active');
+            
+            // Atur max-height untuk animasi slide
+            if (isActive) {
+                content.style.maxHeight = content.scrollHeight + "px";
+            } else {
+                content.style.maxHeight = "0px";
+            }
+        };
+    } else {
+        console.error("[DEBUG] Gagal menemukan elemen infoBtnSiaba atau infoContentSiaba.");
+    }
 }
 
 function initSiabaCutiPage() {
@@ -6885,12 +7333,1018 @@ function initSiabaCutiPage() {
     }).getSiabaFilterOptions();
 }
 
+function initSiabaSalahPresensiPage() {
+    initMenuPage(); // Aktifkan animasi menu
+
+    const btn = document.getElementById('infoBtnSalahPresensi');
+    const content = document.getElementById('infoContentSalahPresensi');
+
+    if (btn && content) {
+        // Isi konten informasi sesuai permintaan
+        const infoHTML = `
+            <div style="text-align: left; padding: 15px 25px; line-height: 1.6; color: #e0e0e0; font-size: 0.95em;">
+                
+                <strong style="color: #00c3ff; display:block; margin-bottom:5px;">A. Petunjuk Penggunaan</strong>
+                <ul style="margin: 0 0 15px 0; padding-left: 20px;">
+                    <li style="margin-bottom: 8px;">
+                        <strong>Kapan Menu Ini Digunakan?</strong><br>
+                        Gunakan menu ini hanya jika Anda salah memilih menu saat presensi Siaba, contoh: salah memilih menu Presensi Pulang saat datang atau sebaliknya.
+                    </li>
+                    <li style="margin-bottom: 8px;">
+                        <strong>Apa yang Perlu Disiapkan?</strong><br>
+                        Sebelum mengisi formulir, pastikan Anda sudah membuka Histori Presensi di HP Siaba dan catat tanggal serta waktu presensinya yang salah.
+                    </li>
+                    <li>
+                        <strong>Mengapa Ini Penting?</strong><br>
+                        Perbaikan ini akan memastikan data pada rekapitulasi kehadiran bulanan Anda akurat dan sesuai.
+                    </li>
+                </ul>
+
+                <strong style="color: #00c3ff; display:block; margin-bottom:5px;">B. Batas Waktu Pengajuan</strong>
+                <ul style="margin: 0; padding-left: 20px;">
+                    <li>Perbaikan hanya dapat diajukan maksimal <strong style="color: #f1c40f;">30 hari</strong> dari tanggal presensi yang salah. Jika melewati batas waktu, silakan gunakan menu "Lupa Presensi".</li>
+                </ul>
+
+            </div>
+        `;
+
+        content.innerHTML = infoHTML;
+
+        // Event Listener untuk Buka/Tutup
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const isActive = btn.classList.toggle('active');
+            content.style.maxHeight = isActive ? content.scrollHeight + "px" : "0px";
+        };
+    }
+}
+
+function initSiabaSalahFormPage() {
+    const form = document.getElementById('salahPresensiForm');
+    const skeleton = document.getElementById('skeleton-loader');
+    
+    const unitSelect = document.getElementById('unitKerjaSalah');
+    const namaSelect = document.getElementById('namaAsnSalah');
+    const nipInput = document.getElementById('nipSalah');
+
+    if (!form) return;
+
+    // Tampilkan Skeleton
+    if(skeleton) skeleton.style.display = 'block';
+    form.style.display = 'none';
+
+    let employeeData = []; // Store data from server
+
+    // 1. Ambil Data Opsi
+    google.script.run
+        .withSuccessHandler(data => {
+            if (data.error) {
+                if(App.showAppModal) App.showAppModal('error', data.error);
+                return;
+            }
+            
+            employeeData = data;
+
+            // Extract Unique Units
+            const units = [...new Set(data.map(item => item.unit))].sort();
+            
+            unitSelect.innerHTML = '<option value="" disabled selected>-- Pilih Unit Kerja --</option>';
+            units.forEach(u => unitSelect.add(new Option(u, u)));
+
+            // Show Form
+            if(skeleton) skeleton.style.display = 'none';
+            form.style.display = 'block';
+        })
+        .withFailureHandler(err => {
+            if(App.showAppModal) App.showAppModal('error', 'Gagal memuat data pegawai: ' + err.message);
+        })
+        .getSiabaSalahOptions();
+
+    // 2. Logic Unit -> Nama
+    unitSelect.addEventListener('change', function() {
+        const selectedUnit = this.value;
+        const filtered = employeeData.filter(item => item.unit === selectedUnit);
+        
+        // Sort Nama
+        filtered.sort((a, b) => a.nama.localeCompare(b.nama));
+
+        namaSelect.innerHTML = '<option value="" disabled selected>-- Pilih Nama --</option>';
+        filtered.forEach(emp => {
+            const opt = new Option(emp.nama, emp.nama);
+            opt.dataset.nip = emp.nip; // Simpan NIP di atribut
+            namaSelect.add(opt);
+        });
+        
+        namaSelect.disabled = false;
+        nipInput.value = ""; // Reset NIP
+    });
+
+    // 3. Logic Nama -> NIP
+    namaSelect.addEventListener('change', function() {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.dataset.nip) {
+            nipInput.value = selectedOption.dataset.nip;
+        }
+    });
+
+    // 4. Handle Submit
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const btn = document.getElementById('submitBtnSalah');
+        btn.disabled = true;
+        App.showAppModal('loading', 'Mengirim pengajuan...');
+
+        const formData = Object.fromEntries(new FormData(form));
+
+        google.script.run
+            .withSuccessHandler(res => {
+                if (res && res.error) {
+                    App.showAppModal('error', res.error);
+                    btn.disabled = false;
+                } else {
+                    // Redirect ke halaman Cek Perbaikan
+                    App.showAppModal('success', res, 'siaba_salah_cek');
+                }
+            })
+            .withFailureHandler(err => {
+                App.showAppModal('error', 'Gagal mengirim: ' + err.message);
+                btn.disabled = false;
+            })
+            .processSiabaSalahForm(formData);
+    });
+}
+
+function initSiabaSalahCekPage() {
+    const filterTahun = document.getElementById('filterTahunSalah');
+    const filterBulan = document.getElementById('filterBulanSalah');
+    const filterUnit = document.getElementById('filterUnitSalah');
+    
+    const tableWrapper = document.getElementById('tableWrapperSalah');
+    const tableOverlay = document.getElementById('tableOverlayLoaderSalah');
+    const table = document.getElementById('salahCekTable');
+
+    if (!table) return;
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+
+    function toggleLoader(show) {
+        if (show) {
+            tableWrapper.style.display = 'flex';
+            tableOverlay.style.display = 'flex';
+        } else {
+            tableOverlay.style.display = 'none';
+        }
+    }
+
+    function renderTable(headers, rows) {
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        // Render Header
+        if (headers.length > 0) {
+            // Tambahkan kolom No. di awal
+            const headerHtml = '<tr><th>No.</th>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+            tableHead.innerHTML = headerHtml;
+        }
+
+        if (!rows || rows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center; padding:30px;">Tidak ada data untuk filter ini.</td></tr>`;
+            return;
+        }
+
+        rows.forEach((rowObj, idx) => {
+            const tr = document.createElement('tr');
+            let html = `<td>${idx + 1}</td>`; // No.
+
+            headers.forEach(key => {
+                let val = rowObj[key];
+                
+                // Format kolom "Cek" (Status)
+                if (key === 'Cek') {
+                    const statusStr = String(val).trim();
+                    
+                    // 1. Jika ada simbol ✅ atau kata 'Diterima'
+                    if (statusStr.includes('✅') || statusStr.toLowerCase() === 'diterima') {
+                        val = '<span class="status-ok"><i class="fas fa-check-circle"></i> Disetujui</span>';
+                    } 
+                    // 2. Jika ada simbol ❌ atau kata 'Ditolak'
+                    else if (statusStr.includes('❌') || statusStr.toLowerCase() === 'ditolak') {
+                        val = '<span class="status-tolak"><i class="fas fa-times-circle"></i> Ditolak</span>';
+                    } 
+                    // 3. Jika kosong, anggap sedang menunggu
+                    else {
+                        val = '<span class="status-proses"><i class="fas fa-clock"></i> Diproses</span>';
+                    }
+                }
+
+                // Format Tanggal Pengajuan (ambil tanggal saja)
+                if (key === 'Tanggal Pengajuan') {
+                    // Asumsi format timestamp string ISO atau default
+                    if (val && val.length > 10) val = val.substring(0, 10);
+                }
+
+                html += `<td>${val}</td>`;
+            });
+            
+            tr.innerHTML = html;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        const filters = {
+            tahun: filterTahun.value,
+            bulan: filterBulan.value,
+            unitKerja: filterUnit.value
+        };
+        toggleLoader(true);
+        google.script.run
+            .withSuccessHandler(res => {
+                if (res.error) {
+                    tableBody.innerHTML = `<tr><td colspan="10" style="color:red; text-align:center; padding:20px;">Error: ${res.error}</td></tr>`;
+                } else {
+                    renderTable(res.headers, res.rows);
+                }
+                toggleLoader(false);
+            })
+            .withFailureHandler(err => {
+                tableBody.innerHTML = `<tr><td colspan="10" style="color:red; text-align:center;">Server Error: ${err.message}</td></tr>`;
+                toggleLoader(false);
+            })
+            .getSiabaSalahCekData(filters);
+    }
+
+    // Init
+    toggleLoader(true);
+    google.script.run
+        .withSuccessHandler(opts => {
+            if (opts.error) {
+                App.showAppModal('error', opts.error);
+                toggleLoader(false);
+                return;
+            }
+
+            // Setup Filter Defaults
+            const now = new Date();
+            const mNames = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+            const curYear = now.getFullYear().toString();
+            const curMonth = mNames[now.getMonth()];
+
+            // Populate
+            const addOpt = (el, val) => el.add(new Option(val, val));
+            
+            opts.tahun.forEach(t => addOpt(filterTahun, t));
+            opts.bulan.forEach(b => addOpt(filterBulan, b));
+            filterUnit.add(new Option("Semua Unit Kerja", "Semua"));
+            opts.unit.forEach(u => addOpt(filterUnit, u));
+
+            // Set Defaults (Jika ada)
+            if (opts.tahun.includes(curYear)) filterTahun.value = curYear;
+            if (opts.bulan.includes(curMonth)) filterBulan.value = curMonth;
+            filterUnit.value = "Semua";
+
+            // Listeners
+            [filterTahun, filterBulan, filterUnit].forEach(el => el.addEventListener('change', fetchData));
+
+            fetchData();
+        })
+        .withFailureHandler(err => {
+            App.showAppModal('error', 'Gagal init filter: ' + err.message);
+            toggleLoader(false);
+        })
+        .getSiabaSalahFilterOptions();
+}
+
+function initSiabaDinasPage() {
+    initMenuPage(); // Aktifkan animasi menu
+
+    const btn = document.getElementById('infoBtnDinas');
+    const content = document.getElementById('infoContentDinas');
+
+    if (btn && content) {
+        const infoHTML = `
+            <div style="text-align: left; padding: 15px 25px; line-height: 1.6; color: #e0e0e0; font-size: 0.95em;">
+                <strong style="color: #00c3ff; display:block; margin-bottom:10px;">Ketentuan Perjalanan Dinas:</strong>
+                <ul style="margin: 0; padding-left: 20px; list-style-type: disc;">
+                    <li style="margin-bottom: 6px;">Diajukan menggunakan Surat Perintah Tugas (SPT);</li>
+                    <li style="margin-bottom: 6px;">Bagi ASN yang akan menggunakan Perjalanan Dinas Siaba dapat mengajukan melalui halaman ini;</li>
+                    <li style="margin-bottom: 6px;">Batas waktu pengusulan adalah sebelum tanggal pelaksanaan;</li>
+                    <li style="margin-bottom: 6px;">Guru yang mengajukan perjalanan dinas menggunakan SPT dari Kepala Sekolah, kecuali jika sudah ada SPT dari Kepala Dinas atau pejabat lain yang berwenang;</li>
+                    <li style="margin-bottom: 6px;">SPT Kepala Sekolah dibuat oleh Kepala Dinas, apabila dari dinas belum/tidak ada SPT, untuk sementara dapat menggunakan surat undangan;</li>
+                    <li style="margin-bottom: 6px;">Surat Perintah Tugas dapat berasal dari instansi/lembaga lain dan dapat diinputkan di Siaba apabila sudah mendapatkan ijin dari Kepala Sekolah/atasan;</li>
+                    <li style="margin-bottom: 6px;">Dalam hal kegiatan lingkup kecamatan, apabila waktu tidak memungkinkan untuk melakukan presensi di sekolah, ASN dapat diberikan SPT untuk perjalanan dinas;</li>
+                    <li style="margin-bottom: 6px;">File format SPT bisa diunduh di halaman ini, terdapat 2 jenis SPT yaitu untuk satu orang pelaksana tugas dan SPT Kolektif untuk pelaksana tugas lebih dari satu orang;</li>
+                    <li>SPT asli discan format pdf menggunakan mesin scanner dengan ukuran file maksimal 200 KB, atau dapat menggunakan SPT elektronik.</li>
+                </ul>
+            </div>
+        `;
+
+        content.innerHTML = infoHTML;
+
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const isActive = btn.classList.toggle('active');
+            content.style.maxHeight = isActive ? content.scrollHeight + "px" : "0px";
+        };
+    }
+}
+
+function initSiabaDinasUnggahPage() {
+    const form = document.getElementById('dinasUnggahForm');
+    const skeleton = document.getElementById('skeleton-loader');
+    
+    const unitSelect = document.getElementById('unitKerjaDinas');
+    const pesertaSelect = document.getElementById('jumlahPeserta');
+    const pesertaWrapper = document.getElementById('peserta-wrapper');
+
+    if (!form) return;
+    setupDateValidation('tanggalSPT', 'tanggalMulai', 'tanggalSelesai');
+
+    // Tampilkan Skeleton
+    if(skeleton) skeleton.style.display = 'block';
+    form.style.display = 'none';
+
+    let employeeData = []; 
+    let currentUnitEmployees = [];
+
+    // 1. Ambil Data Opsi dari Server
+    google.script.run
+        .withSuccessHandler(data => {
+            if (data.error) {
+                if(App.showAppModal) App.showAppModal('error', data.error);
+                return;
+            }
+            employeeData = data;
+
+            // Isi Dropdown Unit Kerja
+            const units = [...new Set(data.map(item => item.unit))].sort();
+            unitSelect.innerHTML = '<option value="" disabled selected>-- Pilih Unit Kerja --</option>';
+            units.forEach(u => unitSelect.add(new Option(u, u)));
+
+            // Isi Dropdown Jumlah Peserta (1-20)
+            pesertaSelect.innerHTML = '';
+            for(let i=1; i<=20; i++) {
+                pesertaSelect.add(new Option(i, i));
+            }
+            // Set default ke 1 tapi disable dulu sampai unit dipilih
+            pesertaSelect.value = 1;
+            pesertaSelect.disabled = true;
+
+            // Tampilkan Form
+            if(skeleton) skeleton.style.display = 'none';
+            form.style.display = 'block';
+        })
+        .withFailureHandler(err => {
+            if(App.showAppModal) App.showAppModal('error', 'Gagal memuat data: ' + err.message);
+        })
+        .getSiabaDinasOptions();
+
+    // 2. Logika Anti-Duplikasi
+    function updateAllDropdownOptions() {
+        const selects = document.querySelectorAll('.peserta-nama-select');
+        const selectedValues = Array.from(selects).map(s => s.value).filter(v => v && v !== "");
+
+        selects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="" disabled>-- Pilih Nama --</option>';
+            if (!currentValue) select.querySelector('option').selected = true;
+
+            currentUnitEmployees.forEach(emp => {
+                if (emp.nama === currentValue || !selectedValues.includes(emp.nama)) {
+                    const opt = new Option(emp.nama, emp.nama);
+                    select.add(opt);
+                }
+            });
+            if (currentValue) select.value = currentValue;
+        });
+    }
+
+    // 3. Helper: Generate Row Peserta (PERBAIKAN TAMPILAN)
+    function generateParticipantRows(count) {
+        pesertaWrapper.innerHTML = ''; 
+        
+        for (let i = 1; i <= count; i++) {
+            // PERUBAHAN DI SINI: Menghapus class 'ptk-row' dan menggunakan style display block standar
+            const rowHtml = `
+            <div style="display: block; width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-bottom: 15px;">
+                <label style="color: #f1c40f; font-weight:bold; margin-bottom:10px; display:block;">Peserta ${i}</label>
+                
+                <div class="form-grid-12">
+                    <div class="col-span-6">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <select id="nama_${i}" name="nama_${i}" class="peserta-nama-select" data-index="${i}" required style="width: 100%;">
+                                <option value="" disabled selected>-- Pilih Nama --</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="col-span-6">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <input type="text" id="nip_${i}" name="nip_${i}" readonly style="background-color: rgba(0,0,0,0.3); width: 100%;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+            pesertaWrapper.insertAdjacentHTML('beforeend', rowHtml);
+        }
+        
+        updateAllDropdownOptions();
+        
+        // Listener Autofill NIP
+        document.querySelectorAll('.peserta-nama-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const idx = this.dataset.index;
+                const selectedEmp = currentUnitEmployees.find(e => e.nama === this.value);
+                if (selectedEmp) {
+                    document.getElementById(`nip_${idx}`).value = selectedEmp.nip;
+                }
+                updateAllDropdownOptions();
+            });
+        });
+    }
+
+    // 4. Event Listener Unit Kerja
+    unitSelect.addEventListener('change', function() {
+        const selectedUnit = this.value;
+        currentUnitEmployees = employeeData.filter(item => item.unit === selectedUnit);
+        currentUnitEmployees.sort((a, b) => a.nama.localeCompare(b.nama));
+        
+        pesertaSelect.disabled = false;
+        pesertaSelect.value = 1; 
+        generateParticipantRows(1);
+    });
+
+    // 5. Event Listener Jumlah Peserta
+    pesertaSelect.addEventListener('change', function() {
+        generateParticipantRows(parseInt(this.value));
+    });
+
+    // 6. Handle Submit
+    form.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtnDinas');
+        const fileInput = document.getElementById('fileSPT');
+        
+        if (fileInput.files[0].size > 200 * 1024) {
+            App.showAppModal('error', 'Ukuran file melebihi 200 KB.');
+            return;
+        }
+
+        btn.disabled = true;
+        App.showAppModal('loading', 'Mengirim Data Perjalanan Dinas...');
+
+        const formData = Object.fromEntries(new FormData(form));
+        
+        const reader = new FileReader();
+        reader.onload = function(event) {
+            formData.fileData = {
+                fileName: fileInput.files[0].name,
+                mimeType: fileInput.files[0].type,
+                data: event.target.result.split(',')[1]
+            };
+
+            google.script.run
+                .withSuccessHandler(res => {
+                    if (res && res.error) {
+                        App.showAppModal('error', res.error);
+                        btn.disabled = false;
+                    } else {
+                        App.showAppModal('success', res, 'siaba_dinas_cek');
+                    }
+                })
+                .withFailureHandler(err => {
+                    App.showAppModal('error', 'Gagal kirim: ' + err.message);
+                    btn.disabled = false;
+                })
+                .processSiabaDinasForm(formData);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+    });
+}
+
+function initSiabaDinasCekPage() {
+    const filterTahun = document.getElementById('filterTahunDinas');
+    const filterBulan = document.getElementById('filterBulanDinas');
+    const filterUnit = document.getElementById('filterUnitDinas');
+    
+    const tableWrapper = document.getElementById('tableWrapperDinas');
+    const tableOverlay = document.getElementById('tableOverlayLoaderDinas');
+    const table = document.getElementById('dinasCekTable');
+
+    if (!table) return;
+    const tableHead = table.querySelector('thead');
+    const tableBody = table.querySelector('tbody');
+
+    function toggleLoader(show) {
+        if(show) {
+            if(tableWrapper) tableWrapper.style.display = 'flex';
+            if(tableOverlay) tableOverlay.style.display = 'flex';
+        } else {
+            if(tableOverlay) tableOverlay.style.display = 'none';
+        }
+    }
+
+    function renderTable(headers, rows) {
+        tableHead.innerHTML = '';
+        tableBody.innerHTML = '';
+
+        if (headers.length > 0) {
+            tableHead.innerHTML = '<tr><th>No.</th>' + headers.map(h => `<th>${h}</th>`).join('') + '</tr>';
+        }
+
+        if (!rows || rows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="${headers.length + 1}" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
+            return;
+        }
+
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            let html = `<td>${idx + 1}</td>`;
+            
+            headers.forEach(key => {
+                let val = row[key];
+                
+                // Format Kolom "Cek"
+                if (key === 'Cek') {
+                    // Ambil nilai string dan bersihkan spasi
+                    const s = String(val).trim(); 
+                    const lowerS = s.toLowerCase();
+                    
+                    // 1. Disetujui (Cek Simbol ✅ ATAU kata kunci)
+                    if (s.includes('V') || lowerS.includes('diterima') || lowerS.includes('ok') || lowerS.includes('disetujui') || lowerS.includes('acc')) {
+                        val = '<span class="status-ok"><i class="fas fa-check-circle"></i> Disetujui</span>';
+                    } 
+                    // 2. Ditolak (Cek Simbol ❌ ATAU kata kunci)
+                    else if (s.includes('X') || lowerS.includes('ditolak') || lowerS.includes('tolak')) {
+                        val = '<span class="status-tolak"><i class="fas fa-times-circle"></i> Ditolak</span>';
+                    } 
+                    // 3. Diproses (Jika kosong atau lainnya)
+                    else {
+                        val = '<span class="status-proses"><i class="fas fa-hourglass-half"></i> Diproses</span>';
+                    }
+                }
+                
+                // Format Tombol Lihat Dokumen
+                if (key === 'Dokumen') {
+                    if (val && String(val).startsWith('http')) {
+                        val = `<button class="view-doc-btn" onclick="App.showFilePreview('${val}')"><i class="fas fa-eye"></i> Lihat</button>`;
+                    } else {
+                        val = '-';
+                    }
+                }
+
+                // Format Kolom Aksi
+                if (key === 'Aksi') {
+                    const idSpt = row['ID'] || ''; 
+                    const jenisDok = row['Jenis Dokumen'];
+                    const rowIndex = row._rowIndex;
+                    
+                    // Tombol Edit
+                    let editBtn = '';
+                    if (jenisDok === 'Sementara' && idSpt) {
+                        editBtn = `<button class="action-btn edit-btn" onclick="App.loadPage(event, 'siaba_dinas_edit', {idSpt: '${idSpt}'})"><i class="fas fa-pencil-alt"></i> Edit</button>`;
+                    } else {
+                        editBtn = `<button class="action-btn edit-btn" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-pencil-alt"></i> Edit</button>`;
+                    }
+
+                    // --- PERBAIKAN TOMBOL HAPUS ---
+                    // Tambahkan 'Nomor SPT' ke dalam objek rowInfo
+                    const rowInfoObj = { 
+                        _source: 'DINAS', 
+                        _rowIndex: rowIndex, 
+                        'Nama': row['Nama ASN'] || 'Pegawai',
+                        'Nomor SPT': row['Nomor SPT'] || '-' // <-- INI YANG DITAMBAHKAN
+                    };
+                    
+                    // Stringify dan escape tanda petik agar HTML aman
+                    const rowInfoStr = JSON.stringify(rowInfoObj).replace(/'/g, "&#39;");
+                    
+                    // Gunakan App.showDeleteConfirmation (Global)
+                    const delBtn = `<button class="action-btn delete-btn" onclick="App.showDeleteConfirmation(this)" data-row-info='${rowInfoStr}'><i class="fas fa-trash"></i> Hapus</button>`;
+                    
+                    val = `<div style="display:flex; gap:5px;">${editBtn}${delBtn}</div>`;
+                }
+
+                html += `<td>${val || '-'}</td>`;
+            });
+            tr.innerHTML = html;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        const filters = {
+            tahun: filterTahun.value,
+            bulan: filterBulan.value,
+            unitKerja: filterUnit.value
+        };
+        toggleLoader(true);
+        google.script.run.withSuccessHandler(res => {
+            if(res.error) {
+                tableBody.innerHTML = `<tr><td colspan="15" style="color:red; text-align:center;">Error: ${res.error}</td></tr>`;
+            } else {
+                renderTable(res.headers, res.rows);
+            }
+            toggleLoader(false);
+        }).getSiabaDinasCekData(filters);
+    }
+
+    // Init
+    toggleLoader(true);
+    google.script.run.withSuccessHandler(opts => {
+        if(opts.error) { App.showAppModal('error', opts.error); return; }
+
+        const now = new Date();
+        const mNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const curYear = now.getFullYear().toString();
+        const curMonth = mNames[now.getMonth()];
+
+        const addOpt = (el, v) => el.add(new Option(v, v));
+        
+        filterTahun.innerHTML = '';
+        opts.tahun.forEach(t => addOpt(filterTahun, t));
+        
+        filterBulan.innerHTML = '';
+        opts.bulan.forEach(b => addOpt(filterBulan, b));
+        
+        filterUnit.innerHTML = '';
+        filterUnit.add(new Option("Semua Unit Kerja", "Semua"));
+        opts.unit.forEach(u => addOpt(filterUnit, u));
+
+        if(opts.tahun.includes(curYear)) filterTahun.value = curYear;
+        if(opts.bulan.includes(curMonth)) filterBulan.value = curMonth;
+        filterUnit.value = "Semua";
+
+        [filterTahun, filterBulan, filterUnit].forEach(el => el.addEventListener('change', fetchData));
+        fetchData();
+    }).getSiabaDinasFilterOptions();
+}
+
+// Helper Hapus Khusus Dinas (agar tidak merusak logika hapus global yang ada)
+App.confirmDeleteDinas = (btn) => {
+    const rowInfo = JSON.parse(btn.dataset.rowInfo);
+    const modal = document.getElementById('deleteModal');
+    const title = document.getElementById('deleteModalTitle');
+    const body = document.getElementById('deleteModalBody');
+    const confirmBtn = document.getElementById('confirmDeleteBtn');
+    
+    title.textContent = "Hapus Data Perjalanan Dinas";
+    body.innerHTML = `<p>Apakah Anda yakin ingin menghapus data perjalanan dinas atas nama <b>${rowInfo.Nama}</b>?</p>`;
+    
+    // Clone tombol untuk reset listener
+    const newConfirm = confirmBtn.cloneNode(true);
+    confirmBtn.parentNode.replaceChild(newConfirm, confirmBtn);
+    
+    newConfirm.onclick = () => {
+        App.showAppModal('loading', 'Menghapus data...');
+        modal.classList.remove('show');
+        google.script.run.withSuccessHandler(res => {
+            App.showAppModal('success', res, 'siaba_dinas_cek');
+        }).deleteSiabaDinasData(rowInfo._rowIndex);
+    };
+    
+    modal.classList.add('show');
+};
+
+function initSiabaDinasEditPage(params) {
+    const form = document.getElementById('dinasEditForm');
+    const skeleton = document.getElementById('skeleton-loader');
+
+    // Cek parameter
+    if (!params || !params.idSpt) {
+        console.error("ID SPT tidak ditemukan");
+        return;
+    }
+    setupDateValidation('tanggalSPTEdit', 'tanggalMulaiEdit', 'tanggalSelesaiEdit');
+
+    // Elemen Form (GUNAKAN ID BARU DENGAN SUFFIX 'Edit')
+    const unitSelect = document.getElementById('unitKerjaDinasEdit');
+    const pesertaSelect = document.getElementById('jumlahPesertaEdit');
+    const pesertaWrapper = document.getElementById('peserta-wrapper-edit');
+    
+    const idInput = document.getElementById('idSpt');
+    if(idInput) idInput.value = params.idSpt;
+    
+    // --- KONTROL SKELETON (Mulai) ---
+    if(skeleton) skeleton.style.display = 'flex'; 
+    form.style.display = 'none'; 
+    // --------------------------------
+    
+    let employeeData = []; 
+    let currentUnitEmployees = [];
+
+    // Helper: Anti-Duplikasi Dropdown (Skop Lokal Edit)
+    function updateAllDropdownOptions() {
+        // Gunakan selector spesifik di dalam wrapper edit
+        const selects = pesertaWrapper.querySelectorAll('.peserta-nama-select');
+        const selectedValues = Array.from(selects).map(s => s.value).filter(v => v && v !== "");
+
+        selects.forEach(select => {
+            const currentValue = select.value;
+            select.innerHTML = '<option value="" disabled>-- Pilih Nama --</option>';
+            if (!currentValue) select.querySelector('option').selected = true;
+
+            currentUnitEmployees.forEach(emp => {
+                if (emp.nama === currentValue || !selectedValues.includes(emp.nama)) {
+                    const opt = new Option(emp.nama, emp.nama);
+                    select.add(opt);
+                }
+            });
+            if (currentValue) select.value = currentValue;
+        });
+    }
+
+    // Helper: Generate Baris Peserta (Layout 50:50)
+    function generateParticipantRows(count) {
+        pesertaWrapper.innerHTML = ''; 
+        for (let i = 1; i <= count; i++) {
+            const rowHtml = `
+            <div style="display: block; width: 100%; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; margin-bottom: 15px;">
+                <label style="color: #f1c40f; font-weight:bold; margin-bottom:10px; display:block;">Peserta ${i}</label>
+                <div class="form-grid-12">
+                    <div class="col-span-6">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <select id="nama_edit_${i}" name="nama_${i}" class="peserta-nama-select" data-index="${i}" required style="width: 100%;">
+                                <option value="" disabled selected>-- Pilih Nama --</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-span-6">
+                        <div class="form-group" style="margin-bottom:0;">
+                            <input type="text" id="nip_edit_${i}" name="nip_${i}" readonly style="background-color: rgba(0,0,0,0.3); width: 100%;">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            `;
+            pesertaWrapper.insertAdjacentHTML('beforeend', rowHtml);
+        }
+        
+        // Listener change untuk setiap baris baru
+        pesertaWrapper.querySelectorAll('.peserta-nama-select').forEach(select => {
+            select.addEventListener('change', function() {
+                const idx = this.dataset.index;
+                const selectedEmp = currentUnitEmployees.find(e => e.nama === this.value);
+                if (selectedEmp) {
+                    document.getElementById(`nip_edit_${idx}`).value = selectedEmp.nip;
+                }
+                updateAllDropdownOptions();
+            });
+        });
+    }
+
+    // EVENT LISTENER UI
+    if (unitSelect) {
+        unitSelect.addEventListener('change', function() {
+            const selectedUnit = this.value;
+            currentUnitEmployees = employeeData.filter(item => item.unit === selectedUnit);
+            currentUnitEmployees.sort((a, b) => a.nama.localeCompare(b.nama));
+            
+            pesertaSelect.value = 1; 
+            generateParticipantRows(1);
+            updateAllDropdownOptions();
+        });
+    }
+
+    if (pesertaSelect) {
+        pesertaSelect.addEventListener('change', function() {
+            generateParticipantRows(parseInt(this.value));
+            updateAllDropdownOptions();
+        });
+    }
+
+    // LOAD DATA DARI SERVER
+    google.script.run.withSuccessHandler(opts => {
+        if (opts.error) { 
+             if(skeleton) skeleton.style.display = 'none';
+             App.showAppModal('error', opts.error); 
+             return; 
+        }
+        employeeData = opts;
+        
+        // Isi Unit Kerja
+        const units = [...new Set(opts.map(item => item.unit))].sort();
+        unitSelect.innerHTML = '<option value="" disabled selected>-- Pilih Unit Kerja --</option>';
+        units.forEach(u => unitSelect.add(new Option(u, u)));
+
+        // Isi Jumlah Peserta
+        pesertaSelect.innerHTML = '';
+        for(let i=1; i<=20; i++) pesertaSelect.add(new Option(i, i));
+
+        // PANGGIL DATA EDIT BERDASARKAN ID
+        google.script.run.withSuccessHandler(data => {
+            
+            // --- KONTROL SKELETON (Selesai) ---
+            if(skeleton) skeleton.style.display = 'none';
+            form.style.display = 'flex';
+            // ----------------------------------
+
+            // Isi Data Utama (Gunakan ID Elemen 'Edit')
+            document.getElementById('idSpt').value = data.id || '';
+            document.getElementById('existingFileUrl').value = data.fileUrl || '';
+            
+            // Helper set value
+            const setVal = (id, val) => { 
+                const el = document.getElementById(id); 
+                if(el) el.value = val || ''; 
+            };
+
+            setVal('jenisPDEdit', data.jenisPD);
+            setVal('nomorSPTEdit', data.nomorSPT);
+            setVal('tanggalSPTEdit', data.tanggalSPT);
+            setVal('tanggalMulaiEdit', data.tanggalMulai);
+            setVal('tanggalSelesaiEdit', data.tanggalSelesai);
+            setVal('lokasiEdit', data.lokasi);
+            setVal('kegiatanEdit', data.kegiatan);
+            setVal('jenisDokumenEdit', data.jenisDokumen);
+
+            // Link File Lama
+            const linkDiv = document.getElementById('currentDocLink');
+            if(data.fileUrl && data.fileUrl.startsWith('http')) {
+                linkDiv.innerHTML = `<button type="button" class="view-doc-btn" onclick="App.showFilePreview('${data.fileUrl}')"><i class="fas fa-eye"></i> Lihat Dokumen Saat Ini</button>`;
+            } else {
+                linkDiv.innerHTML = '<span style="color:#aaa;">Belum ada dokumen.</span>';
+            }
+
+            // C. Isi Data Peserta
+            unitSelect.value = data.unitKerja;
+            currentUnitEmployees = employeeData.filter(item => item.unit === data.unitKerja);
+            currentUnitEmployees.sort((a, b) => a.nama.localeCompare(b.nama));
+
+            const namaList = data.namaASN ? data.namaASN.split('<br>') : [];
+            const nipList = data.nip ? data.nip.split('<br>') : [];
+            const count = Math.max(namaList.length, 1);
+
+            pesertaSelect.value = count;
+            generateParticipantRows(count);
+
+            for (let i = 0; i < count; i++) {
+                const idx = i + 1;
+                const namaVal = namaList[i];
+                const nipVal = nipList[i];
+                
+                // Gunakan ID Baru: nama_edit_1, nip_edit_1
+                const sel = document.getElementById(`nama_edit_${idx}`);
+                if(sel) {
+                    // Inject opsi terpilih jika belum ada
+                    let exists = Array.from(sel.options).some(o => o.value === namaVal);
+                    if (!exists && namaVal) {
+                        sel.add(new Option(namaVal, namaVal));
+                    }
+                    sel.value = namaVal;
+                }
+                
+                const inp = document.getElementById(`nip_edit_${idx}`);
+                if(inp) inp.value = nipVal;
+            }
+            
+            updateAllDropdownOptions();
+
+        }).withFailureHandler(err => {
+            if(skeleton) skeleton.style.display = 'none';
+            App.showAppModal('error', 'Gagal ambil data: ' + err.message);
+        }).getSiabaDinasEditData(params.idSpt);
+
+    }).withFailureHandler(err => {
+        if(skeleton) skeleton.style.display = 'none';
+        App.showAppModal('error', 'Gagal ambil opsi: ' + err.message);
+    }).getSiabaDinasOptions();
+
+    // --- HANDLE SUBMIT (VERSI FINAL & AMAN) ---
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('btnSimpanRevisi');
+        const fileInput = document.getElementById('fileRevisi');
+        
+        // Validasi Ukuran File
+        if (fileInput.files.length > 0 && fileInput.files[0].size > 200 * 1024) {
+            App.showAppModal('error', 'Ukuran file melebihi 200 KB.');
+            return;
+        }
+
+        btn.disabled = true;
+        App.showAppModal('loading', 'Menyimpan perubahan...');
+        
+        // 1. Ambil data form
+        const formData = Object.fromEntries(new FormData(form));
+
+        // 2. [PENTING] Hapus objek File mentah agar tidak error "Illegal Value"
+        delete formData.fileData; 
+        
+        // 3. Fungsi kirim data dengan PENGECEKAN ERROR
+        const sendData = (payload) => {
+             google.script.run.withSuccessHandler(res => {
+                // Cek apakah server mengembalikan objek error
+                if (res && res.error) {
+                    App.showAppModal('error', res.error); // Tampilkan pesan error asli (Merah)
+                    btn.disabled = false; // Aktifkan tombol kembali
+                } else {
+                    // Jika sukses (respon adalah string pesan)
+                    App.showAppModal('success', res, 'siaba_dinas_cek'); // Tampilkan pesan sukses (Hijau)
+                }
+            }).withFailureHandler(err => {
+                // Error koneksi/server crash (Jarang terjadi jika logic server benar)
+                App.showAppModal('error', err.message);
+                btn.disabled = false;
+            }).updateSiabaDinasFullData(payload);
+        };
+
+        // 4. Proses File (Jika ada upload baru)
+        if (fileInput.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                // Masukkan file sebagai objek bersih (base64)
+                formData.fileData = {
+                    fileName: fileInput.files[0].name,
+                    mimeType: fileInput.files[0].type,
+                    data: ev.target.result.split(',')[1]
+                };
+                sendData(formData);
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
+            // 5. Jika tidak ada file, kirim data teks saja
+            sendData(formData);
+        }
+    });
+}
+
+function initSiabaDinasUnduhPage() {
+    initMenuPage(); // Animasi tombol
+
+    const btn = document.getElementById('infoBtnDinasUnduh');
+    const content = document.getElementById('infoContentDinasUnduh');
+
+    if (btn && content) {
+        const infoText = [
+            "Klik tombol di atas untuk mengunduh format Surat Perintah Tugas (SPT) dalam format Microsoft Word (.docx).",
+            "Format ini dapat digunakan untuk SPT Perorangan maupun Kolektif.",
+            "Silakan isi data yang diperlukan, cetak, tanda tangani, lalu scan menjadi PDF untuk diunggah di menu 'Unggah SPT'."
+        ];
+
+        content.innerHTML = `<ul style="text-align: left; padding: 15px 20px 15px 35px; line-height: 1.6; margin: 0; color: #e0e0e0;">
+            ${infoText.map(t => `<li>${t}</li>`).join('')}
+        </ul>`;
+
+        btn.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const isActive = btn.classList.toggle('active');
+            content.style.maxHeight = isActive ? content.scrollHeight + "px" : "0px";
+        };
+    }
+}
+
 /**
  * ===================================================================
  * =================== 3. OBJEK INISIALISASI & TRIGGER ===============
  * ===================================================================
  */
  
+ // Fungsi Buka Preview
+App.showFilePreview = (url) => {
+    const modal = document.getElementById('previewModal');
+    const frame = document.getElementById('previewFrame');
+    const loading = document.getElementById('previewLoading');
+    
+    if (!url) {
+        App.showAppModal('error', 'URL Dokumen tidak valid.');
+        return;
+    }
+
+    // Konversi URL Google Drive dari /view ke /preview agar bersih (embed mode)
+    let previewUrl = url;
+    if (url.includes('drive.google.com') && url.includes('/view')) {
+        previewUrl = url.replace('/view', '/preview');
+    }
+
+    // Tampilkan Modal
+    modal.classList.add('show');
+    loading.style.display = 'flex'; // Tampilkan loading
+    
+    // Set URL iframe
+    frame.src = previewUrl;
+
+    // Hilangkan loading saat iframe selesai memuat
+    frame.onload = () => {
+        loading.style.display = 'none';
+    };
+};
+
+// Fungsi Tutup Preview
+App.closePreview = () => {
+    const modal = document.getElementById('previewModal');
+    const frame = document.getElementById('previewFrame');
+    
+    modal.classList.remove('show');
+    // Reset src agar video/audio/pdf berhenti loading di background
+    setTimeout(() => { frame.src = 'about:blank'; }, 300); 
+};
+
 App.pageInitializers = {
     'home': initMenuPage,
     'sk_menu': initMenuPage,
@@ -6945,11 +8399,17 @@ App.pageInitializers = {
     'siaba_apel_upacara': initSiabaApelUpacaraPage,
     'siaba_lupa_presensi': initMenuPage,
     'siaba_lupa_unggah': initSiabaLupaUnggahPage, // Placeholder sementara
-    'siaba_lupa_cek': initMenuPage,    // Placeholder sementara
-    'siaba_lupa_rekap': initMenuPage,  // Placeholder sementara
-    'siaba_lupa_unduh': initMenuPage,  // Placeholder sementara
-    'siaba_salah_presensi': initMenuPage,
-    'siaba_perjalanan_dinas': initMenuPage,
+    'siaba_lupa_cek': initSiabaLupaCekPage,    // Placeholder sementara
+    'siaba_lupa_rekap': initSiabaLupaRekapPage,  // Placeholder sementara
+    'siaba_lupa_unduh': initSiabaLupaUnduhPage,  // Placeholder sementara
+    'siaba_salah_presensi': initSiabaSalahPresensiPage,
+    'siaba_salah_form': initSiabaSalahFormPage,
+    'siaba_salah_cek': initSiabaSalahCekPage,
+    'siaba_perjalanan_dinas': initSiabaDinasPage,
+    'siaba_dinas_unggah': initSiabaDinasUnggahPage, // Placeholder
+    'siaba_dinas_cek': initSiabaDinasCekPage,    // Placeholder
+    'siaba_dinas_edit': initSiabaDinasEditPage,
+    'siaba_dinas_unduh': initSiabaDinasUnduhPage,  // Placeholder
     'siaba_cuti': initSiabaCutiPage,
     'siaba_rekap_terlambat': initMenuPage,
     'siaba_rekap_pulang_awal': initMenuPage,
@@ -6966,23 +8426,43 @@ App.pageInitializers = {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    // PERBAIKAN TIMING ERROR: Menggunakan setTimeout(..., 0)
+    // Load halaman home saat pertama kali dibuka
     setTimeout(() => {
         App.loadPage(null, 'home');
     }, 0);
     
     document.body.addEventListener('click', function(e) {
+        // Cari elemen <a> terdekat yang diklik
         const link = e.target.closest('a');
         if (!link) return;
+
+        // Ambil data page
         const pageName = link.dataset.page;
         const parentLi = link.parentElement;
         const isParentToggle = parentLi.classList.contains('has-submenu');
+
+        // LOGIKA 1: Jika yang diklik adalah tombol Toggle (Menu Induk yang punya anak)
+        if (isParentToggle) {
+            // Jika user mengklik panah chevron ATAU link itu tidak punya halaman tujuan (href="#" dan tidak ada data-page)
+            // Maka fungsinya hanya Buka/Tutup (Toggle)
+            const isChevronClick = e.target.classList.contains('submenu-icon');
+            
+            if (isChevronClick || !pageName) {
+                e.preventDefault();
+                parentLi.classList.toggle('open'); // Buka atau Tutup
+                return; // Berhenti di sini, jangan load page
+            }
+            
+            // Jika Menu Induk punya halaman tujuan (misal: SK Pembagian Tugas), biarkan lanjut ke Logika 2
+        }
+
+        // LOGIKA 2: Navigasi Halaman
         if (pageName) {
             e.preventDefault();
-            if (isParentToggle && parentLi.classList.contains('open')) {
-                parentLi.classList.remove('open');
-                return;
-            }
+            
+            // Khusus Mobile: Tutup sidebar setelah klik (opsional, jika Anda punya tombol toggle sidebar mobile)
+            // document.querySelector('.sidebar').classList.remove('show'); 
+
             App.loadPage(null, pageName);
         }
     });
