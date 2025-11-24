@@ -1,57 +1,37 @@
 <header>
-  <h2>DAFTAR CUTI PEGAWAI</h2>
+  <h2>MENU CUTI PEGAWAI</h2>
 </header>
 
-<div class="filter-container">
-  <div class="filter-group">
-    <label for="filterTahun">Tahun:</label>
-    <select id="filterTahun"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterBulan">Bulan:</label>
-    <select id="filterBulan"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterUnitKerja">Unit Kerja:</label>
-    <select id="filterUnitKerja"></select>
-  </div>
-</div>
-
-<main class="table-view-container">
-  <div id="loadingStatus" class="loading-container">
-      <div class="spinner-container">
-        <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
-    </div>
-      <p>Memuat data cuti...</p>
-  </div>
+<main class="menu-grid" style="max-width: 1000px;">
   
-  <div id="tableWrapper" style="display:none;">
-    <div class="table-container">
-        <table id="cutiTable" class="data-table freeze-pane-table">
-          <thead></thead>
-          <tbody></tbody>
-        </table>
-    </div>
-  </div>
+  <a href="#" data-page="siaba_cuti_form" class="menu-button">
+    <i class="fas fa-file-pen" style="color: #e67e22;"></i>
+    <span>ISI FORMULIR</span>
+  </a>
+
+  <a href="#" data-page="siaba_cuti_unduh" class="menu-button">
+    <i class="fas fa-file-arrow-down" style="color: #3498db;"></i>
+    <span>UNDUH FORMULIR</span>
+  </a>
+
+  <a href="#" data-page="siaba_cuti_sisa" class="menu-button">
+    <i class="fas fa-chart-pie" style="color: #9b59b6;"></i>
+    <span>SISA CUTI</span>
+  </a>
+
+  <a href="#" data-page="siaba_cuti_unggah" class="menu-button">
+    <i class="fas fa-upload" style="color: #2ecc71;"></i>
+    <span>UNGGAH SURAT</span>
+  </a>
+
+  <a href="#" data-page="siaba_cuti_cek" class="menu-button">
+    <i class="fas fa-list-check" style="color: #f1c40f;"></i>
+    <span>CEK UNGGAHAN</span>
+  </a>
+
+  <a href="#" data-page="siaba_cuti_informasi" class="menu-button">
+    <i class="fas fa-info-circle" style="color: #00c3ff;"></i>
+    <span>INFORMASI</span>
+  </a>
+
 </main>
-
-<style>
-  #main-content { overflow-y: hidden !important; }
-  main.table-view-container { flex-grow: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; }
-  #tableWrapper { flex-grow: 1 !important; min-height: 0 !important; display: flex !important; flex-direction: column !important; margin-bottom: 5px; }
-  #tableWrapper .table-container { flex-grow: 1 !important; overflow: auto !important; border-radius: 0 0 10px 10px; }
-  
-  /* Freeze Pane */
-  #cutiTable thead th { position: sticky; top: 0; z-index: 5; }
-  #cutiTable thead tr:first-child th:nth-child(1),
-  #cutiTable thead tr:first-child th:nth-child(2) { z-index: 7; } /* Nama & NIP Sticky */
-  
-  #cutiTable tbody td:nth-child(2) { text-align: left !important; } /* Nama Rata Kiri */
-  
-  /* Warna Header Khusus */
-  .bg-cuti { background-color: rgba(46, 204, 113, 0.15) !important; font-weight: bold; }
-  
-  /* Hide scrollbar */
-  #tableWrapper .table-container::-webkit-scrollbar { display: none; }
-  #tableWrapper .table-container { scrollbar-width: none; }
-</style>

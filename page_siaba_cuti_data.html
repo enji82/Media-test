@@ -1,0 +1,91 @@
+<header>
+  <h2>DATA CUTI</h2>
+</header>
+
+<div class="filter-container">
+  <div class="filter-group">
+    <label for="filterTahunData">Tahun:</label>
+    <select id="filterTahunData"></select>
+  </div>
+  <div class="filter-group">
+    <label for="filterUnitData">Unit Kerja:</label>
+    <select id="filterUnitData"></select>
+  </div>
+  
+  <div class="filter-group" style="margin-left: auto;">
+    <label for="searchDataCuti" class="search-icon-label"><i class="fas fa-search"></i></label>
+    <input type="search" id="searchDataCuti" class="search-input" placeholder="Cari Nama/NIP...">
+  </div>
+</div>
+
+<main class="table-view-container">
+  <div id="loadingDataCuti" class="loading-container">
+    <div class="spinner-container">
+      <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+    </div>
+    <p>Mencari data...</p>
+  </div>
+
+  <div id="tableWrapperDataCuti" style="display:none;">
+    <div class="table-container">
+      <table id="dataCutiTable" class="data-table freeze-pane-table">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
+</main>
+
+<style>
+  /* Layout */
+  #main-content { overflow-y: hidden !important; }
+  main.table-view-container { flex-grow: 1; min-height: 0; display: flex; flex-direction: column; }
+  #tableWrapperDataCuti { flex-grow: 1; min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+  #tableWrapperDataCuti .table-container { flex-grow: 1; overflow: auto; border-radius: 10px; border-bottom: none; }
+  #tableWrapperDataCuti .table-container::-webkit-scrollbar { display: none; }
+
+  /* Tabel */
+  #dataCutiTable { border-collapse: separate; border-spacing: 0; width: 100%; }
+  
+  /* Cell Styling */
+  #dataCutiTable th, #dataCutiTable td { 
+      padding: 8px 10px; vertical-align: middle; white-space: nowrap; text-align: center;
+      border-bottom: 1px solid rgba(255,255,255,0.1); border-right: 1px solid rgba(255,255,255,0.1); font-size: 13px;
+  }
+
+  /* --- HEADER DINAMIS --- */
+  /* Baris Header 1 */
+  #dataCutiTable thead tr:first-child th { 
+      position: sticky; top: 0; z-index: 6; 
+      background-color: #101E26; height: 35px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  /* Baris Header 2 */
+  #dataCutiTable thead tr:nth-child(2) th { 
+      position: sticky; top: 35px; z-index: 5; /* Tinggi baris 1 asumsi 35px */
+      background-color: #101E26; height: 30px; 
+      border-bottom: 2px solid rgba(0, 195, 255, 0.5);
+  }
+
+  /* Freeze Pane: No (Col 1) */
+  #dataCutiTable tbody td:nth-child(1) { position: sticky; left: 0; z-index: 3; background-color: #1c2e3a; width: 50px; box-sizing:border-box;}
+  #dataCutiTable thead tr:nth-child(1) th:nth-child(1) { position: sticky; left: 0; z-index: 8; background-color: #101E26; }
+
+  /* Freeze Pane: Nama (Col 2) */
+  #dataCutiTable tbody td:nth-child(2) { position: sticky; left: 50px; z-index: 3; background-color: #1c2e3a; text-align: left !important; }
+  #dataCutiTable thead tr:nth-child(1) th:nth-child(2) { position: sticky; left: 50px; z-index: 8; background-color: #101E26; }
+
+  /* Freeze Pane: NIP (Col 3) */
+  #dataCutiTable tbody td:nth-child(3) { position: sticky; left: 250px; z-index: 3; background-color: #1c2e3a; text-align: left !important; }
+  #dataCutiTable thead tr:nth-child(1) th:nth-child(3) { position: sticky; left: 250px; z-index: 8; background-color: #101E26; }
+
+  /* Perataan Teks */
+  #dataCutiTable tbody td:nth-child(2), 
+  #dataCutiTable tbody td:nth-child(3) { text-align: left; }
+
+  /* Hover */
+  #dataCutiTable tbody tr:hover td { background-color: rgba(255, 255, 255, 0.08); }
+  #dataCutiTable tbody tr:hover td:nth-child(1),
+  #dataCutiTable tbody tr:hover td:nth-child(2),
+  #dataCutiTable tbody tr:hover td:nth-child(3) { background-color: #2a4152; }
+</style>

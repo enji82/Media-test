@@ -1750,6 +1750,367 @@ function updateSiabaDinasFullData(formData) {
   }
 }
 
+/**
+ * Mengambil Opsi Pegawai untuk Form Cuti
+ * Sumber: Spreadsheet SIABA_CUTI_DB sheet "database"
+ */
+function getSiabaCutiOptions() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("database");
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    // Ambil seluruh data karena kolomnya berjauhan (A sampai AL)
+    const data = sheet.getDataRange().getValues();
+    const rows = data.slice(1); // Lewati header
+
+    // Indeks Kolom (0-based):
+    // Nama=A(0), NIP=B(1), Alamat=G(6), Unit=AL(37)
+    const idxUnit = 37; // AL
+    const idxNama = 0;  // A
+    const idxNip = 1;   // B
+    const idxAlamat = 6;// G
+
+    return rows.map(row => ({
+      unit: String(row[idxUnit]).trim(),
+      nama: String(row[idxNama]).trim(),
+      nip: String(row[idxNip]).trim(),
+      alamat: String(row[idxAlamat]).trim()
+    })).filter(item => item.unit && item.nama); // Filter baris kosong
+
+  } catch (e) {
+    return handleError('getSiabaCutiOptions', e);
+  }
+}
+
+/**
+ * Memproses Form Pengajuan Cuti (UPDATE: Format Tanggal & Auto ID)
+ * Simpan ke: Spreadsheet SIABA_CUTI_DB sheet "Form Ajuan"
+ */
+function submitSiabaCutiForm(formData) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    let sheet = ss.getSheetByName("Form Ajuan");
+    
+    if (!sheet) {
+      sheet = ss.insertSheet("Form Ajuan");
+    }
+
+    // --- PERBAIKAN FORMAT TANGGAL (DD mmmm YYYY) ---
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "";
+        // Input dari HTML date picker selalu: YYYY-MM-DD
+        const p = dateStr.split('-'); // [YYYY, MM, DD]
+        const day = p[2];
+        const monthIndex = parseInt(p[1], 10) - 1;
+        const year = p[0];
+        
+        // Output: 23 November 2025
+        return `${day} ${monthNames[monthIndex]} ${year}`;
+    };
+    // -----------------------------------------------
+
+    // Generate ID Unik
+    const idCuti = "CUTI" + new Date().getTime();
+    const noHpText = "'" + String(formData.noHp).replace(/\D/g, '');
+
+    const newRow = new Array(33).fill("");
+
+    newRow[0] = new Date();               // A: Timestamp
+    newRow[1] = formData.unitKerja;       // B
+    newRow[2] = formData.namaAsn;         // C
+    newRow[3] = "'" + formData.nip;       // D
+    newRow[4] = formData.tugas;           // E
+    newRow[5] = formData.status;          // F
+    newRow[6] = formData.golongan;        // G
+    newRow[7] = formData.jenisCuti;       // H
+    newRow[8] = formatDate(formData.tglSurat);   // I (Format Baru)
+    newRow[9] = formatDate(formData.tglMulai);   // J (Format Baru)
+    newRow[10] = formatDate(formData.tglSelesai); // K (Format Baru)
+    newRow[11] = formData.jmlHari;        // L
+    newRow[12] = formData.alasan;         // M
+    newRow[13] = formData.alamatCuti;     // N
+    newRow[14] = noHpText;                // O
+    newRow[15] = formData.usulan;         // P
+    
+    // Kolom AG (Index 32) = ID Cuti
+    newRow[32] = idCuti;
+
+    sheet.appendRow(newRow);
+    
+    return "Pengajuan Cuti berhasil dikirim.";
+
+  } catch (e) {
+    return handleError('submitSiabaCutiForm', e);
+  }
+}
+
+/**
+ * Mengambil Data Cuti untuk Edit berdasarkan ID (Kolom AG)
+ */
+function getSiabaCutiEditData(idCuti) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Form Ajuan");
+    
+    const lastRow = sheet.getLastRow();
+    if (lastRow < 2) throw new Error("Data kosong.");
+
+    // Ambil data kolom A sampai AG (1-33)
+    const data = sheet.getRange(2, 1, lastRow - 1, 33).getValues();
+    
+    let rowData = null;
+    let rowIndex = -1;
+
+    // Loop cari ID di kolom AG (Index 32)
+    for (let i = 0; i < data.length; i++) {
+        if (String(data[i][32]) === String(idCuti)) {
+            rowData = data[i];
+            rowIndex = i + 2; // 1-based index + header
+            break;
+        }
+    }
+
+    if (!rowData) throw new Error("Data cuti tidak ditemukan.");
+
+    // Helper Date YYYY-MM-DD
+    const toInputDate = (val) => {
+        if (val instanceof Date) return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
+        if (typeof val === 'string' && val.includes('-') && val.length===10) {
+            // Asumsi format DD-MM-YYYY -> ubah ke YYYY-MM-DD
+             const p = val.split('-');
+             return `${p[2]}-${p[1]}-${p[0]}`;
+        }
+        return "";
+    };
+
+    return {
+        id: idCuti,
+        unitKerja: rowData[1],
+        namaAsn: rowData[2],
+        nip: String(rowData[3]).replace(/'/g, ''), // Hapus petik
+        tugas: rowData[4],
+        status: rowData[5],
+        golongan: rowData[6],
+        jenisCuti: rowData[7],
+        tglSurat: toInputDate(rowData[8]),
+        tglMulai: toInputDate(rowData[9]),
+        tglSelesai: toInputDate(rowData[10]),
+        jmlHari: rowData[11],
+        alasan: rowData[12],
+        alamatCuti: rowData[13],
+        noHp: String(rowData[14]).replace(/'/g, ''),
+        usulan: rowData[15]
+    };
+
+  } catch (e) {
+    return handleError('getSiabaCutiEditData', e);
+  }
+}
+
+/**
+ * Update Data Cuti
+ */
+function updateSiabaCutiData(formData) {
+  try {
+    const idCuti = formData.idCuti;
+    if (!idCuti) throw new Error("ID Cuti tidak ditemukan.");
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Form Ajuan");
+
+    // Cari Baris dengan TextFinder (Lebih Cepat)
+    const finder = sheet.getRange("AG:AG").createTextFinder(idCuti).matchEntireCell(true);
+    const result = finder.findNext();
+    
+    if (!result) throw new Error("Data tidak ditemukan di database.");
+    const rowIndex = result.getRow();
+
+    // Helper Format Tanggal
+    const formatDate = (dateStr) => {
+        if (!dateStr) return "";
+        const p = dateStr.split('-'); 
+        return `${p[2]}-${p[1]}-${p[0]}`;
+    };
+    
+    const noHpText = "'" + String(formData.noHp).replace(/\D/g, '');
+
+    // Update Kolom E sampai P (Index 5 sampai 16 di sheet, kolom 5=E)
+    // Data yang dikunci (Unit, Nama, NIP - Kolom B,C,D) tidak diupdate
+    const dataToUpdate = [[
+        formData.tugas,           // E
+        formData.status,          // F
+        formData.golongan,        // G
+        formData.jenisCuti,       // H
+        formatDate(formData.tglSurat),   // I
+        formatDate(formData.tglMulai),   // J
+        formatDate(formData.tglSelesai), // K
+        formData.jmlHari,         // L
+        formData.alasan,          // M
+        formData.alamatCuti,      // N
+        noHpText,                 // O
+        formData.usulan           // P
+    ]];
+
+    // Tulis ke range E[Row]:P[Row]
+    sheet.getRange(rowIndex, 5, 1, 12).setValues(dataToUpdate);
+    
+    // Opsional: Update Timestamp di Kolom A? (User tidak meminta, jadi biarkan timestamp asli)
+
+    return "Data Cuti berhasil diperbarui.";
+
+  } catch (e) {
+    return handleError('updateSiabaCutiData', e);
+  }
+}
+
+/**
+ * Mengambil Opsi Filter untuk Halaman Unduh Formulir Cuti
+ * Sumber: Sheet "Form Ajuan"
+ * Filter: Tahun (Kolom X/Index 23), Unit Kerja (Kolom B/Index 1)
+ * Data mulai baris 3 (Baris 2 berisi rumus)
+ */
+function getSiabaCutiUnduhFilterOptions() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Form Ajuan");
+    
+    if (!sheet || sheet.getLastRow() < 3) return { tahun: [], unit: [] };
+
+    const lastRow = sheet.getLastRow();
+    // Ambil data sampai kolom X (Index 23) atau lebih aman secukupnya
+    const data = sheet.getRange(3, 1, lastRow - 2, 25).getValues(); 
+    
+    const years = new Set();
+    const units = new Set();
+
+    data.forEach(row => {
+      if (row[23]) years.add(String(row[23]).trim()); // Kolom X (Tahun)
+      if (row[1]) units.add(String(row[1]).trim());   // Kolom B (Unit Kerja)
+    });
+
+    return {
+      tahun: Array.from(years).sort().reverse(),
+      unit: Array.from(units).sort()
+    };
+  } catch (e) {
+    return handleError('getSiabaCutiUnduhFilterOptions', e);
+  }
+}
+
+/**
+ * Mengambil Data Tabel Unduh Formulir Cuti
+ * Data mulai baris 3.
+ */
+function getSiabaCutiUnduhData(filters) {
+  try {
+    const { tahun, unitKerja } = filters;
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Form Ajuan");
+    
+    if (!sheet || sheet.getLastRow() < 3) return [];
+
+    const range = sheet.getDataRange();
+    const rawValues = range.getValues();        
+    const displayValues = range.getDisplayValues(); 
+    
+    const rows = [];
+    
+    // Loop mulai dari i = 2 (Baris ke-3)
+    for (let i = 2; i < rawValues.length; i++) {
+        rows.push({
+            raw: rawValues[i],
+            display: displayValues[i],
+            index: i + 1 // Index baris asli
+        });
+    }
+
+    // Filter
+    const filtered = rows.filter(item => {
+        // Filter Tahun (X=23) & Unit (B=1)
+        const rowTahun = String(item.display[23] || "").trim(); 
+        const rowUnit = String(item.display[1] || "").trim(); 
+        
+        const matchTahun = (rowTahun === String(tahun));
+        const matchUnit = (unitKerja === "Semua" || rowUnit === unitKerja);
+        
+        return matchTahun && matchUnit;
+    });
+
+    // Sorting: Tanggal Pengajuan Terbaru (Kolom A / Index 0)
+    filtered.sort((a, b) => {
+        const dateA = new Date(a.raw[0]);
+        const dateB = new Date(b.raw[0]);
+        return dateB - dateA; 
+    });
+
+    // Mapping Output
+    const output = filtered.map(item => {
+         const disp = item.display;
+         
+         // Status (Kolom R / Index 17)
+         let statusRaw = String(disp[17] || "").trim().toUpperCase();
+         let statusText = "Diproses";
+         if (statusRaw === "V") statusText = "Disetujui";
+         else if (statusRaw === "X") statusText = "Dibatalkan";
+         
+         // PERBAIKAN: Format File URL dari Kolom AT (Index 45)
+         // A=0... Z=25, AA=26... AT=45
+         let fileUrl = (disp.length > 45) ? disp[45] : "";
+
+         return {
+             _rowIndex: item.index,
+             nama: disp[2],
+             nip: disp[3],
+             jenis: disp[16],
+             tglMulai: disp[9],
+             tglSelesai: disp[10],
+             jmlHari: disp[11],
+             usulan: disp[15],
+             status: statusText,
+             fileUrl: fileUrl,
+             keterangan: disp[18], // Kolom S
+             tglAjuan: disp[0] 
+         };
+    });
+
+    return output;
+
+  } catch (e) {
+    return handleError('getSiabaCutiUnduhData', e);
+  }
+}
+
+/**
+ * Hapus Data Cuti
+ */
+function deleteSiabaCutiData(rowIndex, deleteCode) {
+   try {
+    const todayCode = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd");
+    if (String(deleteCode).trim() !== todayCode) throw new Error("Kode Hapus salah.");
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Form Ajuan");
+    
+    // Hapus File jika ada (Kolom AH / Index 33)
+    // Perhatikan: getRange pake 1-based index. Col AH = 34
+    const fileUrl = sheet.getRange(rowIndex, 34).getValue(); 
+    if (fileUrl && String(fileUrl).includes("drive.google.com")) {
+        try {
+            const fileId = String(fileUrl).match(/[-\w]{25,}/);
+            if (fileId) DriveApp.getFileById(fileId[0]).setTrashed(true);
+        } catch(e) {}
+    }
+    
+    sheet.deleteRow(rowIndex);
+    return "Data berhasil dihapus.";
+  } catch (e) {
+    return handleError('deleteSiabaCutiData', e);
+  }
+}
+
 function getSiabaCutiData(filters) {
   try {
     const { tahun, bulan, unitKerja } = filters;
@@ -1813,5 +2174,169 @@ function getSiabaCutiData(filters) {
 
   } catch (e) {
     return handleError('getSiabaCutiData', e);
+  }
+}
+
+/**
+ * Mengambil Opsi Filter Unit Kerja untuk Halaman Sisa Cuti
+ * Sumber: Sheet "Sisa CT" Kolom A
+ */
+function getSiabaCutiSisaFilterOptions() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Sisa CT");
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    // Ambil data Kolom A (Index 1, 1 kolom)
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    
+    const units = new Set();
+    data.forEach(row => {
+      if (row[0]) units.add(String(row[0]).trim());
+    });
+
+    return Array.from(units).sort();
+
+  } catch (e) {
+    return handleError('getSiabaCutiSisaFilterOptions', e);
+  }
+}
+
+/**
+ * Mengambil Data Tabel Sisa Cuti
+ * Sumber: Sheet "Sisa CT"
+ * Filter: Unit Kerja (Kolom A)
+ * Output: Kolom B s/d L (11 Kolom Data)
+ */
+function getSiabaCutiSisaData(unitKerja) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Sisa CT");
+    
+    if (!sheet || sheet.getLastRow() < 2) return { headers: [], rows: [] };
+
+    // Ambil Header (Baris 1)
+    // Kita ambil B sampai L (Kolom 2 sampai 12) = 11 Kolom
+    const headersRaw = sheet.getRange(1, 2, 1, 11).getDisplayValues()[0];
+    
+    // Ambil Data (Baris 2 s/d Akhir)
+    // Kita ambil A sampai L (Kolom 1 sampai 12)
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 12).getDisplayValues();
+
+    const rows = [];
+    
+    data.forEach(row => {
+        const rowUnit = String(row[0] || "").trim(); // Kolom A (Filter)
+        
+        if (unitKerja === "Semua" || rowUnit === unitKerja) {
+            // Ambil data dari index 1 (Kolom B) sampai index 11 (Kolom L)
+            // slice(1, 12) mengambil elemen ke-1, 2, ... 11.
+            const rowData = row.slice(1, 12); 
+            
+            // Validasi: Pastikan rowData tidak kosong
+            if (rowData.length > 0) {
+                rows.push(rowData);
+            }
+        }
+    });
+
+    // Sort berdasarkan Nama (Kolom pertama di rowData = Kolom B asli)
+    rows.sort((a, b) => String(a[0]).localeCompare(String(b[0])));
+
+    return { headers: headersRaw, rows: rows };
+
+  } catch (e) {
+    return handleError('getSiabaCutiSisaData', e);
+  }
+}
+
+/**
+ * Mengambil Daftar Tahun dari sheet Mapping "Data Cuti"
+ * Kolom A: Tahun, Kolom B: Nama Sheet Target
+ */
+function getSiabaDataCutiYears() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Data Cuti");
+    
+    // Validasi sheet mapping
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    // Ambil data kolom A (Tahun) mulai baris 2
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    
+    // Ambil tahun yang unik dan tidak kosong
+    const years = data.map(r => String(r[0]).trim()).filter(y => y !== "");
+    
+    // Return unique years, sorted descending (Terbaru di atas)
+    return [...new Set(years)].sort().reverse();
+  } catch (e) {
+    return handleError('getSiabaDataCutiYears', e);
+  }
+}
+
+/**
+ * Mengambil Data Tabel beserta Header Dinamis
+ */
+function getSiabaDataCutiTable(year, unitFilter) {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    
+    // 1. Cek Mapping
+    const mapSheet = ss.getSheetByName("Data Cuti");
+    if (!mapSheet) throw new Error("Sheet mapping 'Data Cuti' tidak ditemukan.");
+    
+    const mapData = mapSheet.getRange(2, 1, mapSheet.getLastRow() - 1, 2).getDisplayValues();
+    let targetSheetName = "";
+    
+    for(let i=0; i<mapData.length; i++) {
+        if (String(mapData[i][0]).trim() === String(year).trim()) {
+            targetSheetName = mapData[i][1];
+            break;
+        }
+    }
+    
+    if (!targetSheetName) return { error: "Sheet untuk tahun " + year + " tidak ditemukan." };
+
+    // 2. Buka Sheet Target
+    const targetSheet = ss.getSheetByName(targetSheetName);
+    if (!targetSheet) return { error: "Sheet '" + targetSheetName + "' tidak ditemukan." };
+
+    if (targetSheet.getLastRow() < 3) return { units: [], headers: [], rows: [] };
+
+    // 3. Ambil Semua Data (Header + Isi)
+    // Ambil Kolom A (Unit) sampai M (Index 12)
+    const range = targetSheet.getRange(1, 1, targetSheet.getLastRow(), 13);
+    const values = range.getDisplayValues();
+    
+    // Pisahkan Header (Baris 1 & 2) dan Data (Baris 3+)
+    // Kita hanya butuh Kolom B-M untuk ditampilkan (slice(1, 13))
+    const rawHeader1 = values[0].slice(1, 13);
+    const rawHeader2 = values[1].slice(1, 13);
+    
+    // Data mulai index 2
+    const dataRows = [];
+    const unitsSet = new Set();
+
+    for (let i = 2; i < values.length; i++) {
+        const row = values[i];
+        const rowUnit = String(row[0] || "").trim(); // Kolom A
+        
+        if (rowUnit) unitsSet.add(rowUnit);
+
+        // Filter Unit
+        if (unitFilter === "Semua" || rowUnit === unitFilter) {
+            dataRows.push(row.slice(1, 13)); // Ambil B-M
+        }
+    }
+
+    return {
+        units: Array.from(unitsSet).sort(),
+        headers: [rawHeader1, rawHeader2], // Kirim 2 baris header
+        rows: dataRows
+    };
+
+  } catch (e) {
+    return handleError('getSiabaDataCutiTable', e);
   }
 }

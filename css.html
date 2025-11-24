@@ -255,14 +255,87 @@ input:-webkit-autofill, input:-webkit-autofill:hover, input:-webkit-autofill:foc
   .data-table tfoot.has-content td { position: sticky; bottom: -1px; z-index: 5; background-color: #101E26; font-weight: bold; border-top: 2px solid rgba(0, 195, 255, 0.5); }
   .data-table tbody tr:hover .sticky-col { background-color: #2a4152; }
   .action-buttons { display: flex; justify-content: center; align-items: center; gap: 8px; }
-  .action-btn { display: inline-flex; align-items: center; justify-content: center; height: 24px; padding: 0 14px; border: 1px solid transparent; border-radius: 5px; cursor: pointer; color: white; font-size: 13px; font-weight: bold; transition: all 0.2s ease; width: 90px; box-sizing: border-box; text-decoration: none; white-space: nowrap; }
-  .action-btn i { margin-right: 6px; }
-  .view-btn { background-color: rgba(0, 180, 255, 0.2); border-color: rgba(0, 180, 255, 0.5); color: #00b4ff; }
-  .view-btn:hover { color: #ffffff; background-color: rgba(0, 180, 255, 0.4); }
-  .edit-btn { background-color: rgba(255, 183, 77, 0.4); border-color: rgba(255, 183, 77, 0.6); }
-  .edit-btn:hover { background-color: rgba(255, 183, 77, 0.6); }
-  .delete-btn { background-color: rgba(229, 115, 115, 0.4); border-color: rgba(229, 115, 115, 0.6); }
-  .delete-btn:hover { background-color: rgba(229, 115, 115, 0.6); }
+  
+/* --- TOMBOL AKSI GLOBAL (STANDARDISASI) --- */
+  .action-buttons { 
+      display: flex; 
+      justify-content: center; 
+      align-items: center; 
+      gap: 5px; /* Jarak antar tombol */
+  }
+
+  .action-btn { 
+      display: inline-flex; 
+      align-items: center; 
+      justify-content: center; 
+      
+      /* Ukuran Standar */
+      height: 28px;           /* Sedikit lebih tinggi agar enak dilihat */
+      min-width: 80px;        /* Lebar minimal agar seragam */
+      padding: 0 10px;        
+      
+      /* Font & Border */
+      font-size: 12px; 
+      font-weight: 600; 
+      border-radius: 4px; 
+      border: 1px solid transparent;
+      
+      /* Behavior */
+      cursor: pointer; 
+      color: white; 
+      text-decoration: none; 
+      white-space: nowrap;
+      transition: all 0.2s ease;
+      box-sizing: border-box;
+  }
+
+  .action-btn i { 
+      margin-right: 6px; /* Jarak ikon dengan teks */
+      font-size: 1.1em;
+  }
+
+  /* Varian Warna */
+  /* 1. Biru (Lihat / Unduh / Detail) */
+  .btn-blue, .view-btn { 
+      background-color: rgba(52, 152, 219, 0.2); 
+      border-color: rgba(52, 152, 219, 0.5); 
+      color: #3498db; 
+  }
+  .btn-blue:hover, .view-btn:hover { 
+      background-color: rgba(52, 152, 219, 0.5); 
+      color: white; 
+  }
+
+  /* 2. Kuning/Oranye (Edit / Revisi) */
+  .btn-edit, .edit-btn { 
+      background-color: rgba(241, 196, 15, 0.2); 
+      border-color: rgba(241, 196, 15, 0.5); 
+      color: #f1c40f; 
+  }
+  .btn-edit:hover, .edit-btn:hover { 
+      background-color: rgba(241, 196, 15, 0.5); 
+      color: white; 
+  }
+  
+  /* 3. Merah (Hapus / Batal) */
+  .btn-delete, .delete-btn { 
+      background-color: rgba(231, 76, 60, 0.2); 
+      border-color: rgba(231, 76, 60, 0.5); 
+      color: #e74c3c; 
+  }
+  .btn-delete:hover, .delete-btn:hover { 
+      background-color: rgba(231, 76, 60, 0.5); 
+      color: white; 
+  }
+  
+  /* 4. Disabled State */
+  .action-btn:disabled, .action-btn.disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      filter: grayscale(100%);
+  }
+
+
   .pagination-container { 
     width: 100%; /* Memastikan kontainer paginasi mengambil lebar penuh */
     margin-top: 15px; 
