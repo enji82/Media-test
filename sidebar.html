@@ -184,12 +184,30 @@
         </ul>
     </li>
     
-    <li>
-        <a href="#" data-page="pns_menu" title="PNS">
-            <i class="fas fa-user-tie"></i>
-            <span>PNS</span>
-        </a>
-    </li>
+    <li class="has-submenu">
+                <a href="#" data-page-parent="asn_menu" title="ASN">
+                    <i class="fas fa-user-tie"></i>
+                    <span>ASN</span>
+                    <i class="fas fa-chevron-right submenu-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li class="has-submenu">
+                        <a href="#" data-page-parent="asn_skp" data-page="asn_skp_menu" title="SKP">
+                            <span>SKP</span>
+                            <i class="fas fa-chevron-right submenu-icon"></i>
+                        </a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="asn_skp_unggah" title="Unggah Data SKP"><span>Unggah Data SKP</span></a></li>
+                            <li><a href="#" data-page="asn_skp_kelola" title="Kelola Data SKP"><span>Kelola Data SKP</span></a></li>
+                            <li><a href="#" data-page="asn_skp_kirim" title="Daftar Pengiriman SKP"><span>Daftar Pengiriman SKP</span></a></li>
+                        </ul>
+                    </li>
+                    <li><a href="#" data-page="asn_pak" title="PAK"><span>PAK</span></a></li>
+                    <li><a href="#" data-page="asn_kp" title="KP"><span>KP</span></a></li>
+                    <li><a href="#" data-page="asn_kgb" title="KGB"><span>KGB</span></a></li>
+                    <li><a href="#" data-page="asn_kp4" title="KP4"><span>KP4</span></a></li>
+                </ul>
+            </li>
 </ul>
 
 <div class="sidebar-footer">

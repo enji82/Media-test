@@ -881,6 +881,14 @@ App.showDeleteConfirmation = (button) => {
         infoHtml = `<p>Hapus pengajuan cuti atas nama <b>${rowInfo.Nama}</b>?</p>`;
         deleteFunction = App.processDeletionCuti;
         reloadPage = 'siaba_cuti_unduh';
+    } else if (rowInfo._source === 'CEKCUTI') {
+        infoHtml = `<p>Hapus data unggahan cuti atas nama <b>${rowInfo.Nama}</b>?</p>`;
+        deleteFunction = App.processDeletionCutiCek; // Fungsi baru
+        reloadPage = 'siaba_cuti_cek';
+    } else if (rowInfo._source === 'SKP') {
+        infoHtml = `<p>Hapus data SKP atas nama <b>${rowInfo.Nama}</b>?</p>`;
+        deleteFunction = App.processDeletionSkp;
+        reloadPage = 'asn_skp_kelola';    
     } else {
         App.showAppModal('error', 'Gagal: Jenis data untuk dihapus tidak teridentifikasi.');
         return;
@@ -1045,6 +1053,17 @@ App.processDeletionCuti = (rowInfo, reloadPage) => {
         if(res && res.error) App.showAppModal('error', res.error);
         else App.showAppModal('success', res, reloadPage);
     }).deleteSiabaCutiData(rowInfo._rowIndex, deleteCode);
+};
+
+App.processDeletionCutiCek = (rowInfo, reloadPage) => {
+    const deleteCode = document.getElementById('kodeHapusInput').value;
+    if (!deleteCode) { App.showAppModal('error', 'Kode hapus kosong.'); return; }
+    App.showAppModal('loading', 'Menghapus...');
+    google.script.run.withSuccessHandler(res => {
+        document.getElementById('deleteModal').classList.remove('show');
+        if(res && res.error) App.showAppModal('error', res.error);
+        else App.showAppModal('success', res, reloadPage);
+    }).deleteSiabaCutiUnggahan(rowInfo._rowIndex, deleteCode);
 };
 
 // ========================================================
@@ -8517,29 +8536,25 @@ function initSiabaCutiUnduhPage() {
     const filterUnit = document.getElementById('filterUnitUnduh');
     const searchInput = document.getElementById('searchCuti');
     
+    const loadingStatus = document.getElementById('loadingStatusUnduh');
     const tableWrapper = document.getElementById('tableWrapperUnduh');
     const tableOverlay = document.getElementById('tableOverlayLoaderUnduh');
     const tableBody = document.getElementById('cutiUnduhTable').querySelector('tbody');
     
-    let allRows = []; // Store data for client-side search
+    let allRows = []; 
 
-    // --- LOGIKA LOADER BARU (OVERLAY) ---
     function toggleLoader(show) {
         if(show) {
-            // Pastikan wrapper tampil, overlay tampil di atasnya
             if(tableWrapper) tableWrapper.style.display = 'flex';
             if(tableOverlay) tableOverlay.style.display = 'flex';
         } else {
-            // Sembunyikan overlay saja, tabel tetap tampil
             if(tableOverlay) tableOverlay.style.display = 'none';
         }
     }
 
     function renderTable(rows) {
         tableBody.innerHTML = '';
-        
         if (rows.length === 0) {
-            // Tampilkan pesan kosong
             tableBody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
             return;
         }
@@ -8555,19 +8570,15 @@ function initSiabaCutiUnduhPage() {
             html += `<td>${row.jmlHari}</td>`;
             html += `<td>${row.usulan}</td>`;
             
-            // 1. STATUS
+            // Status
             let statusHtml = '';
             const s = row.status; 
-            if (s === 'Disetujui') {
-                statusHtml = '<span class="status-ok"><i class="fas fa-check-circle"></i> Disetujui</span>';
-            } else if (s === 'Dibatalkan') {
-                statusHtml = '<span class="status-tolak"><i class="fas fa-times-circle"></i> Dibatalkan</span>';
-            } else {
-                statusHtml = '<span class="status-proses"><i class="fas fa-hourglass-half"></i> Diproses</span>';
-            }
+            if (s === 'Disetujui') statusHtml = '<span class="status-ok"><i class="fas fa-check-circle"></i> Disetujui</span>';
+            else if (s === 'Dibatalkan') statusHtml = '<span class="status-tolak"><i class="fas fa-times-circle"></i> Dibatalkan</span>';
+            else statusHtml = '<span class="status-proses"><i class="fas fa-hourglass-half"></i> Diproses</span>';
             html += `<td>${statusHtml}</td>`;
 
-            // 2. FORMULIR (Tombol Unduh)
+            // Formulir
             let fileBtn = '-';
             if (row.fileUrl && row.fileUrl.startsWith('http')) {
                 fileBtn = `<button class="action-btn btn-blue" onclick="App.showFilePreview('${row.fileUrl}')"><i class="fas fa-download"></i> Unduh</button>`;
@@ -8576,21 +8587,19 @@ function initSiabaCutiUnduhPage() {
 
             html += `<td>${row.keterangan}</td>`;
             
-            // 3. AKSI (Edit & Hapus)
-            const rowInfo = JSON.stringify({ _source: 'CUTI', _rowIndex: row._rowIndex, Nama: row.nama });
-            const safeRowInfo = rowInfo.replace(/'/g, "&#39;");
+            // Aksi
+            const rowInfo = JSON.stringify({ _source: 'CUTI', _rowIndex: row._rowIndex, Nama: row.nama }).replace(/'/g, "&#39;");
             
-            // LOGIKA BARU: Tombol Edit HANYA aktif jika status "Diproses"
+            // LOGIKA EDIT: Tidak aktif jika Disetujui
             let editBtn = '';
-            if (s === 'Diproses') {
-                // Tombol Aktif
-                editBtn = `<button class="action-btn btn-edit" onclick="App.loadPage(event, 'siaba_cuti_form', {rowIndex: ${row._rowIndex}})"><i class="fas fa-pencil-alt" style="margin-right:4px;"></i> Edit</button>`;
-            } else {
-                // Tombol Mati (untuk Disetujui atau Dibatalkan)
+            if (s === 'Disetujui') {
                 editBtn = `<button class="action-btn btn-edit" disabled style="opacity: 0.5; cursor: not-allowed;"><i class="fas fa-pencil-alt" style="margin-right:4px;"></i> Edit</button>`;
+            } else {
+                // Gunakan row._rowIndex atau ID jika sudah ada. Disini pakai rowIndex (lama) atau ID jika ada.
+                editBtn = `<button class="action-btn btn-edit" onclick="App.loadPage(event, 'siaba_cuti_form', {rowIndex: ${row._rowIndex}})"><i class="fas fa-pencil-alt" style="margin-right:4px;"></i> Edit</button>`;
             }
 
-            const delBtn = `<button class="action-btn btn-delete" onclick="App.showDeleteConfirmation(this)" data-row-info='${safeRowInfo}'><i class="fas fa-trash" style="margin-right:4px;"></i> Hapus</button>`;
+            const delBtn = `<button class="action-btn btn-delete" onclick="App.showDeleteConfirmation(this)" data-row-info='${rowInfo}'><i class="fas fa-trash" style="margin-right:4px;"></i> Hapus</button>`;
             
             html += `<td><div class="action-buttons">${editBtn}${delBtn}</div></td>`;
 
@@ -8606,15 +8615,13 @@ function initSiabaCutiUnduhPage() {
             tahun: filterTahun.value,
             unitKerja: filterUnit.value
         };
-        
         toggleLoader(true);
-        
         google.script.run.withSuccessHandler(data => {
             allRows = data; 
             filterAndRender();
-            toggleLoader(false); // Matikan overlay setelah data siap
+            toggleLoader(false);
         }).withFailureHandler(err => {
-            tableBody.innerHTML = `<tr><td colspan="13" style="color:red; text-align:center; padding:20px;">Error: ${err.message}</td></tr>`;
+            tableBody.innerHTML = `<tr><td colspan="13" style="color:red;">Error: ${err.message}</td></tr>`;
             toggleLoader(false);
         }).getSiabaCutiUnduhData(filters);
     }
@@ -8622,21 +8629,16 @@ function initSiabaCutiUnduhPage() {
     function filterAndRender() {
         const query = searchInput.value.toLowerCase();
         const filtered = allRows.filter(r => 
-            r.nama.toLowerCase().includes(query) || 
-            r.nip.toLowerCase().includes(query)
+            String(r.nama).toLowerCase().includes(query) || 
+            String(r.nip).toLowerCase().includes(query)
         );
         renderTable(filtered);
     }
 
     // Init
-    toggleLoader(true); // Tampilkan overlay saat awal load
-    
+    toggleLoader(true);
     google.script.run.withSuccessHandler(opts => {
-        if(opts.error) { 
-             App.showAppModal('error', opts.error); 
-             toggleLoader(false);
-             return; 
-        }
+        if(opts.error) { App.showAppModal('error', opts.error); toggleLoader(false); return; }
 
         const now = new Date();
         const curYear = now.getFullYear().toString();
@@ -8659,51 +8661,50 @@ function initSiabaCutiUnduhPage() {
 }
 
 function initSiabaCutiEditPage(params) {
+    // ALERT INI HARUS MUNCUL. JIKA TIDAK, BERARTI CODE BELUM TER-UPDATE.
+    alert("MEMUAT HALAMAN EDIT CUTI - VERSI BARU"); 
+
     const form = document.getElementById('cutiEditForm');
     const skeleton = document.getElementById('skeleton-loader');
-    if (!form || !params || !params.idCuti) return;
+    
+    if (!form || !params || !params.idCuti) {
+        alert("Error: ID Cuti tidak ditemukan");
+        return;
+    }
 
     form.idCuti.value = params.idCuti;
     
-    // Elemen
+    // Elemen Input
     const elStatus = document.getElementById('statusEdit');
-    const elGol = document.getElementById('golonganEdit');
     const elJenis = document.getElementById('jenisCutiEdit');
     const elMulai = document.getElementById('tglMulaiEdit');
     const elSelesai = document.getElementById('tglSelesaiEdit');
     const elHari = document.getElementById('jmlHariEdit');
 
-    // 1. Logika Dinamis Dropdown (Status -> Gol/Jenis)
-    function updateDropdowns(statusRaw) {
-        // PERBAIKAN: Bersihkan status dari spasi agar pencocokan akurat
+    // 1. Logic Dropdown Jenis Cuti
+    function updateJenisCuti(statusRaw) {
         const status = String(statusRaw || "").trim();
-
-        elGol.innerHTML = '<option value="" disabled selected>-- Pilih --</option>';
         elJenis.innerHTML = '<option value="" disabled selected>-- Pilih --</option>';
-        
-        let golOpts = [];
-        let cutiOpts = [];
-
+        let opts = [];
         if (status === 'PNS') {
-            golOpts = ['IV/b', 'IV/a', 'III/d', 'III/c', 'III/b', 'III/a', 'II/d', 'II/c', 'II/b', 'II/a'];
-            cutiOpts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Melahirkan', 'Cuti Alasan Penting', 'Cuti Besar', 'Cuti di Luar Tanggungan Negara', 'Cuti Umroh'];
+            opts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Alasan Penting', 'Cuti Melahirkan', 'Cuti Besar'];
         } else if (status === 'PPPK') {
-            golOpts = ['IX', 'VII', 'VI', 'V', 'IV', 'I'];
-            cutiOpts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Melahirkan', 'Cuti Umroh'];
+            opts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Melahirkan'];
         }
-        
-        golOpts.forEach(o => elGol.add(new Option(o, o)));
-        cutiOpts.forEach(o => elJenis.add(new Option(o, o)));
+        opts.forEach(o => elJenis.add(new Option(o, o)));
     }
 
-    elStatus.addEventListener('change', () => updateDropdowns(elStatus.value));
+    elStatus.addEventListener('change', () => {
+        updateJenisCuti(elStatus.value);
+        elJenis.disabled = false;
+    });
 
-    // 2. Kalkulasi Hari
+    // 2. Logic Tanggal & Hari
     function calculateDays() {
         if (elMulai.value && elSelesai.value) {
-             if (elSelesai.value < elMulai.value) elSelesai.value = elMulai.value;
-             const diff = Math.ceil(Math.abs(new Date(elSelesai.value) - new Date(elMulai.value)) / (1000 * 60 * 60 * 24)) + 1;
-             elHari.value = diff;
+            if (elSelesai.value < elMulai.value) elSelesai.value = elMulai.value;
+            const diff = Math.ceil(Math.abs(new Date(elSelesai.value) - new Date(elMulai.value)) / (1000 * 60 * 60 * 24)) + 1;
+            elHari.value = diff;
         }
     }
     elMulai.addEventListener('change', () => { elSelesai.min = elMulai.value; calculateDays(); });
@@ -8711,38 +8712,46 @@ function initSiabaCutiEditPage(params) {
 
     // 3. Load Data
     if(skeleton) skeleton.style.display = 'block';
-    
+    form.style.display = 'none';
+
     google.script.run.withSuccessHandler(data => {
         if(skeleton) skeleton.style.display = 'none';
         form.style.display = 'block';
 
-        // Isi Field
-        document.getElementById('unitKerjaEdit').value = data.unitKerja;
-        document.getElementById('namaAsnEdit').value = data.namaAsn;
-        document.getElementById('nipEdit').value = data.nip;
-        document.getElementById('tugasEdit').value = data.tugas;
-        document.getElementById('noHpEdit').value = data.noHp;
-        document.getElementById('alasanEdit').value = data.alasan;
-        document.getElementById('alamatCutiEdit').value = data.alamatCuti;
-        document.getElementById('usulanEdit').value = data.usulan;
-        
-        // Tanggal
-        document.getElementById('tglSuratEdit').value = data.tglSurat;
-        elMulai.value = data.tglMulai;
-        elSelesai.value = data.tglSelesai;
-        elHari.value = data.jmlHari;
+        // ALERT DATA DARI SERVER
+        // alert("Data Server:\nUnit: " + data.unitKerja + "\nNama: " + data.namaAsn);
 
-        // Dropdown Bertingkat (PERBAIKAN)
-        const safeStatus = String(data.status || "").trim(); // Bersihkan status dari server
+        if (!data) {
+            App.showAppModal('error', 'Data tidak ditemukan.');
+            return;
+        }
+
+        // ISI DATA
+        document.getElementById('existingFileUrlEdit').value = data.fileUrl || '';
+        
+        document.getElementById('unitKerjaEdit').value = data.unitKerja || '';
+        document.getElementById('namaAsnEdit').value = data.namaAsn || '';
+        document.getElementById('nipEdit').value = data.nip || '';
+
+        const safeStatus = String(data.status || "").trim();
         elStatus.value = safeStatus;
+        updateJenisCuti(safeStatus); 
         
-        // Panggil updateDropdowns dengan status yang sudah bersih
-        updateDropdowns(safeStatus); 
-        
-        // Set nilai terpilih setelah opsi digenerate
-        // (Timeout kecil kadang diperlukan jika browser lambat merender option, tapi biasanya aman tanpanya)
-        if (data.golongan) elGol.value = data.golongan;
-        if (data.jenisCuti) elJenis.value = data.jenisCuti;
+        if(data.jenisCuti) {
+            elJenis.value = data.jenisCuti;
+        }
+        elJenis.disabled = false;
+
+        elMulai.value = data.tglMulai || '';
+        elSelesai.value = data.tglSelesai || '';
+        elHari.value = data.jmlHari || '';
+
+        const linkDiv = document.getElementById('currentDocLink');
+        if(data.fileUrl && data.fileUrl.startsWith('http')) {
+            linkDiv.innerHTML = `<button type="button" class="view-doc-btn" onclick="App.showFilePreview('${data.fileUrl}')"><i class="fas fa-eye"></i> Lihat Dokumen Saat Ini</button>`;
+        } else {
+            linkDiv.innerHTML = '<span style="color:#aaa;">Belum ada dokumen.</span>';
+        }
 
     }).withFailureHandler(err => {
         if(skeleton) skeleton.style.display = 'none';
@@ -8752,18 +8761,48 @@ function initSiabaCutiEditPage(params) {
     // 4. Submit Update
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const btn = document.getElementById('submitBtnEdit');
+        const btn = document.getElementById('submitBtnEditCuti');
+        const fileInput = document.getElementById('fileCutiEdit');
+        
+        if (fileInput.files.length > 0 && fileInput.files[0].size > 100 * 1024) {
+            App.showAppModal('error', 'Ukuran file melebihi 100 KB.');
+            return;
+        }
+
         btn.disabled = true;
         App.showAppModal('loading', 'Menyimpan Perubahan...');
-        
+
         const formData = Object.fromEntries(new FormData(form));
-        
-        google.script.run.withSuccessHandler(res => {
-            App.showAppModal('success', res, 'siaba_cuti_unduh');
-        }).withFailureHandler(err => {
-            App.showAppModal('error', err.message);
-            btn.disabled = false;
-        }).updateSiabaCutiData(formData);
+        delete formData.fileData; 
+
+        const sendData = (payload) => {
+             google.script.run.withSuccessHandler(res => {
+                if(res && res.error) {
+                    App.showAppModal('error', res.error);
+                    btn.disabled = false;
+                } else {
+                    App.showAppModal('success', res, 'siaba_cuti_cek');
+                }
+            }).withFailureHandler(err => {
+                App.showAppModal('error', err.message);
+                btn.disabled = false;
+            }).updateSiabaCutiData(payload);
+        };
+
+        if (fileInput.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                formData.fileData = {
+                    fileName: fileInput.files[0].name,
+                    mimeType: fileInput.files[0].type,
+                    data: ev.target.result.split(',')[1]
+                };
+                sendData(formData);
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
+            sendData(formData);
+        }
     });
 }
 
@@ -8772,41 +8811,41 @@ function initSiabaDataCutiPage() {
     const filterUnit = document.getElementById('filterUnitData');
     const searchInput = document.getElementById('searchDataCuti');
     
-    const loadingStatus = document.getElementById('loadingDataCuti');
+    // Elemen Overlay
     const tableWrapper = document.getElementById('tableWrapperDataCuti');
+    const tableOverlay = document.getElementById('tableOverlayLoaderDataCuti');
+    
     const tableBody = document.getElementById('dataCutiTable').querySelector('tbody');
     const tableHead = document.getElementById('dataCutiTable').querySelector('thead');
     
     let allRows = [];
 
+    // Toggle Overlay
     function toggleLoader(show) {
         if(show) {
-            loadingStatus.style.display = 'flex';
-            tableWrapper.style.display = 'none';
+            if(tableWrapper) tableWrapper.style.display = 'flex';
+            if(tableOverlay) tableOverlay.style.display = 'flex';
         } else {
-            loadingStatus.style.display = 'none';
-            tableWrapper.style.display = 'flex';
+            if(tableOverlay) tableOverlay.style.display = 'none';
         }
     }
 
-    // --- FUNGSI RENDER HEADER DINAMIS ---
     function renderHeader(headers) {
         tableHead.innerHTML = '';
-        const row1 = headers[0]; // Header Utama
-        const row2 = headers[1]; // Sub Header
+        const row1 = headers[0]; 
+        const row2 = headers[1]; 
         
         let tr1 = document.createElement('tr');
         let tr2 = document.createElement('tr');
         
-        // --- 1. SISIPKAN KOLOM NO. (Manual) ---
+        // Kolom No.
         let thNo = document.createElement('th');
         thNo.textContent = "No.";
-        thNo.rowSpan = 2; // Gabung 2 baris header
+        thNo.rowSpan = 2; 
         thNo.style.width = "50px";
         thNo.style.minWidth = "50px";
         thNo.style.maxWidth = "50px";
         tr1.appendChild(thNo);
-        // --------------------------------------
         
         let skipCol = new Array(row1.length).fill(false);
 
@@ -8818,12 +8857,10 @@ function initSiabaDataCutiPage() {
             let th = document.createElement('th');
             th.textContent = text1;
 
-            // Cek Vertical Merge (Rowspan)
             if (text1 && !text2) {
                 th.rowSpan = 2;
                 tr1.appendChild(th);
             }
-            // Cek Horizontal Merge (Colspan)
             else if (text1 && text2) {
                 let span = 1;
                 for (let j = i + 1; j < row1.length; j++) {
@@ -8834,14 +8871,10 @@ function initSiabaDataCutiPage() {
                         break; 
                     }
                 }
-                
-                if (span > 1) {
-                    th.colSpan = span;
-                    th.style.backgroundColor = '#2c3e50'; 
-                }
+                if (span > 1) th.colSpan = span;
+                // Background color dihapus agar ikut CSS
                 tr1.appendChild(th);
 
-                // Render Sub-headers
                 let subTh = document.createElement('th');
                 subTh.textContent = text2;
                 tr2.appendChild(subTh);
@@ -8871,9 +8904,7 @@ function initSiabaDataCutiPage() {
 
     function renderTable(rows) {
         tableBody.innerHTML = '';
-        
         if (rows.length === 0) {
-            // Colspan disesuaikan (asumsi data ~12 kolom + 1 No)
             tableBody.innerHTML = `<tr><td colspan="15" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
             return;
         }
@@ -8881,16 +8912,19 @@ function initSiabaDataCutiPage() {
         rows.forEach((row, idx) => {
             const tr = document.createElement('tr');
             
-            // --- 2. SISIPKAN NOMOR URUT (Manual) ---
+            // Kolom No.
             let tdNo = document.createElement('td');
             tdNo.textContent = idx + 1;
             tr.appendChild(tdNo);
-            // ---------------------------------------
             
             row.forEach(cell => {
-                const val = (cell === "" || cell == null) ? "-" : cell;
+                // LOGIKA PENGGANTIAN NILAI 0/- MENJADI '-'
+                let cellContent = cell;
+                if (cell === '' || cell == null || cell == 0 || cell === '0') {
+                    cellContent = '-';
+                }
                 const td = document.createElement('td');
-                td.textContent = val;
+                td.textContent = cellContent;
                 tr.appendChild(td);
             });
             
@@ -8935,7 +8969,6 @@ function initSiabaDataCutiPage() {
 
     function filterAndRender() {
         const query = searchInput.value.toLowerCase();
-        // Asumsi Nama di index 0, NIP di index 1 (karena data mentah B-M)
         const filtered = allRows.filter(row => 
             String(row[0] || "").toLowerCase().includes(query) || 
             String(row[1] || "").toLowerCase().includes(query)
@@ -8969,12 +9002,1387 @@ function initSiabaDataCutiPage() {
     }).getSiabaDataCutiYears();
 }
 
+function initSiabaCutiUnggahPage() {
+    const form = document.getElementById('cutiUnggahForm');
+    const skeleton = document.getElementById('skeleton-loader');
+    
+    // Element Form
+    const unitSelect = document.getElementById('unitKerjaUnggah');
+    const namaSelect = document.getElementById('namaAsnUnggah');
+    const nipInput = document.getElementById('nipUnggah');
+    const statusSelect = document.getElementById('statusUnggah');
+    const jenisSelect = document.getElementById('jenisCutiUnggah');
+    
+    const elMulai = document.getElementById('tglMulaiUnggah');
+    const elSelesai = document.getElementById('tglSelesaiUnggah');
+    const elHari = document.getElementById('jmlHariUnggah');
+
+    if (!form) return;
+
+    // Reset Form & Tampilkan Loader
+    if(skeleton) skeleton.style.display = 'block';
+    form.style.display = 'none';
+    
+    // Reset Dropdown Unit agar bersih
+    if(unitSelect) unitSelect.innerHTML = '<option value="" disabled selected>-- Memuat... --</option>';
+
+    let employeeData = [];
+
+    // 1. Load Options (Unit, Nama, NIP)
+    google.script.run
+        .withSuccessHandler(data => {
+            // Sembunyikan Loader & Tampilkan Form
+            if(skeleton) skeleton.style.display = 'none';
+            form.style.display = 'block';
+
+            // Cek Error Server
+            if (data.error) { 
+                App.showAppModal('error', data.error); 
+                return; 
+            }
+            
+            // Cek Data Kosong
+            if (!data || data.length === 0) {
+                if(unitSelect) unitSelect.innerHTML = '<option value="" disabled selected>-- Data Kosong --</option>';
+                // Optional: App.showAppModal('error', 'Data Database Cuti kosong.');
+                return;
+            }
+
+            employeeData = data;
+            
+            // Isi Dropdown Unit Kerja
+            const units = [...new Set(data.map(item => item.unit))].sort();
+            
+            if(unitSelect) {
+                unitSelect.innerHTML = '<option value="" disabled selected>-- Pilih Unit Kerja --</option>';
+                units.forEach(u => unitSelect.add(new Option(u, u)));
+            }
+
+        })
+        .withFailureHandler(err => {
+            // Handler Error Koneksi/Script
+            if(skeleton) skeleton.style.display = 'none';
+            form.style.display = 'block'; // Tetap tampilkan form meski error (biar user tau)
+            if(unitSelect) unitSelect.innerHTML = '<option value="" disabled selected>-- Gagal Memuat --</option>';
+            App.showAppModal('error', 'Gagal memuat data: ' + err.message);
+        })
+        .getSiabaCutiDatabaseOptions();
+
+    // 2. Dropdown Bertingkat (Unit -> Nama -> NIP)
+    if(unitSelect) {
+        unitSelect.addEventListener('change', function() {
+            const unit = this.value;
+            const filtered = employeeData.filter(e => e.unit === unit);
+            filtered.sort((a, b) => a.nama.localeCompare(b.nama));
+
+            namaSelect.innerHTML = '<option value="" disabled selected>-- Pilih Nama --</option>';
+            filtered.forEach(emp => {
+                const opt = new Option(emp.nama, emp.nama);
+                opt.dataset.nip = emp.nip;
+                namaSelect.add(opt);
+            });
+            namaSelect.disabled = false;
+            nipInput.value = "";
+        });
+    }
+
+    if(namaSelect) {
+        namaSelect.addEventListener('change', function() {
+            const opt = this.options[this.selectedIndex];
+            if (opt.dataset.nip) nipInput.value = opt.dataset.nip;
+        });
+    }
+
+    // 3. Dropdown Status -> Jenis Cuti
+    if(statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            const status = this.value;
+            jenisSelect.innerHTML = '<option value="" disabled selected>-- Pilih --</option>';
+            
+            let opts = [];
+            if (status === 'PNS') {
+                opts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Alasan Penting', 'Cuti Melahirkan', 'Cuti Besar'];
+            } else if (status === 'PPPK') {
+                opts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Melahirkan'];
+            }
+            
+            opts.forEach(o => jenisSelect.add(new Option(o, o)));
+            jenisSelect.disabled = false;
+        });
+    }
+
+    // 4. Kalkulasi Hari & Validasi Tanggal
+    function calculateDays() {
+        if (elMulai.value && elSelesai.value) {
+            if (elSelesai.value < elMulai.value) elSelesai.value = elMulai.value;
+            const diff = Math.ceil(Math.abs(new Date(elSelesai.value) - new Date(elMulai.value)) / (1000 * 60 * 60 * 24)) + 1;
+            elHari.value = diff;
+        }
+    }
+    
+    if(elMulai) {
+        elMulai.addEventListener('change', () => {
+            elSelesai.min = elMulai.value;
+            calculateDays();
+        });
+    }
+    if(elSelesai) elSelesai.addEventListener('change', calculateDays);
+
+    // 5. Submit Form
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtnUnggahCuti');
+        const fileInput = document.getElementById('fileCuti');
+        
+        // UBAH BATASAN JADI 100 KB
+        if (fileInput.files[0].size > 100 * 1024) {
+            App.showAppModal('error', 'Ukuran file melebihi 100 KB.');
+            return;
+        }
+
+        btn.disabled = true;
+        App.showAppModal('loading', 'Mengirim data...');
+
+        const formData = Object.fromEntries(new FormData(form));
+        
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            formData.fileData = {
+                fileName: fileInput.files[0].name,
+                mimeType: fileInput.files[0].type,
+                data: ev.target.result.split(',')[1]
+            };
+
+            google.script.run.withSuccessHandler(res => {
+                if (res && res.error) {
+                    App.showAppModal('error', res.error);
+                    btn.disabled = false;
+                } else {
+                    App.showAppModal('success', res, 'siaba_cuti_cek'); 
+                }
+            }).withFailureHandler(err => {
+                App.showAppModal('error', err.message);
+                btn.disabled = false;
+            }).submitSiabaCutiUnggahForm(formData);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+    });
+}
+
+function initSiabaCutiCekPage() {
+    const filterTahun = document.getElementById('filterTahunCekCuti');
+    const filterBulan = document.getElementById('filterBulanCekCuti');
+    const filterUnit = document.getElementById('filterUnitCekCuti');
+    const searchInput = document.getElementById('searchCekCuti');
+    
+    const tableWrapper = document.getElementById('tableWrapperCekCuti');
+    const tableOverlay = document.getElementById('tableOverlayLoaderCekCuti');
+    const tableBody = document.getElementById('cekCutiTable').querySelector('tbody');
+    
+    let allRows = [];
+
+    function toggleLoader(show) {
+        if(show) {
+            if(tableWrapper) tableWrapper.style.display = 'flex';
+            if(tableOverlay) tableOverlay.style.display = 'flex';
+        } else {
+            if(tableOverlay) tableOverlay.style.display = 'none';
+        }
+    }
+
+    function renderTable(rows) {
+        tableBody.innerHTML = '';
+        if (rows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="13" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
+            return;
+        }
+
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            let html = `<td>${idx + 1}</td>`;
+            html += `<td>${row.nama}</td>`;
+            html += `<td>${row.nip}</td>`;
+            html += `<td>${row.jenis}</td>`;
+            html += `<td>${row.mulai}</td>`;
+            html += `<td>${row.selesai}</td>`;
+            html += `<td>${row.jml}</td>`;
+            
+            // Formulir
+            let fileBtn = '-';
+            if (row.fileUrl && row.fileUrl.startsWith('http')) {
+                // Menggunakan class 'action-btn btn-blue' agar seragam
+                fileBtn = `<button class="action-btn btn-blue" onclick="App.showFilePreview('${row.fileUrl}')"><i class="fas fa-eye"></i> Lihat</button>`;
+            }
+            html += `<td>${fileBtn}</td>`;
+
+            // Status
+            let statusHtml = '';
+            if (row.status === 'Disetujui') statusHtml = '<span class="status-ok"><i class="fas fa-check-circle"></i> Disetujui</span>';
+            else if (row.status === 'Ditolak') statusHtml = '<span class="status-tolak"><i class="fas fa-times-circle"></i> Ditolak</span>';
+            else if (row.status === 'Revisi') statusHtml = '<span class="status-revisi"><i class="fas fa-exclamation-triangle"></i> Revisi</span>';
+            else statusHtml = '<span class="status-proses"><i class="fas fa-hourglass-half"></i> Diproses</span>';
+            html += `<td>${statusHtml}</td>`;
+
+            html += `<td>${row.ket}</td>`;
+            
+            // Aksi (HANYA DEKLARASI SEKALI)
+            const canEdit = (row.status === 'Diproses' || row.status === 'Revisi');
+            const rowInfo = JSON.stringify({ _source: 'CEKCUTI', _rowIndex: row._rowIndex, Nama: row.nama }).replace(/'/g, "&#39;");
+            
+            let editBtn = '';
+            if(canEdit && row.id) {
+                editBtn = `<button class="action-btn btn-edit" onclick="App.loadPage(event, 'siaba_cuti_edit', {idCuti: '${row.id}'})"><i class="fas fa-pencil-alt" style="margin-right:4px;"></i> Edit</button>`;
+            } else {
+                editBtn = `<button class="action-btn btn-edit" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-pencil-alt" style="margin-right:4px;"></i> Edit</button>`;
+            }
+
+            const delBtn = `<button class="action-btn btn-delete" onclick="App.showDeleteConfirmation(this)" data-row-info='${rowInfo}'><i class="fas fa-trash" style="margin-right:4px;"></i> Hapus</button>`;
+            
+            html += `<td><div class="action-buttons">${editBtn}${delBtn}</div></td>`;
+
+            html += `<td>${row.tglAju}</td>`;
+            html += `<td>${row.update}</td>`;
+
+            tr.innerHTML = html;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        const filters = {
+            tahun: filterTahun.value,
+            bulan: filterBulan.value,
+            unitKerja: filterUnit.value
+        };
+        toggleLoader(true);
+        google.script.run.withSuccessHandler(data => {
+            allRows = data; 
+            filterAndRender();
+            toggleLoader(false);
+        }).withFailureHandler(err => {
+            tableBody.innerHTML = `<tr><td colspan="13" style="color:red; text-align:center;">Error: ${err.message}</td></tr>`;
+            toggleLoader(false);
+        }).getSiabaCutiCekData(filters);
+    }
+
+    function filterAndRender() {
+        const query = searchInput.value.toLowerCase();
+        const filtered = allRows.filter(r => 
+            String(r.nama).toLowerCase().includes(query) || 
+            String(r.nip).toLowerCase().includes(query)
+        );
+        renderTable(filtered);
+    }
+
+    // Init
+    toggleLoader(true);
+    google.script.run.withSuccessHandler(opts => {
+        if(opts.error) { App.showAppModal('error', opts.error); toggleLoader(false); return; }
+
+        const now = new Date();
+        const curYear = now.getFullYear().toString();
+        const mNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const curMonth = mNames[now.getMonth()];
+
+        const addOpt = (el, v) => el.add(new Option(v, v));
+        
+        filterTahun.innerHTML = '';
+        opts.tahun.forEach(t => addOpt(filterTahun, t));
+        if(opts.tahun.includes(curYear)) filterTahun.value = curYear;
+
+        filterBulan.innerHTML = '';
+        filterBulan.add(new Option("Semua Bulan", "Semua"));
+        opts.bulan.forEach(b => addOpt(filterBulan, b));
+        filterBulan.value = "Semua";
+
+        filterUnit.innerHTML = '';
+        filterUnit.add(new Option("Semua Unit Kerja", "Semua"));
+        opts.unit.forEach(u => addOpt(filterUnit, u));
+
+        [filterTahun, filterBulan, filterUnit].forEach(el => el.addEventListener('change', fetchData));
+        searchInput.addEventListener('input', App.debounce(filterAndRender, 300));
+
+        fetchData();
+    }).getSiabaCutiCekFilterOptions();
+}
+
+// --- FUNGSI BARU V2 ---
+function initSiabaCutiEditPage_v2(params) {
+    const form = document.getElementById('cutiEditForm');
+    const skeleton = document.getElementById('skeleton-loader');
+    
+    if (!form || !params || !params.idCuti) {
+        App.showAppModal('error', 'Parameter ID Salah.');
+        return;
+    }
+
+    form.idCuti.value = params.idCuti;
+    
+    const elUnit = document.getElementById('unitKerjaEdit');
+    const elNama = document.getElementById('namaAsnEdit');
+    const elNip = document.getElementById('nipEdit');
+    const elStatus = document.getElementById('statusEdit');
+    const elJenis = document.getElementById('jenisCutiEdit');
+    const elMulai = document.getElementById('tglMulaiEdit');
+    const elSelesai = document.getElementById('tglSelesaiEdit');
+    const elHari = document.getElementById('jmlHariEdit');
+
+    // Helper Parse Date Client Side (dd mmmm yyyy -> yyyy-mm-dd)
+    function convertIndoDate(str) {
+        if(!str) return "";
+        const mNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const parts = str.split(' '); 
+        if(parts.length >= 3) {
+            const d = parts[0].padStart(2,'0');
+            const mIdx = mNames.indexOf(parts[1]) + 1;
+            const m = String(mIdx).padStart(2,'0');
+            const y = parts[2];
+            return `${y}-${m}-${d}`;
+        }
+        return "";
+    }
+
+    // Logic Dropdown
+    function updateJenisCuti(status) {
+        elJenis.innerHTML = '<option value="" disabled selected>-- Pilih --</option>';
+        let opts = [];
+        if (status === 'PNS') opts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Alasan Penting', 'Cuti Melahirkan', 'Cuti Besar'];
+        else if (status === 'PPPK') opts = ['Cuti Tahunan', 'Cuti Sakit', 'Cuti Melahirkan'];
+        opts.forEach(o => elJenis.add(new Option(o, o)));
+    }
+    elStatus.addEventListener('change', () => { updateJenisCuti(elStatus.value); elJenis.disabled = false; });
+
+    // Logic Hari
+    function calculateDays() {
+        if (elMulai.value && elSelesai.value) {
+            if (elSelesai.value < elMulai.value) elSelesai.value = elMulai.value;
+            const diff = Math.ceil(Math.abs(new Date(elSelesai.value) - new Date(elMulai.value)) / (1000 * 60 * 60 * 24)) + 1;
+            elHari.value = diff;
+        }
+    }
+    elMulai.addEventListener('change', calculateDays);
+    elSelesai.addEventListener('change', calculateDays);
+
+    // Load Data
+    if(skeleton) skeleton.style.display = 'block';
+    form.style.display = 'none';
+
+    // PANGGIL FUNGSI V2
+    google.script.run.withSuccessHandler(data => {
+        if(skeleton) skeleton.style.display = 'none';
+        form.style.display = 'block';
+
+        if(!data) { App.showAppModal('error', 'Data kosong.'); return; }
+
+        // Debug Alert (Bisa dihapus jika sudah sukses)
+        // alert("Data Masuk:\n" + JSON.stringify(data));
+
+        // Isi Form
+        document.getElementById('existingFileUrlEdit').value = data.fileUrl || '';
+        elUnit.value = data.unitKerja || '';
+        elNama.value = data.namaAsn || '';
+        elNip.value = data.nip || '';
+
+        elStatus.value = data.status || '';
+        updateJenisCuti(data.status);
+        if(data.jenisCuti) elJenis.value = data.jenisCuti;
+        elJenis.disabled = false;
+
+        // Parse Tanggal dari Server (String Indo) ke Input Date (HTML)
+        elMulai.value = convertIndoDate(data.tglMulai);
+        elSelesai.value = convertIndoDate(data.tglSelesai);
+        elHari.value = data.jmlHari || '';
+
+        // Dokumen
+        const linkDiv = document.getElementById('currentDocLink');
+        if(data.fileUrl && data.fileUrl.startsWith('http')) {
+            linkDiv.innerHTML = `<button type="button" class="view-doc-btn" onclick="App.showFilePreview('${data.fileUrl}')"><i class="fas fa-eye"></i> Lihat Dokumen</button>`;
+        } else {
+            linkDiv.innerHTML = '<span style="color:#aaa;">Tidak ada dokumen.</span>';
+        }
+
+    }).withFailureHandler(err => {
+        if(skeleton) skeleton.style.display = 'none';
+        App.showAppModal('error', 'Gagal: ' + err.message);
+    }).getSiabaCutiEditData_v2(params.idCuti);
+
+    // Submit
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtnEditCuti');
+        const fileInput = document.getElementById('fileCutiEdit');
+        
+        if (fileInput.files.length > 0 && fileInput.files[0].size > 100 * 1024) {
+            App.showAppModal('error', 'Ukuran file > 100 KB.'); return;
+        }
+
+        btn.disabled = true;
+        App.showAppModal('loading', 'Menyimpan...');
+        
+        const formData = Object.fromEntries(new FormData(form));
+        delete formData.fileData;
+        
+        // Kirim kembali Nama ASN agar penamaan file di server aman
+        formData.namaAsn = elNama.value; 
+
+        const sendData = (payload) => {
+             google.script.run.withSuccessHandler(res => {
+                App.showAppModal('success', res, 'siaba_cuti_cek');
+            }).withFailureHandler(err => {
+                App.showAppModal('error', err.message);
+                btn.disabled = false;
+            }).updateSiabaCutiData_v2(payload);
+        };
+
+        if (fileInput.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                formData.fileData = {
+                    fileName: fileInput.files[0].name,
+                    mimeType: fileInput.files[0].type,
+                    data: ev.target.result.split(',')[1]
+                };
+                sendData(formData);
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
+            sendData(formData);
+        }
+    });
+}
+
+function initSiabaRekapTerlambatPage() {
+    const filterTahun = document.getElementById('filterTahunRekapTelat');
+    const filterUnit = document.getElementById('filterUnitRekapTelat');
+    const searchInput = document.getElementById('searchRekapTelat');
+    
+    const loader = document.getElementById('loadingRekapTelat');
+    const wrapper = document.getElementById('wrapperRekapTelat');
+    
+    const table = document.getElementById('rekapTelatTable');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    
+    let allRows = [];
+
+    function toggleLoader(show) {
+        if(show) {
+            loader.style.display = 'flex';
+            wrapper.style.display = 'flex'; // Tetap tampilkan wrapper (di bawah overlay)
+        } else {
+            loader.style.display = 'none';
+        }
+    }
+
+    // Render Header Dinamis (Copy logic from Cuti Data)
+    function renderHeader(headers) {
+        thead.innerHTML = '';
+        if (!headers || headers.length < 2) return;
+
+        const row1 = headers[0];
+        const row2 = headers[1];
+        
+        let tr1 = document.createElement('tr');
+        let tr2 = document.createElement('tr');
+        
+        // Insert Kolom No.
+        let thNo = document.createElement('th');
+        thNo.textContent = "No.";
+        thNo.rowSpan = 2;
+        thNo.style.width = "50px"; thNo.style.minWidth = "50px"; thNo.style.maxWidth = "50px";
+        tr1.appendChild(thNo);
+
+        let skipCol = new Array(row1.length).fill(false);
+
+        for (let i = 0; i < row1.length; i++) {
+            if (skipCol[i]) continue;
+            const t1 = row1[i];
+            const t2 = row2[i];
+            let th = document.createElement('th');
+            th.textContent = t1;
+
+            if (t1 && !t2) { // Rowspan
+                th.rowSpan = 2;
+                tr1.appendChild(th);
+            } else if (t1 && t2) { // Colspan check
+                let span = 1;
+                for (let j = i + 1; j < row1.length; j++) {
+                    if (!row1[j] && row2[j]) { span++; skipCol[j] = true; } 
+                    else break;
+                }
+                if (span > 1) th.colSpan = span;
+                tr1.appendChild(th);
+                
+                let subTh = document.createElement('th');
+                subTh.textContent = t2;
+                tr2.appendChild(subTh);
+                for (let k = 1; k < span; k++) {
+                    let nSub = document.createElement('th');
+                    nSub.textContent = row2[i + k];
+                    tr2.appendChild(nSub);
+                }
+            } else {
+                th.rowSpan = 1; tr1.appendChild(th);
+                if (t2) {
+                    let subTh = document.createElement('th');
+                    subTh.textContent = t2;
+                    tr2.appendChild(subTh);
+                }
+            }
+        }
+        thead.appendChild(tr1);
+        if (tr2.children.length > 0) thead.appendChild(tr2);
+    }
+
+    function renderTable(rows) {
+        tbody.innerHTML = '';
+        if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="30" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
+            return;
+        }
+
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            // No
+            let tdNo = document.createElement('td');
+            tdNo.textContent = idx + 1;
+            tr.appendChild(tdNo);
+
+            // Data
+            row.forEach(cell => {
+                const val = (cell === "" || cell == null || cell == 0 || cell === '0') ? "-" : cell;
+                const td = document.createElement('td');
+                td.textContent = val;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        const year = filterTahun.value;
+        const unit = filterUnit.value || "Semua";
+        if (!year) return;
+
+        toggleLoader(true);
+        
+        google.script.run.withSuccessHandler(res => {
+            if (res.error) {
+                tbody.innerHTML = `<tr><td colspan="30" style="color:red; padding:20px;">${res.error}</td></tr>`;
+                toggleLoader(false);
+                return;
+            }
+
+            // Isi Filter Unit
+            const curUnit = filterUnit.value;
+            filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+            res.units.forEach(u => filterUnit.add(new Option(u, u)));
+            if (res.units.includes(curUnit)) filterUnit.value = curUnit;
+
+            // Render
+            renderHeader(res.headers);
+            allRows = res.rows;
+            filterAndRender();
+            toggleLoader(false);
+
+        }).withFailureHandler(err => {
+            tbody.innerHTML = `<tr><td colspan="30" style="color:red;">${err.message}</td></tr>`;
+            toggleLoader(false);
+        }).getRekapTerlambatData(year, unit);
+    }
+
+    function filterAndRender() {
+        const query = searchInput.value.toLowerCase();
+        // Filter di Client (Cari di semua kolom)
+        const filtered = allRows.filter(row => 
+            row.some(cell => String(cell).toLowerCase().includes(query))
+        );
+        renderTable(filtered);
+    }
+
+    // Init
+    toggleLoader(true);
+    google.script.run.withSuccessHandler(years => {
+        filterTahun.innerHTML = '';
+        if (!years || years.length === 0) {
+            filterTahun.add(new Option("Tidak ada data", ""));
+            toggleLoader(false);
+            return;
+        }
+        
+        const curYear = new Date().getFullYear().toString();
+        years.forEach(y => filterTahun.add(new Option(y, y)));
+        
+        if (years.includes(curYear)) filterTahun.value = curYear;
+        else filterTahun.selectedIndex = 0;
+
+        filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+
+        filterTahun.addEventListener('change', fetchData);
+        filterUnit.addEventListener('change', fetchData);
+        searchInput.addEventListener('input', App.debounce(filterAndRender, 300));
+
+        fetchData();
+    }).getRekapTerlambatOptions();
+}
+
+function initSiabaRekapPulangAwalPage() {
+    const filterTahun = document.getElementById('filterTahunRekapPulang');
+    const filterUnit = document.getElementById('filterUnitRekapPulang');
+    const searchInput = document.getElementById('searchRekapPulang');
+    
+    const loader = document.getElementById('loadingRekapPulang');
+    const wrapper = document.getElementById('wrapperRekapPulang');
+    
+    const table = document.getElementById('rekapPulangTable');
+    const thead = table.querySelector('thead');
+    const tbody = table.querySelector('tbody');
+    
+    let allRows = [];
+
+    function toggleLoader(show) {
+        if(show) {
+            loader.style.display = 'flex';
+            wrapper.style.display = 'flex';
+        } else {
+            loader.style.display = 'none';
+        }
+    }
+
+    // Render Header (Sama dengan Rekap Terlambat)
+    function renderHeader(headers) {
+        thead.innerHTML = '';
+        if (!headers || headers.length < 2) return;
+
+        const row1 = headers[0];
+        const row2 = headers[1];
+        let tr1 = document.createElement('tr');
+        let tr2 = document.createElement('tr');
+        
+        let thNo = document.createElement('th');
+        thNo.textContent = "No."; thNo.rowSpan = 2;
+        thNo.style.width = "50px"; thNo.style.minWidth = "50px";
+        tr1.appendChild(thNo);
+
+        let skipCol = new Array(row1.length).fill(false);
+        for (let i = 0; i < row1.length; i++) {
+            if (skipCol[i]) continue;
+            const t1 = row1[i];
+            const t2 = row2[i];
+            let th = document.createElement('th');
+            th.textContent = t1;
+
+            if (t1 && !t2) { 
+                th.rowSpan = 2; tr1.appendChild(th);
+            } else if (t1 && t2) { 
+                let span = 1;
+                for (let j = i + 1; j < row1.length; j++) {
+                    if (!row1[j] && row2[j]) { span++; skipCol[j] = true; } else break;
+                }
+                if (span > 1) th.colSpan = span;
+                tr1.appendChild(th);
+                
+                let subTh = document.createElement('th');
+                subTh.textContent = t2; tr2.appendChild(subTh);
+                for (let k = 1; k < span; k++) {
+                    let nSub = document.createElement('th');
+                    nSub.textContent = row2[i + k]; tr2.appendChild(nSub);
+                }
+            } else {
+                th.rowSpan = 1; tr1.appendChild(th);
+                if (t2) {
+                    let subTh = document.createElement('th');
+                    subTh.textContent = t2; tr2.appendChild(subTh);
+                }
+            }
+        }
+        thead.appendChild(tr1);
+        if (tr2.children.length > 0) thead.appendChild(tr2);
+    }
+
+    function renderTable(rows) {
+        tbody.innerHTML = '';
+        if (rows.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="30" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
+            return;
+        }
+
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            let tdNo = document.createElement('td');
+            tdNo.textContent = idx + 1;
+            tr.appendChild(tdNo);
+
+            row.forEach(cell => {
+                const val = (cell === "" || cell == null || cell == 0 || cell === '0') ? "-" : cell;
+                const td = document.createElement('td');
+                td.textContent = val;
+                tr.appendChild(td);
+            });
+            tbody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        const year = filterTahun.value;
+        const unit = filterUnit.value || "Semua";
+        if (!year) return;
+
+        toggleLoader(true);
+        
+        google.script.run.withSuccessHandler(res => {
+            if (res.error) {
+                tbody.innerHTML = `<tr><td colspan="30" style="color:red; padding:20px;">${res.error}</td></tr>`;
+                toggleLoader(false);
+                return;
+            }
+
+            const curUnit = filterUnit.value;
+            filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+            res.units.forEach(u => filterUnit.add(new Option(u, u)));
+            if (res.units.includes(curUnit)) filterUnit.value = curUnit;
+
+            renderHeader(res.headers);
+            allRows = res.rows;
+            filterAndRender();
+            toggleLoader(false);
+        }).withFailureHandler(err => {
+            tbody.innerHTML = `<tr><td colspan="30" style="color:red;">${err.message}</td></tr>`;
+            toggleLoader(false);
+        }).getRekapPulangAwalData(year, unit);
+    }
+
+    function filterAndRender() {
+        const query = searchInput.value.toLowerCase();
+        const filtered = allRows.filter(row => row.some(cell => String(cell).toLowerCase().includes(query)));
+        renderTable(filtered);
+    }
+
+    toggleLoader(true);
+    google.script.run.withSuccessHandler(years => {
+        filterTahun.innerHTML = '';
+        if (!years || years.length === 0) {
+            filterTahun.add(new Option("Tidak ada data", ""));
+            toggleLoader(false);
+            return;
+        }
+        
+        const curYear = new Date().getFullYear().toString();
+        years.forEach(y => filterTahun.add(new Option(y, y)));
+        
+        if (years.includes(curYear)) filterTahun.value = curYear;
+        else filterTahun.selectedIndex = 0;
+
+        filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+
+        filterTahun.addEventListener('change', fetchData);
+        filterUnit.addEventListener('change', fetchData);
+        searchInput.addEventListener('input', App.debounce(filterAndRender, 300));
+
+        fetchData();
+    }).getRekapPulangAwalOptions();
+}
+
+function initSiabaUnduhRekapPage() {
+    const breadcrumbEl = document.getElementById('rekapBreadcrumb');
+    const gridEl = document.getElementById('rekapGrid');
+    const loader = document.getElementById('rekapLoader');
+    
+    // State untuk navigasi (Stack of objects: {id, name})
+    let navHistory = []; 
+
+    // Fungsi Utama: Load Folder
+    function loadFolder(folderId, folderName, isPush = true) {
+        // UI Loading
+        gridEl.style.display = 'none';
+        loader.style.display = 'flex';
+        
+        google.script.run.withSuccessHandler(data => {
+            // Update History
+            if (data.isRoot) {
+                navHistory = [{ id: null, name: 'Home' }];
+            } else if (isPush) {
+                navHistory.push({ id: data.currentId, name: data.currentName });
+            }
+            
+            renderBreadcrumb();
+            renderGrid(data.folders, data.files);
+            
+            loader.style.display = 'none';
+            gridEl.style.display = 'grid';
+        }).withFailureHandler(err => {
+            loader.style.display = 'none';
+            gridEl.innerHTML = `<p style="color:red; text-align:center; width:100%;">Error: ${err.message}</p>`;
+            gridEl.style.display = 'block';
+        }).getSiabaRekapArchiveContent(folderId);
+    }
+
+    // Render Breadcrumb
+    function renderBreadcrumb() {
+        breadcrumbEl.innerHTML = '';
+        navHistory.forEach((item, index) => {
+            const li = document.createElement('li');
+            if (index === navHistory.length - 1) {
+                // Item Terakhir (Aktif) - Teks biasa
+                li.textContent = item.name;
+                li.style.color = '#ecf0f1';
+            } else {
+                // Item Link - Klik untuk mundur
+                const a = document.createElement('a');
+                a.textContent = item.name;
+                a.onclick = (e) => {
+                    e.preventDefault();
+                    // Potong history sampai index ini
+                    navHistory = navHistory.slice(0, index + 1);
+                    // Load (isPush = false karena kita mundur, tidak nambah history baru)
+                    loadFolder(item.id, item.name, false); 
+                };
+                li.appendChild(a);
+            }
+            breadcrumbEl.appendChild(li);
+        });
+    }
+
+    // Render Grid (Folder & File)
+    function renderGrid(folders, files) {
+        gridEl.innerHTML = '';
+        
+        if (folders.length === 0 && files.length === 0) {
+            gridEl.innerHTML = `<p style="color:#bdc3c7; text-align:center; width:100%; grid-column: 1/-1; padding-top:20px;">Folder kosong.</p>`;
+            return;
+        }
+
+        // 1. Render Folders
+        folders.forEach(f => {
+            const div = document.createElement('div');
+            div.className = 'grid-item';
+            div.onclick = () => loadFolder(f.id, f.name);
+            div.innerHTML = `
+                <div class="item-icon icon-folder"><i class="fas fa-folder"></i></div>
+                <div class="item-name">${f.name}</div>
+            `;
+            gridEl.appendChild(div);
+        });
+
+        // 2. Render Files
+        files.forEach(f => {
+            const div = document.createElement('div');
+            div.className = 'grid-item';
+            // Klik file -> Preview
+            div.onclick = () => App.showFilePreview(f.url);
+            div.innerHTML = `
+                <div class="item-icon icon-pdf"><i class="fas fa-file-pdf"></i></div>
+                <div class="item-name">${f.name}</div>
+            `;
+            gridEl.appendChild(div);
+        });
+    }
+
+    // Init Load (Root)
+    loadFolder(null, 'Home');
+}
+
+function initAsnSkpUnggahPage() {
+    const form = document.getElementById('skpUnggahForm');
+    const skeleton = document.getElementById('skeleton-loader');
+    
+    // Elements
+    const unitSelect = document.getElementById('unitKerjaSkp');
+    const namaSelect = document.getElementById('namaAsnSkp');
+    const nipInput = document.getElementById('nipSkp');
+    const tahunSelect = document.getElementById('tahunSkp');
+
+    if (!form) return;
+
+    if(skeleton) skeleton.style.display = 'block';
+    form.style.display = 'none';
+
+    let employeeData = [];
+
+    // 1. Load Data Pegawai
+    google.script.run.withSuccessHandler(data => {
+        if (data.error) { App.showAppModal('error', data.error); return; }
+        employeeData = data;
+        
+        const units = [...new Set(data.map(item => item.unit))].sort();
+        unitSelect.innerHTML = '<option value="" disabled selected>-- Pilih Unit Kerja --</option>';
+        units.forEach(u => unitSelect.add(new Option(u, u)));
+        
+        // Setup Tahun (2022 - Tahun Depan)
+        const currentYear = new Date().getFullYear();
+        tahunSelect.innerHTML = '';
+        for (let y = 2022; y <= currentYear + 1; y++) {
+            const opt = new Option(y, y);
+            if (y === currentYear) opt.selected = true;
+            tahunSelect.add(opt);
+        }
+
+        if(skeleton) skeleton.style.display = 'none';
+        form.style.display = 'block';
+    }).withFailureHandler(err => {
+        App.showAppModal('error', 'Gagal memuat data: ' + err.message);
+    }).getSiabaSkpOptions();
+
+    // 2. Listener Unit -> Nama
+    unitSelect.addEventListener('change', function() {
+        const unit = this.value;
+        const filtered = employeeData.filter(e => e.unit === unit);
+        filtered.sort((a, b) => a.nama.localeCompare(b.nama));
+
+        namaSelect.innerHTML = '<option value="" disabled selected>-- Pilih Nama --</option>';
+        filtered.forEach(emp => {
+            const opt = new Option(emp.nama, emp.nama);
+            opt.dataset.nip = emp.nip;
+            namaSelect.add(opt);
+        });
+        namaSelect.disabled = false;
+        nipInput.value = "";
+    });
+
+    // 3. Listener Nama -> NIP
+    namaSelect.addEventListener('change', function() {
+        const opt = this.options[this.selectedIndex];
+        if (opt.dataset.nip) nipInput.value = opt.dataset.nip;
+    });
+
+    // 4. Submit
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtnSkp');
+        const fileInput = document.getElementById('fileSkp');
+        
+        // Max 1 MB
+        if (fileInput.files[0].size > 1 * 1024 * 1024) {
+            App.showAppModal('error', 'Ukuran file melebihi 1 MB.');
+            return;
+        }
+
+        btn.disabled = true;
+        App.showAppModal('loading', 'Mengirim Data SKP...');
+
+        const formData = Object.fromEntries(new FormData(form));
+        
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            formData.fileData = {
+                fileName: fileInput.files[0].name,
+                mimeType: fileInput.files[0].type,
+                data: ev.target.result.split(',')[1]
+            };
+
+            google.script.run.withSuccessHandler(res => {
+                if (res && res.error) {
+                    App.showAppModal('error', res.error);
+                    btn.disabled = false;
+                } else {
+                    // PERBAIKAN: Redirect ke halaman 'asn_skp_kelola'
+                    App.showAppModal('success', res, 'asn_skp_kelola'); 
+                }
+            }).withFailureHandler(err => {
+                App.showAppModal('error', err.message);
+                btn.disabled = false;
+            }).submitSiabaSkpForm(formData);
+        };
+        reader.readAsDataURL(fileInput.files[0]);
+    });
+}
+
+function initAsnSkpKelolaPage() {
+    const filterTahun = document.getElementById('filterTahunSkp');
+    const filterUnit = document.getElementById('filterUnitSkp');
+    const searchInput = document.getElementById('searchSkp');
+    
+    const tableWrapper = document.getElementById('tableWrapperSkp');
+    const tableOverlay = document.getElementById('tableOverlayLoaderSkp');
+    const tableBody = document.getElementById('skpTable').querySelector('tbody');
+    
+    let allRows = [];
+
+    function toggleLoader(show) {
+        if(show) {
+            if(tableWrapper) tableWrapper.style.display = 'flex';
+            if(tableOverlay) tableOverlay.style.display = 'flex';
+        } else {
+            if(tableOverlay) tableOverlay.style.display = 'none';
+        }
+    }
+
+    function renderTable(rows) {
+        tableBody.innerHTML = '';
+        if (rows.length === 0) {
+            tableBody.innerHTML = `<tr><td colspan="12" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
+            return;
+        }
+
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            let html = `<td>${idx + 1}</td>`;
+            html += `<td>${row.nama}</td>`;
+            html += `<td>${row.nip}</td>`;
+            html += `<td>${row.statusPeg}</td>`;
+            html += `<td>${row.tahun}</td>`;
+            
+            // Dokumen (Tombol Lihat - Global CSS)
+            let fileBtn = '-';
+            if (row.fileUrl && row.fileUrl.startsWith('http')) {
+                fileBtn = `<button class="action-btn btn-blue" onclick="App.showFilePreview('${row.fileUrl}')"><i class="fas fa-eye"></i> Lihat</button>`;
+            }
+            html += `<td>${fileBtn}</td>`;
+
+            // Status Cek
+            let statusHtml = '';
+            const s = row.statusCek;
+            if (s === 'Diterima') statusHtml = '<span class="status-ok"><i class="fas fa-check-circle"></i> Diterima</span>';
+            else if (s === 'Ditolak') statusHtml = '<span class="status-tolak"><i class="fas fa-times-circle"></i> Ditolak</span>';
+            else if (s === 'Revisi') statusHtml = '<span class="status-revisi"><i class="fas fa-exclamation-triangle"></i> Revisi</span>';
+            else statusHtml = '<span class="status-proses"><i class="fas fa-hourglass-half"></i> Diproses</span>';
+            html += `<td>${statusHtml}</td>`;
+
+            html += `<td>${row.ket}</td>`;
+            
+            // Aksi
+            // Data untuk Hapus
+            const rowInfo = JSON.stringify({ 
+                _source: 'SKP', 
+                _rowIndex: row._rowIndex, 
+                _sheetName: row._sheetName, 
+                Nama: row.nama 
+            }).replace(/'/g, "&#39;");
+            
+            // LOGIKA EDIT (BARU)
+            // Aktif KECUALI jika "Diterima" (sesuai request)
+            const canEdit = (s !== 'Diterima'); 
+            let editBtn = '';
+            
+            if(canEdit) {
+                // Kirim sheetName dan rowIndex
+                editBtn = `<button class="action-btn btn-edit" onclick="App.loadPage(event, 'asn_skp_edit', {sheetName: '${row._sheetName}', rowIndex: ${row._rowIndex}})"><i class="fas fa-pencil-alt"></i> Edit</button>`;
+            } else {
+                editBtn = `<button class="action-btn btn-edit" disabled style="opacity:0.5; cursor:not-allowed;"><i class="fas fa-pencil-alt"></i> Edit</button>`;
+            }
+
+            const delBtn = `<button class="action-btn btn-delete" onclick="App.showDeleteConfirmation(this)" data-row-info='${rowInfo}'><i class="fas fa-trash"></i> Hapus</button>`;
+            
+            html += `<td><div class="action-buttons">${editBtn}${delBtn}</div></td>`;
+
+            html += `<td>${row.tgl}</td>`;
+            html += `<td>${row.update}</td>`;
+
+            tr.innerHTML = html;
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        const tahun = filterTahun.value;
+        const unit = filterUnit.value;
+        if (!tahun) return;
+
+        toggleLoader(true);
+        google.script.run.withSuccessHandler(data => {
+            allRows = data.rows;
+            
+            // Isi Filter Unit (Dinamis sesuai tahun terpilih)
+            const curUnit = filterUnit.value;
+            filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+            data.units.forEach(u => filterUnit.add(new Option(u, u)));
+            if (data.units.includes(curUnit)) filterUnit.value = curUnit;
+
+            filterAndRender();
+            toggleLoader(false);
+        }).withFailureHandler(err => {
+            tableBody.innerHTML = `<tr><td colspan="12" style="color:red; text-align:center;">Error: ${err.message}</td></tr>`;
+            toggleLoader(false);
+        }).getSiabaSkpData(tahun, unit);
+    }
+
+    function filterAndRender() {
+        const query = searchInput.value.toLowerCase();
+        const filtered = allRows.filter(r => 
+            String(r.nama).toLowerCase().includes(query) || 
+            String(r.nip).toLowerCase().includes(query)
+        );
+        renderTable(filtered);
+    }
+
+    // Init
+    toggleLoader(true);
+    google.script.run.withSuccessHandler(years => {
+        filterTahun.innerHTML = '';
+        if (!years || years.length === 0) {
+            filterTahun.add(new Option("Tidak ada data", ""));
+            toggleLoader(false);
+            return;
+        }
+
+        const currentYear = new Date().getFullYear().toString(); // Dapatkan Tahun Ini
+
+        years.forEach(y => filterTahun.add(new Option(y, y)));
+        
+        // --- LOGIKA BARU: PILIH TAHUN INI SECARA DEFAULT ---
+        if (years.includes(currentYear)) {
+            filterTahun.value = currentYear;
+        } else {
+            filterTahun.selectedIndex = 0; // Fallback: Pilih yang paling atas (terbaru)
+        }
+        // ---------------------------------------------------
+
+        filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+
+        filterTahun.addEventListener('change', fetchData); 
+        filterUnit.addEventListener('change', filterAndRender); 
+        searchInput.addEventListener('input', App.debounce(filterAndRender, 300));
+
+        fetchData();
+    }).getSiabaSkpYearList();
+}
+
+function initAsnSkpEditPage(params) {
+    const form = document.getElementById('skpEditForm');
+    const skeleton = document.getElementById('skeleton-loader');
+    
+    if (!form || !params || !params.sheetName || !params.rowIndex) {
+        App.showAppModal('error', 'Parameter Data Salah.');
+        return;
+    }
+
+    form.rowIndex.value = params.rowIndex;
+    form.oldSheetName.value = params.sheetName;
+    
+    // Elemen
+    const tahunSelect = document.getElementById('tahunSkpEdit');
+    
+    // Setup Tahun (2022 - Tahun Depan)
+    const currentYear = new Date().getFullYear();
+    tahunSelect.innerHTML = '';
+    for (let y = 2022; y <= currentYear + 1; y++) {
+        tahunSelect.add(new Option(y, y));
+    }
+
+    if(skeleton) skeleton.style.display = 'block';
+    form.style.display = 'none';
+
+    // Load Data
+    google.script.run.withSuccessHandler(data => {
+        if(skeleton) skeleton.style.display = 'none';
+        form.style.display = 'block';
+
+        if (!data) { App.showAppModal('error', 'Data tidak ditemukan.'); return; }
+
+        // Isi Form
+        document.getElementById('unitKerjaSkpEdit').value = data.unitKerja || '';
+        document.getElementById('namaAsnSkpEdit').value = data.namaAsn || '';
+        document.getElementById('nipSkpEdit').value = data.nip || '';
+        document.getElementById('statusSkpEdit').value = data.status || 'PNS';
+        document.getElementById('existingFileUrlSkp').value = data.fileUrl || '';
+        
+        // Set Tahun (Trigger change sheet logic jika diubah)
+        tahunSelect.value = data.tahun;
+
+        // Dokumen
+        const linkDiv = document.getElementById('currentDocLinkSkp');
+        if(data.fileUrl && data.fileUrl.startsWith('http')) {
+            linkDiv.innerHTML = `<button type="button" class="view-doc-btn" onclick="App.showFilePreview('${data.fileUrl}')"><i class="fas fa-eye"></i> Lihat Dokumen Saat Ini</button>`;
+        } else {
+            linkDiv.innerHTML = '<span style="color:#aaa;">Belum ada dokumen.</span>';
+        }
+
+    }).withFailureHandler(err => {
+        if(skeleton) skeleton.style.display = 'none';
+        App.showAppModal('error', err.message);
+    }).getSiabaSkpEditData(params.sheetName, params.rowIndex);
+
+    // Submit
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const btn = document.getElementById('submitBtnSkpEdit');
+        const fileInput = document.getElementById('fileSkpEdit');
+        
+        if (fileInput.files.length > 0 && fileInput.files[0].size > 1 * 1024 * 1024) {
+            App.showAppModal('error', 'Ukuran file melebihi 1 MB.');
+            return;
+        }
+
+        btn.disabled = true;
+        App.showAppModal('loading', 'Menyimpan Perubahan...');
+        
+        const formData = Object.fromEntries(new FormData(form));
+        delete formData.fileData; 
+
+        // Kirim ulang data readonly agar aman
+        formData.unitKerja = document.getElementById('unitKerjaSkpEdit').value;
+        formData.namaAsn = document.getElementById('namaAsnSkpEdit').value;
+        formData.nip = document.getElementById('nipSkpEdit').value;
+
+        const sendData = (payload) => {
+             google.script.run.withSuccessHandler(res => {
+                App.showAppModal('success', res, 'asn_skp_kelola');
+            }).withFailureHandler(err => {
+                App.showAppModal('error', err.message);
+                btn.disabled = false;
+            }).updateSiabaSkpData(payload);
+        };
+
+        if (fileInput.files.length > 0) {
+            const reader = new FileReader();
+            reader.onload = function(ev) {
+                formData.fileData = {
+                    fileName: fileInput.files[0].name,
+                    mimeType: fileInput.files[0].type,
+                    data: ev.target.result.split(',')[1]
+                };
+                sendData(formData);
+            };
+            reader.readAsDataURL(fileInput.files[0]);
+        } else {
+            sendData(formData);
+        }
+    });
+}
+
+function initAsnSkpDaftarKirimPage() {
+    const filterUnit = document.getElementById('filterUnitSkpKirim');
+    const searchInput = document.getElementById('searchSkpKirim');
+    
+    const loader = document.getElementById('loaderSkpKirim');
+    const tableWrapper = document.getElementById('tableWrapperSkpKirim');
+    const tableBody = document.getElementById('skpKirimTable').querySelector('tbody');
+    const tableHead = document.getElementById('skpKirimTable').querySelector('thead');
+
+    let allRows = [];
+
+    function toggleLoader(show) {
+        if(show) {
+            if(tableWrapper) tableWrapper.style.display = 'flex';
+            if(loader) loader.style.display = 'flex';
+        } else {
+            if(loader) loader.style.display = 'none';
+        }
+    }
+
+    function renderTable(headers, rows) {
+        // 1. Render Header Dinamis
+        tableHead.innerHTML = '';
+        if (headers.length > 0) {
+            let thHtml = '<tr><th>No.</th>'; // Kolom No manual
+            headers.forEach(h => thHtml += `<th>${h}</th>`);
+            thHtml += '</tr>';
+            tableHead.innerHTML = thHtml;
+        }
+
+        // 2. Render Body
+        tableBody.innerHTML = '';
+        if (rows.length === 0) {
+            const colCount = headers.length + 1;
+            tableBody.innerHTML = `<tr><td colspan="${colCount}" style="text-align:center; padding:30px;">Tidak ada data.</td></tr>`;
+            return;
+        }
+
+        rows.forEach((row, idx) => {
+            const tr = document.createElement('tr');
+            
+            // Kolom No
+            tr.innerHTML += `<td>${idx + 1}</td>`;
+            
+            // Loop Data Kolom (B s/d Terakhir)
+            row.forEach((cell, i) => {
+                let displayVal = cell;
+                
+                // LOGIKA IKON (Mulai Kolom D)
+                // Di array row ini:
+                // Index 0 = Kolom B (Nama)
+                // Index 1 = Kolom C (NIP)
+                // Index 2+ = Kolom D dst (Data Status)
+                if (i >= 2) {
+                    const val = String(cell).trim().toUpperCase();
+                    if (val === 'V') {
+                        displayVal = '<i class="fas fa-check-circle ic-ok" title="Selesai"></i>';
+                    } else if (val === 'X') {
+                        displayVal = '<i class="fas fa-times-circle ic-no" title="Belum/Salah"></i>';
+                    } else if (val === 'R') {
+                        displayVal = '<i class="fas fa-exclamation-triangle ic-warn" title="Revisi"></i>';
+                    } else if (val === '' || val === null) {
+                        displayVal = '<i class="fas fa-clock ic-wait" title="Belum Ada Data"></i>';
+                    } else if (val === '#N/A' || val.toLowerCase() === 'error') {
+                        displayVal = '-';
+                    }
+                    // Jika teks lain, tampilkan apa adanya
+                }
+                
+                tr.innerHTML += `<td>${displayVal}</td>`;
+            });
+            
+            tableBody.appendChild(tr);
+        });
+    }
+
+    function fetchData() {
+        const unit = filterUnit.value || "Semua";
+        toggleLoader(true);
+        
+        google.script.run.withSuccessHandler(data => {
+            if (data.error) {
+                tableBody.innerHTML = `<tr><td colspan="10" style="color:red;">${data.error}</td></tr>`;
+                toggleLoader(false);
+                return;
+            }
+
+            // Populate Filter Unit
+            const currentUnit = filterUnit.value;
+            filterUnit.innerHTML = '<option value="Semua">Semua Unit Kerja</option>';
+            data.units.forEach(u => filterUnit.add(new Option(u, u)));
+            if (data.units.includes(currentUnit)) filterUnit.value = currentUnit;
+
+            // Render
+            allRows = { headers: data.headers, rows: data.rows }; // Simpan struktur
+            filterAndRender();
+            toggleLoader(false);
+
+        }).withFailureHandler(err => {
+            tableBody.innerHTML = `<tr><td colspan="10" style="color:red;">Error: ${err.message}</td></tr>`;
+            toggleLoader(false);
+        }).getSiabaSkpDaftarKirimData(unit);
+    }
+
+    function filterAndRender() {
+        if (!allRows.rows) return;
+        
+        const query = searchInput.value.toLowerCase();
+        // Filter hanya pada Nama (Index 0) atau NIP (Index 1)
+        const filteredRows = allRows.rows.filter(row => 
+            String(row[0]).toLowerCase().includes(query) || 
+            String(row[1]).toLowerCase().includes(query)
+        );
+        renderTable(allRows.headers, filteredRows);
+    }
+
+    // Init
+    toggleLoader(true);
+    // Fetch awal dengan unit 'Semua'
+    fetchData();
+    
+    filterUnit.addEventListener('change', fetchData);
+    searchInput.addEventListener('input', App.debounce(filterAndRender, 300));
+}
+
 /**
  * ===================================================================
  * =================== 3. OBJEK INISIALISASI & TRIGGER ===============
  * ===================================================================
  */
- 
+
+App.processDeletionSkp = (rowInfo, reloadPage) => {
+    const deleteCode = document.getElementById('kodeHapusInput').value;
+    if (!deleteCode) { App.showAppModal('error', 'Kode hapus kosong.'); return; }
+    App.showAppModal('loading', 'Menghapus...');
+    
+    google.script.run.withSuccessHandler(res => {
+        document.getElementById('deleteModal').classList.remove('show');
+        if(res && res.error) App.showAppModal('error', res.error);
+        else App.showAppModal('success', res, reloadPage);
+    }).deleteSiabaSkpData(rowInfo._sheetName, rowInfo._rowIndex, deleteCode);
+};
+
 // Fungsi Buka Preview (UPDATED)
 App.showFilePreview = (url) => {
     const modal = document.getElementById('previewModal');
@@ -9088,14 +10496,22 @@ App.pageInitializers = {
     'siaba_cuti_data': initSiabaDataCutiPage,
     'siaba_cuti_form': initSiabaCutiFormPage,            // Placeholder
     'siaba_cuti_unduh': initSiabaCutiUnduhPage,           // Placeholder
-    'siaba_cuti_unggah': initMenuPage,          // Placeholder
-    'siaba_cuti_cek': initMenuPage,
+    'siaba_cuti_unggah': initSiabaCutiUnggahPage,          // Placeholder
+    'siaba_cuti_cek': initSiabaCutiCekPage,
     'siaba_cuti_informasi': initMenuPage,
-    'siaba_cuti_edit': initSiabaCutiEditPage,
-    'siaba_rekap_terlambat': initMenuPage,
-    'siaba_rekap_pulang_awal': initMenuPage,
-    'siaba_unduh_rekap': initMenuPage,
-    'pns_menu': initMenuPage,
+    'siaba_cuti_edit': initSiabaCutiEditPage_v2,
+    'siaba_rekap_terlambat': initSiabaRekapTerlambatPage,
+    'siaba_rekap_pulang_awal': initSiabaRekapPulangAwalPage,
+    'siaba_unduh_rekap': initSiabaUnduhRekapPage,
+    'asn_skp_menu': initMenuPage,   // Halaman Menu Utama SKP
+    'asn_skp_unggah': initAsnSkpUnggahPage,
+    'asn_skp_kelola': initAsnSkpKelolaPage,
+    'asn_skp_edit': initAsnSkpEditPage,
+    'asn_skp_kirim': initAsnSkpDaftarKirimPage,
+    'asn_pak': initMenuPage,
+    'asn_kp': initMenuPage,
+    'asn_kgb': initMenuPage,
+    'asn_kp4': initMenuPage,
     'rapor_pendidikan_menu': initMenuPage,
     'tata_naskah_menu': initMenuPage,
     'mutasi_murid_menu': initMenuPage,

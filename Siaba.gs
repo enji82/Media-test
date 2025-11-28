@@ -1848,121 +1848,119 @@ function submitSiabaCutiForm(formData) {
 }
 
 /**
- * Mengambil Data Cuti untuk Edit berdasarkan ID (Kolom AG)
+ * Mengambil Data Cuti untuk Edit (VERSI V2 - JALUR BARU)
  */
-function getSiabaCutiEditData(idCuti) {
+function getSiabaCutiEditData_v2(idCuti) {
   try {
     const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
-    const sheet = ss.getSheetByName("Form Ajuan");
+    const sheet = ss.getSheetByName("Unggah Dokumen");
     
-    const lastRow = sheet.getLastRow();
-    if (lastRow < 2) throw new Error("Data kosong.");
+    const idColumn = sheet.getRange("K:K").getValues().flat();
+    const rowIndex = idColumn.indexOf(idCuti) + 1; 
 
-    // Ambil data kolom A sampai AG (1-33)
-    const data = sheet.getRange(2, 1, lastRow - 1, 33).getValues();
+    if (rowIndex < 1) throw new Error("ID tidak ditemukan (" + idCuti + ")");
+
+    // Ambil data A-O (15 Kolom)
+    // Gunakan getDisplayValues agar semua data pasti menjadi String (aman)
+    const rowData = sheet.getRange(rowIndex, 1, 1, 15).getDisplayValues()[0];
     
-    let rowData = null;
-    let rowIndex = -1;
-
-    // Loop cari ID di kolom AG (Index 32)
-    for (let i = 0; i < data.length; i++) {
-        if (String(data[i][32]) === String(idCuti)) {
-            rowData = data[i];
-            rowIndex = i + 2; // 1-based index + header
-            break;
-        }
-    }
-
-    if (!rowData) throw new Error("Data cuti tidak ditemukan.");
-
-    // Helper Date YYYY-MM-DD
-    const toInputDate = (val) => {
-        if (val instanceof Date) return Utilities.formatDate(val, Session.getScriptTimeZone(), "yyyy-MM-dd");
-        if (typeof val === 'string' && val.includes('-') && val.length===10) {
-            // Asumsi format DD-MM-YYYY -> ubah ke YYYY-MM-DD
-             const p = val.split('-');
-             return `${p[2]}-${p[1]}-${p[0]}`;
-        }
-        return "";
-    };
-
-    return {
+    // Mapping Data (Pastikan Index Benar)
+    // A=0, B=1, C=2, D=3, E=4, F=5
+    
+    // Kita buat objek hasil secara manual dan eksplisit
+    const result = {
         id: idCuti,
-        unitKerja: rowData[1],
-        namaAsn: rowData[2],
-        nip: String(rowData[3]).replace(/'/g, ''), // Hapus petik
-        tugas: rowData[4],
-        status: rowData[5],
-        golongan: rowData[6],
-        jenisCuti: rowData[7],
-        tglSurat: toInputDate(rowData[8]),
-        tglMulai: toInputDate(rowData[9]),
-        tglSelesai: toInputDate(rowData[10]),
-        jmlHari: rowData[11],
-        alasan: rowData[12],
-        alamatCuti: rowData[13],
-        noHp: String(rowData[14]).replace(/'/g, ''),
-        usulan: rowData[15]
+        unitKerja:    String(rowData[1]).trim(), // Kolom B
+        namaAsn:      String(rowData[2]).trim(), // Kolom C
+        nip:          String(rowData[3]).replace(/'/g, '').trim(), // Kolom D
+        status:       String(rowData[4]).trim(), // Kolom E
+        jenisCuti:    String(rowData[5]).trim(), // Kolom F
+        tglMulai:     rowData[6], // Kolom G (Biarkan string dd mmmm yyyy, nanti diparse di client atau di sini)
+        tglSelesai:   rowData[7], // Kolom H
+        jmlHari:      rowData[8],
+        fileUrl:      rowData[9],
+        usulan:       rowData[15]
     };
+    
+    return result;
 
   } catch (e) {
-    return handleError('getSiabaCutiEditData', e);
+    return handleError('getSiabaCutiEditData_v2', e);
   }
 }
 
 /**
- * Update Data Cuti
+ * Update Data Cuti (VERSI V2 + UPDATE TIMESTAMP)
  */
-function updateSiabaCutiData(formData) {
+function updateSiabaCutiData_v2(formData) {
   try {
     const idCuti = formData.idCuti;
-    if (!idCuti) throw new Error("ID Cuti tidak ditemukan.");
-
     const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
-    const sheet = ss.getSheetByName("Form Ajuan");
+    const sheet = ss.getSheetByName("Unggah Dokumen");
+    const folderId = FOLDER_CONFIG.SIABA_CUTI_DOCS;
 
-    // Cari Baris dengan TextFinder (Lebih Cepat)
-    const finder = sheet.getRange("AG:AG").createTextFinder(idCuti).matchEntireCell(true);
+    const finder = sheet.getRange("K:K").createTextFinder(idCuti).matchEntireCell(true);
     const result = finder.findNext();
-    
-    if (!result) throw new Error("Data tidak ditemukan di database.");
+    if (!result) throw new Error("ID tidak ditemukan saat update.");
     const rowIndex = result.getRow();
 
-    // Helper Format Tanggal
-    const formatDate = (dateStr) => {
+    // 1. Handle File
+    let fileUrl = formData.existingFileUrl;
+    if (formData.fileData && formData.fileData.data) {
+        const decodedData = Utilities.base64Decode(formData.fileData.data);
+        const blob = Utilities.newBlob(decodedData, formData.fileData.mimeType, formData.fileData.fileName);
+        
+        // Format Nama File
+        const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+        const tglMulaiObj = new Date(formData.tglMulai);
+        const folderName = monthNames[tglMulaiObj.getMonth()];
+        const targetFolder = getOrCreateFolder(DriveApp.getFolderById(folderId), folderName);
+        
+        const day = String(tglMulaiObj.getDate()).padStart(2,'0');
+        const year = tglMulaiObj.getFullYear();
+        const tglFile = `${day} ${folderName} ${year}`;
+        
+        const safeNama = String(formData.namaAsn || "Pegawai").replace(/[^a-zA-Z0-9 ]/g, '');
+        const newFileName = `${safeNama} - ${formData.jenisCuti} - ${tglFile}.pdf`;
+        
+        const file = targetFolder.createFile(blob).setName(newFileName);
+        fileUrl = file.getUrl();
+    }
+
+    // 2. Helper Format Tanggal (YYYY-MM-DD -> dd mmmm yyyy)
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    const formatDateIndo = (dateStr) => {
         if (!dateStr) return "";
         const p = dateStr.split('-'); 
-        return `${p[2]}-${p[1]}-${p[0]}`;
+        if(p.length < 3) return dateStr;
+        const d = p[2];
+        const m = monthNames[parseInt(p[1])-1];
+        const y = p[0];
+        return `${d} ${m} ${y}`;
     };
-    
-    const noHpText = "'" + String(formData.noHp).replace(/\D/g, '');
 
-    // Update Kolom E sampai P (Index 5 sampai 16 di sheet, kolom 5=E)
-    // Data yang dikunci (Unit, Nama, NIP - Kolom B,C,D) tidak diupdate
-    const dataToUpdate = [[
-        formData.tugas,           // E
-        formData.status,          // F
-        formData.golongan,        // G
-        formData.jenisCuti,       // H
-        formatDate(formData.tglSurat),   // I
-        formatDate(formData.tglMulai),   // J
-        formatDate(formData.tglSelesai), // K
-        formData.jmlHari,         // L
-        formData.alasan,          // M
-        formData.alamatCuti,      // N
-        noHpText,                 // O
-        formData.usulan           // P
+    // 3. Update Data Utama (Kolom E - J) -> Index 5 s/d 10
+    const vals = [[
+        formData.status,
+        formData.jenisCuti,
+        formatDateIndo(formData.tglMulai),
+        formatDateIndo(formData.tglSelesai),
+        formData.jmlHari,
+        fileUrl
     ]];
-
-    // Tulis ke range E[Row]:P[Row]
-    sheet.getRange(rowIndex, 5, 1, 12).setValues(dataToUpdate);
     
-    // Opsional: Update Timestamp di Kolom A? (User tidak meminta, jadi biarkan timestamp asli)
+    sheet.getRange(rowIndex, 5, 1, 6).setValues(vals);
 
-    return "Data Cuti berhasil diperbarui.";
+    // 4. Update Status (Kolom L)
+    sheet.getRange(rowIndex, 12).setValue("R"); 
+
+    // 5. BARU: Update Tanggal Perubahan (Kolom P / Index 16)
+    sheet.getRange(rowIndex, 16).setValue(new Date());
+
+    return "Perbaikan data berhasil disimpan.";
 
   } catch (e) {
-    return handleError('updateSiabaCutiData', e);
+    return handleError('updateSiabaCutiData_v2', e);
   }
 }
 
@@ -2002,7 +2000,7 @@ function getSiabaCutiUnduhFilterOptions() {
 
 /**
  * Mengambil Data Tabel Unduh Formulir Cuti
- * Data mulai baris 3.
+ * Fitur: Filter (Tahun/Unit), Sorting Tanggal (Terbaru)
  */
 function getSiabaCutiUnduhData(filters) {
   try {
@@ -2013,8 +2011,8 @@ function getSiabaCutiUnduhData(filters) {
     if (!sheet || sheet.getLastRow() < 3) return [];
 
     const range = sheet.getDataRange();
-    const rawValues = range.getValues();        
-    const displayValues = range.getDisplayValues(); 
+    const rawValues = range.getValues();        // Untuk Sorting (Date Object)
+    const displayValues = range.getDisplayValues(); // Untuk Tampilan (String)
     
     const rows = [];
     
@@ -2023,7 +2021,7 @@ function getSiabaCutiUnduhData(filters) {
         rows.push({
             raw: rawValues[i],
             display: displayValues[i],
-            index: i + 1 // Index baris asli
+            index: i + 1 // Index baris asli (1-based)
         });
     }
 
@@ -2040,10 +2038,11 @@ function getSiabaCutiUnduhData(filters) {
     });
 
     // Sorting: Tanggal Pengajuan Terbaru (Kolom A / Index 0)
+    // Data Mentah (raw) digunakan agar sorting tanggal akurat
     filtered.sort((a, b) => {
-        const dateA = new Date(a.raw[0]);
-        const dateB = new Date(b.raw[0]);
-        return dateB - dateA; 
+        const dateA = new Date(a.raw[0] || 0);
+        const dateB = new Date(b.raw[0] || 0);
+        return dateB - dateA; // Descending (Besar ke Kecil / Terbaru ke Lama)
     });
 
     // Mapping Output
@@ -2056,9 +2055,7 @@ function getSiabaCutiUnduhData(filters) {
          if (statusRaw === "V") statusText = "Disetujui";
          else if (statusRaw === "X") statusText = "Dibatalkan";
          
-         // PERBAIKAN: Format File URL dari Kolom AT (Index 45)
-         // A=0... Z=25, AA=26... AT=45
-         let fileUrl = (disp.length > 45) ? disp[45] : "";
+         let fileUrl = (disp.length > 45) ? disp[45] : ""; // AT=45
 
          return {
              _rowIndex: item.index,
@@ -2276,7 +2273,7 @@ function getSiabaDataCutiYears() {
 }
 
 /**
- * Mengambil Data Tabel beserta Header Dinamis
+ * Mengambil Data Tabel beserta Header Dinamis (Versi Sort Abjad)
  */
 function getSiabaDataCutiTable(year, unitFilter) {
   try {
@@ -2309,12 +2306,11 @@ function getSiabaDataCutiTable(year, unitFilter) {
     const range = targetSheet.getRange(1, 1, targetSheet.getLastRow(), 13);
     const values = range.getDisplayValues();
     
-    // Pisahkan Header (Baris 1 & 2) dan Data (Baris 3+)
-    // Kita hanya butuh Kolom B-M untuk ditampilkan (slice(1, 13))
+    // Pisahkan Header (Baris 1 & 2)
     const rawHeader1 = values[0].slice(1, 13);
     const rawHeader2 = values[1].slice(1, 13);
     
-    // Data mulai index 2
+    // Data mulai index 2 (Baris ke-3)
     const dataRows = [];
     const unitsSet = new Set();
 
@@ -2326,13 +2322,26 @@ function getSiabaDataCutiTable(year, unitFilter) {
 
         // Filter Unit
         if (unitFilter === "Semua" || rowUnit === unitFilter) {
-            dataRows.push(row.slice(1, 13)); // Ambil B-M
+            // Ambil Kolom B-M (Index 1-12)
+            // row[1] adalah Nama ASN
+            dataRows.push(row.slice(1, 13)); 
         }
     }
 
+    // --- TAMBAHAN: SORTING ABJAD (NAMA ASN) ---
+    // Nama ASN ada di index 0 dari array dataRows (karena dataRows adalah slice(1,13))
+    dataRows.sort((a, b) => {
+        const namaA = String(a[0]).toLowerCase();
+        const namaB = String(b[0]).toLowerCase();
+        if (namaA < namaB) return -1;
+        if (namaA > namaB) return 1;
+        return 0;
+    });
+    // ------------------------------------------
+
     return {
         units: Array.from(unitsSet).sort(),
-        headers: [rawHeader1, rawHeader2], // Kirim 2 baris header
+        headers: [rawHeader1, rawHeader2], 
         rows: dataRows
     };
 
@@ -2340,3 +2349,546 @@ function getSiabaDataCutiTable(year, unitFilter) {
     return handleError('getSiabaDataCutiTable', e);
   }
 }
+
+/**
+ * Mengambil Opsi Pegawai untuk Form Unggah Cuti
+ * Sumber: Sheet "Database CT" (PERBAIKAN NAMA SHEET)
+ * Kolom: A(Nama), B(NIP), C(Unit Kerja)
+ */
+function getSiabaCutiDatabaseOptions() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    
+    // PERBAIKAN: Ganti "Database Cuti" menjadi "Database CT"
+    const sheet = ss.getSheetByName("Database CT");
+    
+    if (!sheet || sheet.getLastRow() < 2) {
+        return []; // Sheet tidak ditemukan atau kosong
+    }
+
+    // Ambil data dari baris 2 sampai akhir, Kolom A-C (3 Kolom)
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 3).getValues();
+
+    // Map ke object
+    // A (Index 0) = Nama
+    // B (Index 1) = NIP
+    // C (Index 2) = Unit Kerja
+    const options = data.map(row => ({
+      nama: String(row[0] || "").trim(), 
+      nip: String(row[1] || "").trim(),  
+      unit: String(row[2] || "").trim()  
+    })).filter(item => item.unit !== "" && item.nama !== "");
+
+    return options;
+
+  } catch (e) {
+    return handleError('getSiabaCutiDatabaseOptions', e);
+  }
+}
+
+/**
+ * Memproses Form Unggah Dokumen Cuti
+ * Simpan ke: Sheet "Unggah Dokumen"
+ * File ke: Folder Cuti -> Folder Bulan
+ */
+function submitSiabaCutiUnggahForm(formData) {
+  try {
+    const mainFolderId = FOLDER_CONFIG.SIABA_CUTI_DOCS;
+    const mainFolder = DriveApp.getFolderById(mainFolderId);
+
+    // 1. Helper Format Tanggal (dd mmmm yyyy)
+    const monthNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    
+    const formatDateIndo = (dateStr) => {
+        if (!dateStr) return "";
+        const p = dateStr.split('-'); // YYYY-MM-DD
+        const day = p[2];
+        const monthIndex = parseInt(p[1], 10) - 1;
+        const year = p[0];
+        return `${day} ${monthNames[monthIndex]} ${year}`;
+    };
+
+    const tglMulaiObj = new Date(formData.tglMulai);
+    const tglMulaiFormatted = formatDateIndo(formData.tglMulai);
+    const tglSelesaiFormatted = formatDateIndo(formData.tglSelesai);
+    
+    // 2. Manajemen Folder (Berdasarkan Bulan Tanggal Mulai)
+    const folderName = monthNames[tglMulaiObj.getMonth()]; // Contoh: "November"
+    const targetFolder = getOrCreateFolder(mainFolder, folderName); // Fungsi helper global
+
+    // 3. Proses File
+    const fileData = formData.fileData;
+    const decodedData = Utilities.base64Decode(fileData.data);
+    const blob = Utilities.newBlob(decodedData, fileData.mimeType, fileData.fileName);
+    
+    // Nama File: Nama ASN - Jenis Cuti - Tanggal Mulai
+    const safeNama = formData.namaAsn.replace(/[^a-zA-Z0-9 ]/g, '');
+    const newFileName = `${safeNama} - ${formData.jenisCuti} - ${tglMulaiFormatted}.pdf`;
+    
+    const file = targetFolder.createFile(blob).setName(newFileName);
+    const fileUrl = file.getUrl();
+
+    // 4. Simpan Data ke Spreadsheet "Unggah Dokumen"
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    let sheet = ss.getSheetByName("Unggah Dokumen");
+    
+    if (!sheet) {
+      sheet = ss.insertSheet("Unggah Dokumen");
+      // Header mapping A-O
+    }
+
+    // Generate ID
+    const idCuti = "DOC_CUTI_" + new Date().getTime();
+    
+    // Data untuk Filter (Tahun & Bulan)
+    const tahunFilter = tglMulaiObj.getFullYear();
+    const bulanFilter = monthNames[tglMulaiObj.getMonth()];
+
+    // Mapping Kolom (Sesuai Request)
+    // A: Timestamp
+    // B: Unit, C: Nama, D: NIP, E: Status, F: Jenis, G: Mulai, H: Selesai, I: Jml Hari, J: File
+    // K: ID
+    // N: Tahun (Filter), O: Bulan (Filter)
+    
+    const newRow = new Array(15).fill(""); // Siapkan sampai kolom O (Index 14)
+
+    newRow[0] = new Date();               // A: Timestamp
+    newRow[1] = formData.unitKerja;       // B
+    newRow[2] = formData.namaAsn;         // C
+    newRow[3] = "'" + formData.nip;       // D
+    newRow[4] = formData.status;          // E
+    newRow[5] = formData.jenisCuti;       // F
+    newRow[6] = tglMulaiFormatted;        // G
+    newRow[7] = tglSelesaiFormatted;      // H
+    newRow[8] = formData.jmlHari;         // I
+    newRow[9] = fileUrl;                  // J
+    newRow[10] = idCuti;                  // K
+    
+    // Kolom L & M kosong/cadangan
+    
+    newRow[13] = tahunFilter;             // N
+    newRow[14] = bulanFilter;             // O
+
+    sheet.appendRow(newRow);
+    
+    return "Formulir Cuti berhasil diunggah.";
+
+  } catch (e) {
+    return handleError('submitSiabaCutiUnggahForm', e);
+  }
+}
+
+/**
+ * ==========================================
+ * MODUL CEK UNGGAHAN CUTI
+ * ==========================================
+ */
+
+/**
+ * Mengambil Opsi Filter (Tahun, Bulan, Unit)
+ * Sumber: Sheet "Unggah Dokumen"
+ */
+function getSiabaCutiCekFilterOptions() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Unggah Dokumen");
+    if (!sheet || sheet.getLastRow() < 2) return { tahun: [], bulan: [], unit: [] };
+
+    // Ambil data (Mulai baris 2)
+    // Kolom B(1)=Unit, N(13)=Tahun, O(14)=Bulan
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 15).getValues();
+    
+    const years = new Set();
+    const months = new Set();
+    const units = new Set();
+    
+    // Helper sort bulan
+    const mNames = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+
+    data.forEach(row => {
+      if (row[13]) years.add(String(row[13]).trim()); // N
+      if (row[14]) months.add(String(row[14]).trim()); // O
+      if (row[1]) units.add(String(row[1]).trim());   // B
+    });
+
+    return {
+      tahun: Array.from(years).sort().reverse(),
+      bulan: Array.from(months).sort((a, b) => mNames.indexOf(a) - mNames.indexOf(b)),
+      unit: Array.from(units).sort()
+    };
+  } catch (e) {
+    return handleError('getSiabaCutiCekFilterOptions', e);
+  }
+}
+
+/**
+ * Mengambil Data Tabel Cek Unggahan Cuti (UPDATED: SORTING A vs P)
+ */
+function getSiabaCutiCekData(filters) {
+  try {
+    const { tahun, bulan, unitKerja } = filters;
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Unggah Dokumen");
+    
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    const range = sheet.getDataRange();
+    const rawValues = range.getValues(); 
+    const displayValues = range.getDisplayValues(); 
+    
+    const rows = [];
+    
+    for (let i = 1; i < rawValues.length; i++) {
+        const raw = rawValues[i];
+        const disp = displayValues[i];
+        
+        // Filter: N(13)=Tahun, O(14)=Bulan, B(1)=Unit
+        const rowTahun = String(disp[13] || "").trim();
+        const rowBulan = String(disp[14] || "").trim();
+        const rowUnit = String(disp[1] || "").trim();
+        
+        const matchTahun = (rowTahun === String(tahun));
+        const matchBulan = (bulan === "Semua" || rowBulan === String(bulan));
+        const matchUnit = (unitKerja === "Semua" || rowUnit === unitKerja);
+        
+        if (matchTahun && matchBulan && matchUnit) {
+             let statusRaw = String(disp[11] || "").trim().toUpperCase();
+             let statusText = "Diproses";
+             if (statusRaw === "V") statusText = "Disetujui";
+             else if (statusRaw === "X") statusText = "Ditolak";
+             else if (statusRaw === "R") statusText = "Revisi";
+
+             rows.push({
+                 _rowIndex: i + 1,
+                 id: disp[10],        
+                 nip: disp[3],        
+                 nama: disp[2],       
+                 jenis: disp[5],      
+                 mulai: disp[6],      
+                 selesai: disp[7],    
+                 jml: disp[8],        
+                 fileUrl: disp[9],    
+                 status: statusText,  
+                 ket: disp[12],       
+                 tglAju: raw[0], // Gunakan RAW untuk sorting yang akurat
+                 update: raw[15] // Gunakan RAW untuk sorting yang akurat
+             });
+        }
+    }
+
+    // Sorting: Bandingkan Tanggal Aju (A) dan Update (P), ambil yg terbaru
+    rows.sort((a, b) => {
+        const dateA = new Date(a.tglAju || 0).getTime();
+        const dateUpdateA = new Date(a.update || 0).getTime();
+        const maxA = Math.max(dateA, dateUpdateA); // Ambil waktu terakhir aktivitas
+
+        const dateB = new Date(b.tglAju || 0).getTime();
+        const dateUpdateB = new Date(b.update || 0).getTime();
+        const maxB = Math.max(dateB, dateUpdateB);
+
+        return maxB - maxA; // Descending
+    });
+
+    // Format tanggal kembali ke string untuk dikirim ke client
+    const formatDate = (d) => {
+        if (!d) return "";
+        if (d instanceof Date) return Utilities.formatDate(d, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+        return String(d);
+    };
+
+    return rows.map(r => ({
+        ...r,
+        tglAju: formatDate(r.tglAju),
+        update: formatDate(r.update)
+    }));
+
+  } catch (e) {
+    return handleError('getSiabaCutiCekData', e);
+  }
+}
+
+/**
+ * Hapus Data Cek Unggahan
+ */
+function deleteSiabaCutiUnggahan(rowIndex, deleteCode) {
+   try {
+    const todayCode = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd");
+    if (String(deleteCode).trim() !== todayCode) throw new Error("Kode Hapus salah.");
+
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_CUTI_DB);
+    const sheet = ss.getSheetByName("Unggah Dokumen");
+    
+    // Hapus File Fisik (Kolom J / Index 9 + 1 = 10)
+    const fileUrl = sheet.getRange(rowIndex, 10).getValue(); 
+    if (fileUrl && String(fileUrl).includes("drive.google.com")) {
+        try {
+            const fileId = String(fileUrl).match(/[-\w]{25,}/);
+            if (fileId) DriveApp.getFileById(fileId[0]).setTrashed(true);
+        } catch(e) {}
+    }
+    
+    sheet.deleteRow(rowIndex);
+    return "Data berhasil dihapus.";
+  } catch (e) {
+    return handleError('deleteSiabaCutiUnggahan', e);
+  }
+}
+
+/**
+ * ==========================================
+ * MODUL REKAP TERLAMBAT (MULTI-SOURCE)
+ * ==========================================
+ */
+
+/**
+ * Mengambil Daftar Tahun dari Spreadsheet Helper
+ * Sumber: Sheet "Lookup TA" Kolom A
+ */
+function getRekapTerlambatOptions() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_REKAP_HELPER);
+    const sheet = ss.getSheetByName("Lookup TA");
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    // Ambil kolom A (Tahun)
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    const years = data.map(r => String(r[0]).trim()).filter(y => y !== "");
+    
+    // Return tahun unik, urut descending
+    return [...new Set(years)].sort().reverse();
+  } catch (e) {
+    return handleError('getRekapTerlambatOptions', e);
+  }
+}
+
+/**
+ * Mengambil Data Rekap Terlambat dari Spreadsheet Target
+ */
+function getRekapTerlambatData(year, unitFilter) {
+  try {
+    // 1. Cari ID Spreadsheet & ID Sheet di Helper
+    const ssHelper = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_REKAP_HELPER);
+    const sheetHelper = ssHelper.getSheetByName("Lookup TA");
+    const helperData = sheetHelper.getDataRange().getValues(); // A=Tahun, B=SS_ID, C=Sheet_ID
+    
+    let targetSsId = "";
+    let targetSheetId = "";
+
+    for (let i = 1; i < helperData.length; i++) {
+        if (String(helperData[i][0]) === String(year)) {
+            targetSsId = helperData[i][1];
+            targetSheetId = helperData[i][2];
+            break;
+        }
+    }
+
+    if (!targetSsId || targetSheetId === "") {
+        return { error: "Konfigurasi database untuk tahun " + year + " tidak ditemukan." };
+    }
+
+    // 2. Buka Spreadsheet Target
+    const targetSs = SpreadsheetApp.openById(targetSsId);
+    let targetSheet;
+    
+    // Cari Sheet berdasarkan ID (GID) atau Nama
+    // Jika targetSheetId berupa angka, anggap itu GID
+    const sheets = targetSs.getSheets();
+    for (let s of sheets) {
+        if (String(s.getSheetId()) === String(targetSheetId) || s.getName() === String(targetSheetId)) {
+            targetSheet = s;
+            break;
+        }
+    }
+
+    if (!targetSheet) return { error: "Sheet target tidak ditemukan." };
+
+    // 3. Ambil Data
+    // Asumsi Header 2 baris, Data mulai baris 3
+    if (targetSheet.getLastRow() < 3) return { units: [], headers: [], rows: [] };
+
+    // Ambil data sampai kolom AD (Index 30 dalam A1Notation, tapi index array 29)
+    // A=1 ... Z=26, AA=27, AB=28, AC=29, AD=30.
+    // Jadi kita ambil 30 kolom.
+    const dataRange = targetSheet.getRange(1, 1, targetSheet.getLastRow(), 30);
+    const values = dataRange.getDisplayValues();
+
+    // Header (Baris 1 & 2), Ambil C-AD (Index 2 s/d 29)
+    const header1 = values[0].slice(2, 30);
+    const header2 = values[1].slice(2, 30);
+
+    const rows = [];
+    const unitsSet = new Set();
+
+    // Data (Baris 3 s/d Akhir)
+    for (let i = 2; i < values.length; i++) {
+        const row = values[i];
+        const rowUnit = String(row[1] || "").trim(); // Kolom B (Index 1) = Unit Kerja
+        
+        if (rowUnit) unitsSet.add(rowUnit);
+
+        if (unitFilter === "Semua" || rowUnit === unitFilter) {
+            // Ambil C-AD (Index 2 s/d 29)
+            rows.push(row.slice(2, 30));
+        }
+    }
+
+    return {
+        units: Array.from(unitsSet).sort(),
+        headers: [header1, header2],
+        rows: rows
+    };
+
+  } catch (e) {
+    return handleError('getRekapTerlambatData', e);
+  }
+}
+
+/**
+ * ==========================================
+ * MODUL REKAP PULANG AWAL
+ * ==========================================
+ */
+
+/**
+ * Mengambil Daftar Tahun dari Helper
+ * Sumber: Sheet "Lookup PLA" Kolom A
+ */
+function getRekapPulangAwalOptions() {
+  try {
+    const ss = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_REKAP_HELPER);
+    const sheet = ss.getSheetByName("Lookup PLA");
+    if (!sheet || sheet.getLastRow() < 2) return [];
+
+    const data = sheet.getRange(2, 1, sheet.getLastRow() - 1, 1).getValues();
+    const years = data.map(r => String(r[0]).trim()).filter(y => y !== "");
+    
+    return [...new Set(years)].sort().reverse();
+  } catch (e) {
+    return handleError('getRekapPulangAwalOptions', e);
+  }
+}
+
+/**
+ * Mengambil Data Rekap Pulang Awal
+ */
+function getRekapPulangAwalData(year, unitFilter) {
+  try {
+    // 1. Cari Mapping di Lookup PLA
+    const ssHelper = SpreadsheetApp.openById(SPREADSHEET_IDS.SIABA_REKAP_HELPER);
+    const sheetHelper = ssHelper.getSheetByName("Lookup PLA");
+    const helperData = sheetHelper.getDataRange().getValues(); 
+    
+    let targetSsId = "";
+    let targetSheetId = "";
+
+    for (let i = 1; i < helperData.length; i++) {
+        if (String(helperData[i][0]) === String(year)) {
+            targetSsId = helperData[i][1];
+            targetSheetId = helperData[i][2];
+            break;
+        }
+    }
+
+    if (!targetSsId || targetSheetId === "") {
+        return { error: "Konfigurasi database tahun " + year + " tidak ditemukan." };
+    }
+
+    // 2. Buka Sheet Target
+    const targetSs = SpreadsheetApp.openById(targetSsId);
+    let targetSheet;
+    const sheets = targetSs.getSheets();
+    for (let s of sheets) {
+        if (String(s.getSheetId()) === String(targetSheetId) || s.getName() === String(targetSheetId)) {
+            targetSheet = s;
+            break;
+        }
+    }
+
+    if (!targetSheet) return { error: "Sheet target tidak ditemukan." };
+    if (targetSheet.getLastRow() < 3) return { units: [], headers: [], rows: [] };
+
+    // 3. Ambil Data (C s.d. AD = Index 2 s.d. 29)
+    const dataRange = targetSheet.getRange(1, 1, targetSheet.getLastRow(), 30);
+    const values = dataRange.getDisplayValues();
+
+    const header1 = values[0].slice(2, 30);
+    const header2 = values[1].slice(2, 30);
+
+    const rows = [];
+    const unitsSet = new Set();
+
+    for (let i = 2; i < values.length; i++) {
+        const row = values[i];
+        const rowUnit = String(row[1] || "").trim(); // Kolom B
+        
+        if (rowUnit) unitsSet.add(rowUnit);
+
+        if (unitFilter === "Semua" || rowUnit === unitFilter) {
+            rows.push(row.slice(2, 30));
+        }
+    }
+
+    return {
+        units: Array.from(unitsSet).sort(),
+        headers: [header1, header2],
+        rows: rows
+    };
+
+  } catch (e) {
+    return handleError('getRekapPulangAwalData', e);
+  }
+}
+
+/**
+ * Mengambil Isi Folder untuk Halaman Unduh Rekap Bulanan
+ * @param {String} folderId - ID Folder yang akan dibuka (opsional)
+ */
+function getSiabaRekapArchiveContent(folderId) {
+  try {
+    const rootId = FOLDER_CONFIG.SIABA_REKAP_ARCHIVE;
+    const targetId = folderId || rootId;
+    
+    const folder = DriveApp.getFolderById(targetId);
+    const folders = [];
+    const files = [];
+    
+    // Ambil Sub-folder
+    const folderIter = folder.getFolders();
+    while (folderIter.hasNext()) {
+      const f = folderIter.next();
+      folders.push({ id: f.getId(), name: f.getName() });
+    }
+    
+    // Ambil File
+    const fileIter = folder.getFiles();
+    while (fileIter.hasNext()) {
+      const f = fileIter.next();
+      files.push({ 
+        id: f.getId(), 
+        name: f.getName(), 
+        url: f.getUrl(), 
+        mimeType: f.getMimeType()
+      });
+    }
+    
+    // Sorting
+    // Folder (Tahun/Bulan) diurutkan Descending (Terbaru di atas)
+    // Kecuali jika nama folder adalah nama bulan, mungkin perlu logic khusus, tapi default desc cukup.
+    folders.sort((a, b) => b.name.localeCompare(a.name)); 
+    
+    // File diurutkan Ascending (A-Z)
+    files.sort((a, b) => a.name.localeCompare(b.name));
+
+    return { 
+        folders: folders, 
+        files: files, 
+        currentId: targetId,
+        currentName: folder.getName(),
+        isRoot: (targetId === rootId)
+    };
+
+  } catch (e) {
+    return handleError('getSiabaRekapArchiveContent', e);
+  }
+}
+
