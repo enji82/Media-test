@@ -1,34 +1,108 @@
-<header>
-  <h2>KELOLA DATA SK PEMBAGIAN TUGAS</h2>
-</header>
+<style>
+    /* Rata Kiri untuk kolom spesifik (Index berdasarkan struktur baru) */
+    /* 5: No SK, 13: User, 14: Verifikator, 15: Keterangan */
+    #kelolaTable tbody td:nth-child(5),
+    #kelolaTable tbody td:nth-child(13),
+    #kelolaTable tbody td:nth-child(14),
+    #kelolaTable tbody td:nth-child(15) {
+        text-align: left !important;
+        padding-left: 15px;
+    }
+</style>
 
-<!-- Kontainer untuk Filter -->
-<div class="filter-container">
-  <div class="filter-group"><label for="filterTahun">Tahun Ajaran:</label><select id="filterTahun"></select></div>
-  <div class="filter-group"><label for="filterSemester">Semester:</label><select id="filterSemester"></select></div>
-  <div class="filter-group"><label for="filterNamaSekolah">Nama Sekolah:</label><select id="filterNamaSekolah"></select></div>
+<div class="std-header">
+    <h1>Kelola Data SK Pembagian Tugas</h1>
 </div>
 
-<!-- Kontainer Utama untuk Tabel dan Paginasi -->
-<main class="table-view-container">
-  <div id="loadingStatus" class="loading-container">
-      <div class="spinner-container">
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
+<div id="tableWrapper" class="std-content-wrapper">
+
+    <div class="std-filter-card">
+        <div class="filter-group">
+            <label class="std-filter-label">Tahun Ajaran:</label>
+            <select id="filterTahun" class="std-filter-select"><option value="">Semua</option></select>
+        </div>
+        <div class="filter-group">
+            <label class="std-filter-label">Semester:</label>
+            <select id="filterSemester" class="std-filter-select"><option value="">Semua</option></select>
+        </div>
+        <div class="filter-group">
+            <label class="std-filter-label">Nama Sekolah:</label>
+            <select id="filterNamaSekolah" class="std-filter-select"><option value="">Semua</option></select>
+        </div>
+        
+        <div class="filter-group" style="margin-left: auto;">
+            <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data...">
+        </div>
     </div>
-      <p>Memuat data, mohon tunggu...</p>
-  </div>
-  
-  <div id="tableWrapper" style="display:none;">
-    <div class="table-container">
-        <table id="kelolaTable" class="data-table freeze-pane-table">
-          <thead></thead>
-          <tbody></tbody>
+
+    <div id="loadingStatus" class="loading-container" style="display: none;">
+        <div class="spinner-container">
+            <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+        </div>
+        <p style="color:#64748b;">Memuat Data...</p>
+    </div>
+
+    <div class="std-table-container">
+        <table id="kelolaTable" class="std-table">
+            <thead></thead>
+            <tbody id="kelolaTableBody"></tbody>
+            <tfoot class="has-content"></tfoot>
         </table>
     </div>
-  </div>
-  
-  <div id="pagination-container" class="pagination-container"></div>
-</main>
+
+</div>
+
+<div id="verificationModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content verif-box">
+        
+        <div class="verif-header">
+            <h3><i class="fas fa-tasks"></i> Verifikasi Data</h3>
+            <button onclick="document.getElementById('verificationModal').style.display='none'" class="close-btn">&times;</button>
+        </div>
+
+        <div class="verif-body">
+            <div class="verif-left">
+                <div class="preview-container-box">
+                    <iframe id="verifPreviewFrame" src=""></iframe>
+                    <div id="verifLoading" class="loader-overlay">Memuat Dokumen...</div>
+                    <div id="verifNoDoc" class="no-doc-overlay" style="display:none;">
+                        <i class="fas fa-file-excel"></i>
+                        <p>Tidak ada dokumen terlampir</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="verif-right">
+                <form id="verifForm">
+                    <input type="hidden" id="verifRowIndex">
+                    
+                    <div class="info-block">
+                        <label>Sekolah</label>
+                        <span id="verifSekolahName">-</span>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Perubahan Status</label>
+                        <select id="verifStatus" class="std-input" style="width:100%; font-weight:bold;">
+                            <option value="Diproses">Diproses</option>
+                            <option value="OK" style="color:green;">&#xf00c; OK (Disetujui)</option>
+                            <option value="Revisi" style="color:#d97706;">&#xf071; Revisi</option>
+                            <option value="Ditolak" style="color:red;">&#xf00d; Ditolak</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group" style="flex:1; display:flex; flex-direction:column;">
+                        <label>Catatan / Keterangan</label>
+                        <textarea id="verifKeterangan" class="std-input" style="flex:1; resize:none; padding:10px; height:100px;" placeholder="Tulis alasan jika Revisi/Ditolak..."></textarea>
+                    </div>
+
+                    <div style="margin-top:auto; pt-3;">
+                        <button type="submit" class="submit-btn" style="width:100%;">
+                            <i class="fas fa-save"></i> SIMPAN PERUBAHAN
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

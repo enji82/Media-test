@@ -1,23 +1,28 @@
-<header>
-  <h2>ARSIP SK PEMBAGIAN TUGAS</h2>
-</header>
+<div class="std-header">
+    <h1>Arsip SK Pembagian Tugas</h1>
+</div>
 
-<!-- Kontainer utama untuk browser file dengan tema glassmorphism -->
-<main class="arsip-container">
-  <!-- Navigasi breadcrumb yang bisa diklik akan muncul di sini -->
-  <div id="breadcrumb" class="breadcrumb"></div>
-  
-  <!-- Kontainer dinamis untuk menampilkan folder atau file -->
-  <div id="view-container">
-    <div class="loading-container">
-        <div class="spinner-container">
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-    </div>
-    <p>Memuat data arsip, mohon tunggu...</p>
-    </div>
-  </div>
-</main>
+<div class="std-content-wrapper">
 
+    <div class="fm-toolbar-container">
+        <i class="fas fa-folder-open" style="color:#fbbf24; font-size:1.2em; margin-right:10px;"></i>
+        <div id="arsipBreadcrumb" class="fm-breadcrumb-box">
+            </div>
+    </div>
+
+    <div class="fm-container">
+        
+        <div id="arsipLoading" class="fm-loader-overlay" style="display:none;">
+            <div class="fm-spinner"></div>
+            <div class="fm-loader-text">Sedang memuat data...</div>
+        </div>
+        
+        <div id="fileGrid" class="file-grid"></div>
+        
+        <div id="emptyFolderMsg" class="fm-empty" style="display:none;">
+            <i class="fas fa-folder-open"></i>
+            <p>Folder ini kosong</p>
+        </div>
+    </div>
+
+</div>

@@ -1,377 +1,549 @@
+// --- KONFIGURASI FOLDER ---
+// ID Folder Utama (Penyimpanan Aktif)
 function getSkArsipFolderIds() {
-  try {
-    return {
-      'MAIN_SK': FOLDER_CONFIG.MAIN_SK
-    };
-  } catch (e) {
-    return handleError('getSkArsipFolderIds', e);
-  }
+  try { return { 'MAIN_SK': FOLDER_CONFIG.MAIN_SK }; } catch(e) { return {}; }
 }
 
-function getMasterSkOptions() {
-  // Kunci cache unik
-  const cacheKey = 'master_sk_options_v1';
-  
-  // Gunakan fungsi cache yang sudah ada
-  return getCachedData(cacheKey, function() {
-    try {
-      const ss = SpreadsheetApp.openById(SPREADSHEET_CONFIG.DROPDOWN_DATA.id);
-      const getValuesFromSheet = (sheetName) => {
-        const sheet = ss.getSheetByName(sheetName);
-        if (!sheet) return [];
-        return sheet.getRange('A2:A' + sheet.getLastRow()).getValues()
-                    .flat()
-                    .filter(value => String(value).trim() !== '');
-      };
+// ID Folder Trash (Tempat Pembuangan)
+const TRASH_FOLDER_ID = '1OB2Mxa_zvpYl7Vru9NEddYmBlU5SfYHL';
+const ARSIP_ROOT_ID = '1GwIow8B4O1OWoq3nhpzDbMO53LXJJUKs';
 
-      return {
-        'Nama SD': getValuesFromSheet('Nama SD').sort(),
-        'Tahun Ajaran': getValuesFromSheet('Tahun Ajaran').sort().reverse(),
-        'Semester': getValuesFromSheet('Semester').sort(),
-        'Kriteria SK': getValuesFromSheet('Kriteria SK').sort()
-      };
-    } catch (e) {
-      // Saat caching, kita lempar error agar tidak menyimpan cache yang rusak
-      throw new Error(`Gagal mengambil SK Options: ${e.message}`);
-    }
-  });
+// --- HELPER: DAPATKAN/BUAT FOLDER (AKTIF) ---
+function getTargetFolder(tahun, semester) {
+  const mainFolder = DriveApp.getFolderById(FOLDER_CONFIG.MAIN_SK);
+  return getOrCreateSubfolder(mainFolder, tahun, semester);
 }
 
-function processManualForm(formData) {
-  try {
-    const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    const mainFolder = DriveApp.getFolderById(FOLDER_CONFIG.MAIN_SK);  
-    
-    const tahunAjaranFolderName = formData.tahunAjaran.replace(/\//g, '-');
-    const tahunAjaranFolder = getOrCreateFolder(mainFolder, tahunAjaranFolderName);
-
-    const semesterFolderName = formData.semester;
-    const targetFolder = getOrCreateFolder(tahunAjaranFolder, semesterFolderName);
-
-    const newFilename = `${formData.namaSD} - ${tahunAjaranFolderName} - ${formData.semester} - ${formData.kriteriaSK}.pdf`;
-    
-    const decodedData = Utilities.base64Decode(formData.fileData.data);
-    const blob = Utilities.newBlob(decodedData, formData.fileData.mimeType, newFilename);
-    const newFile = targetFolder.createFile(blob);
-    const fileUrl = newFile.getUrl();
-    const newRow = [ new Date(), formData.namaSD, formData.tahunAjaran, formData.semester, formData.nomorSK, new Date(formData.tanggalSK), formData.kriteriaSK, fileUrl ];
-    
-    sheet.appendRow(newRow);
-    
-    const lastRow = sheet.getLastRow();
-    sheet.getRange(lastRow, 6).setNumberFormat("dd-MM-yyyy");
-
-    return "Dokumen SK berhasil diunggah.";
-  } catch (e) {
-    return handleError('processManualForm', e);
-  }
+// --- HELPER: DAPATKAN/BUAT FOLDER (TRASH) ---
+function getTrashTargetFolder(tahun, semester) {
+  const trashRoot = DriveApp.getFolderById(TRASH_FOLDER_ID);
+  return getOrCreateSubfolder(trashRoot, tahun, semester);
 }
 
-function getSKRiwayatData() {
-  try {
-    const sheet = SpreadsheetApp.openById(SPREADSHEET_CONFIG.SK_FORM_RESPONSES.id)
-                                .getSheetByName(SPREADSHEET_CONFIG.SK_FORM_RESPONSES.sheet);
-    const desiredHeaders = [
-        "Nama SD",        // <-- Dipakai oleh filterNamaSekolah
-        "Tahun Ajaran",   // <-- Dipakai oleh filterTahun
-        "Semester",       // <-- Dipakai oleh filterSemester
-        "Nomor SK", 
-        "Tanggal SK", 
-        "Kriteria SK", 
-        "Dokumen", 
-        "Tanggal Unggah"
-    ];
-    
-    if (!sheet || sheet.getLastRow() < 2) {
-      // Jika data kosong, pastikan headers tetap dikirim agar client-side bisa me-render filter.
-      return { headers: desiredHeaders, rows: [] }; 
-    }
-    
-    // Tetap gunakan getValues() untuk mendapatkan objek tanggal asli
-    const allData = sheet.getDataRange().getValues(); 
-    const originalHeaders = allData[0].map(h => String(h).trim());
-    const dataRows = allData.slice(1);
+// Fungsi bantu umum untuk logika folder bertingkat
+function getOrCreateSubfolder(rootFolder, level1Name, level2Name) {
+  // 1. Level 1 (Tahun)
+  let folder1;
+  const iter1 = rootFolder.getFoldersByName(level1Name);
+  if (iter1.hasNext()) { folder1 = iter1.next(); } 
+  else { folder1 = rootFolder.createFolder(level1Name); }
 
-    // Cari indeks kolom 'Tanggal Unggah' untuk sorting
-    const timestampIndex = originalHeaders.indexOf('Tanggal Unggah');
+  // 2. Level 2 (Semester)
+  let folder2;
+  const iter2 = folder1.getFoldersByName(level2Name);
+  if (iter2.hasNext()) { folder2 = iter2.next(); } 
+  else { folder2 = folder1.createFolder(level2Name); }
 
-    // Langsung urutkan berdasarkan objek tanggal mentah. Ini lebih cepat dan akurat.
-    dataRows.sort((a, b) => {
-        const dateA = a[timestampIndex] instanceof Date ? a[timestampIndex].getTime() : 0;
-        const dateB = b[timestampIndex] instanceof Date ? b[timestampIndex].getTime() : 0;
-        return dateB - dateA; // Mengurutkan dari terbaru (nilai terbesar) ke terlama
-    });
-
-    // Setelah diurutkan, baru kita format datanya untuk ditampilkan
-    let structuredRows = dataRows.map(row => {
-      const rowObject = {};
-      originalHeaders.forEach((header, index) => {
-        let cell = row[index];
-        if (cell instanceof Date) {
-          // Terapkan format yang berbeda berdasarkan nama header
-          if (header === 'Tanggal SK') {
-            rowObject[header] = Utilities.formatDate(cell, Session.getScriptTimeZone(), "dd/MM/yyyy");
-          } else { // Asumsikan sisanya adalah timestamp
-            rowObject[header] = Utilities.formatDate(cell, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
-          }
-        } else {
-          rowObject[header] = cell;
-        }
-      });
-      return rowObject;
-    });
-
-    return {
-      headers: desiredHeaders,
-      rows: structuredRows
-    };
-  } catch (e) {
-    return handleError('getSKRiwayatData', e);
-  }
+  return folder2;
 }
 
-function getSKStatusData() {
-  try {
-    const config = SPREADSHEET_CONFIG.SK_BAGI_TUGAS;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-
-    if (!sheet || sheet.getLastRow() < 2) {
-      return { headers: [], rows: [] };
-    }
-
-    const dataRange = sheet.getDataRange();
-    // Ambil nilai teks biasa
-    const displayValues = dataRange.getDisplayValues();
-    // Ambil nilai rich text untuk mendapatkan URL
-    const richTextValues = dataRange.getRichTextValues();
-
-    const headers = displayValues[0].map(h => String(h).trim());
-    const dataRows = displayValues.slice(1);
-    const richTextRows = richTextValues.slice(1);
-
-    // Cari tahu di kolom mana 'Dokumen' berada
-    const docIndex = headers.indexOf('Dokumen');
-
-    const structuredRows = dataRows.map((row, rowIndex) => {
-      const rowObject = {};
-      headers.forEach((header, colIndex) => {
-        // Jika ini adalah kolom "Dokumen" dan ada linknya, ambil URL-nya
-        if (colIndex === docIndex) {
-          const richText = richTextRows[rowIndex][colIndex];
-          const linkUrl = richText.getLinkUrl();
-          // Jika ada link, gunakan URL-nya. Jika tidak, gunakan teks biasa.
-          rowObject[header] = linkUrl || row[colIndex]; 
-        } else {
-          rowObject[header] = row[colIndex];
-        }
-      });
-      return rowObject;
-    });
-
-    return {
-      headers: headers,
-      rows: structuredRows
-    };
-  } catch (e) {
-    return handleError('getSKStatusData', e);
-  }
-}
-
-function getSKKelolaData() {
+// --- FUNGSI UTAMA: AMBIL DATA TABEL (SORTIR PRIORITAS UPDATE) ---
+function getSKTableData(isKelola) {
   try {
     const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    if (!sheet || sheet.getLastRow() < 2) {
-      return { headers: [], rows: [] };
-    }
-
-    const originalData = sheet.getDataRange().getValues();
-    const originalHeaders = originalData[0].map(h => String(h).trim());
-    const dataRows = originalData.slice(1);
+    const ss = SpreadsheetApp.openById(config.id);
+    const sheet = ss.getSheetByName(config.sheet);
     
-    const parseDate = (value) => value instanceof Date && !isNaN(value) ? value : new Date(0);
+    if (!sheet) throw new Error(`Sheet "${config.sheet}" tidak ditemukan.`);
 
-    const indexedData = dataRows.map((row, index) => ({
-      row: row,
-      originalIndex: index + 2
-    }));
-    
-    const updateIndex = originalHeaders.indexOf('Update');
-    const timestampIndex = originalHeaders.indexOf('Tanggal Unggah');
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 2) return []; 
 
-    indexedData.sort((a, b) => {
-      const dateB_update = parseDate(b.row[updateIndex]);
-      const dateA_update = parseDate(a.row[updateIndex]);
-      if (dateB_update.getTime() !== dateA_update.getTime()) {
-        return dateB_update - dateA_update;
-      }
-      const dateB_timestamp = parseDate(b.row[timestampIndex]);
-      const dateA_timestamp = parseDate(a.row[timestampIndex]);
-      return dateB_timestamp - dateA_timestamp;
-    });
+    const rows = data.slice(1);
 
-    const structuredRows = indexedData.map(item => {
-      const rowObject = {
-        _rowIndex: item.originalIndex,
-        _source: 'SK'
-      };
-      originalHeaders.forEach((header, i) => {
-      let cell = item.row[i];
-      // MODIFIKASI DIMULAI DI SINI
-      if (header === 'Tanggal SK' && cell instanceof Date) {
-      rowObject[header] = Utilities.formatDate(cell, Session.getScriptTimeZone(), "dd/MM/yyyy");
-      } else if ((header === 'Tanggal Unggah' || header === 'Update') && cell instanceof Date) {
-      rowObject[header] = Utilities.formatDate(cell, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
-      // MODIFIKASI SELESAI
-      } else {
-      rowObject[header] = cell;
-    }
-  });
-  return rowObject;
-    });
-    
-    const desiredHeaders = ["Nama SD", "Tahun Ajaran", "Semester", "Nomor SK", "Kriteria SK", "Dokumen", "Aksi", "Tanggal Unggah", "Update"];
-
-    return {
-      headers: desiredHeaders,
-      rows: structuredRows
+    // INDEX KOLOM
+    const I = {
+        TS: 0, STATUS_SEK: 1, NAMA_SEK: 2, TA: 3, SMT: 4, NO_SK: 5, TGL_SK: 6, KRITERIA: 7, DOK: 8,
+        STATUS: 9, KET: 10, UPDATE: 11, USER: 12, VERIF: 13
     };
+
+    const safeDate = (v, fmt) => (v instanceof Date && !isNaN(v)) ? Utilities.formatDate(v, Session.getScriptTimeZone(), fmt) : (v || '-');
+
+    // Update Helper di dalam getSKTableData juga
+    const formatStatus = (val) => {
+        let s = String(val).trim();
+        const sl = s.toLowerCase();
+        let cssClass = 'status-diproses'; 
+        let displayText = s || 'Diproses';    
+
+        if (sl === 'v' || sl === 'disetujui' || sl === 'ok') {
+            cssClass = 'status-ok'; displayText = 'OK'; 
+        } 
+        else if (sl === 'x' || sl === 'ditolak') {
+            cssClass = 'status-ditolak'; displayText = 'Ditolak';
+        }
+        else if (sl === 'revisi') {
+            cssClass = 'status-revisi'; displayText = 'Revisi';
+        }
+        else if (sl === 'dihapus') {
+            cssClass = 'status-dihapus'; displayText = 'Dihapus';
+        }
+        
+        return `<span class="status-badge ${cssClass}">${displayText}</span>`;
+    };
+
+    const result = rows.map((r, i) => {
+        let rowObj = {
+            _rowIndex: i + 2,
+            _source: 'SK',
+            _statusRaw: r[I.STATUS], 
+            
+            'Nama Sekolah': r[I.NAMA_SEK] || '-',
+            'Tahun Ajaran': r[I.TA] || '-',
+            'Semester': r[I.SMT] || '-',
+            'Nomor SK': r[I.NO_SK] || '-',
+            'Tanggal SK': safeDate(r[I.TGL_SK], "dd/MM/yyyy"),
+            'Kriteria SK': r[I.KRITERIA] || '-',
+            'Status': formatStatus(r[I.STATUS]), 
+            'Dokumen': r[I.DOK] || '',
+            'Tanggal Unggah': safeDate(r[I.TS], "dd/MM/yyyy HH:mm:ss"),
+            'User': r[I.USER] || '-'
+        };
+
+        if (isKelola) {
+            rowObj['Keterangan'] = r[I.KET] || '-';
+            rowObj['Verifikator'] = r[I.VERIF] || '-';
+            rowObj['Update'] = safeDate(r[I.UPDATE], "dd/MM/yyyy HH:mm:ss"); 
+        }
+        
+        // --- LOGIKA SORTIR CERDAS ---
+        // Ambil waktu Unggah
+        let timeUpload = (r[I.TS] instanceof Date) ? r[I.TS].getTime() : 0;
+        
+        // Ambil waktu Update (jika ada)
+        let timeUpdate = (r[I.UPDATE] instanceof Date) ? r[I.UPDATE].getTime() : 0;
+        
+        // Bandingkan: Ambil mana yang paling besar (paling baru)
+        // Jika belum pernah diupdate (timeUpdate 0), maka pakai timeUpload
+        rowObj._sortKey = Math.max(timeUpload, timeUpdate);
+        
+        return rowObj;
+    });
+
+    // Sortir Descending (Paling Baru di Atas)
+    result.sort((a, b) => b._sortKey - a._sortKey);
+    
+    return result;
+
   } catch (e) {
-    return handleError("getSKKelolaData", e);
+    return { error: e.message };
   }
 }
 
+// --- FUNGSI AMBIL DATA BARIS (EDIT) ---
 function getSKDataByRow(rowIndex) {
   try {
     const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
     const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    
-    // Ambil nilai mentah (RAW) untuk mendapatkan objek Date asli
-    const rawValues = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getValues()[0];
-    // Ambil nilai tampilan (DISPLAY) untuk konsistensi string/angka
-    const displayValues = sheet.getRange(rowIndex, 1, 1, sheet.getLastColumn()).getDisplayValues()[0];
-    
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => h.trim());
-    
-    const rowData = {};
-    headers.forEach((header, i) => {
-      // KUNCI PERBAIKAN: Format Tanggal SK ke YYYY-MM-DD
-      if (header === 'Tanggal SK' && rawValues[i] instanceof Date) {
-        // Format yang wajib untuk HTML input type="date"
-        rowData[header] = Utilities.formatDate(rawValues[i], "UTC", "yyyy-MM-dd");
-      } else {
-        // Gunakan display value untuk field lain (Nomor SK, dll.)
-        rowData[header] = displayValues[i];
-      }
-    });
-    return rowData;
+    const range = sheet.getRange(rowIndex, 2, 1, 8); 
+    const val = range.getValues()[0];
+
+    let tglSK = '';
+    if (val[5] instanceof Date) {
+        tglSK = Utilities.formatDate(val[5], Session.getScriptTimeZone(), "yyyy-MM-dd");
+    }
+
+    return {
+      statusSekolah: String(val[0]), 
+      namaSekolah: String(val[1]),   
+      tahunAjaran: String(val[2]),   
+      semester: String(val[3]),      
+      nomorSK: String(val[4]),       
+      tanggalSK: tglSK,              
+      kriteriaSK: String(val[6]),    
+      dokumen: String(val[7])        
+    };
   } catch (e) {
-    return handleError("getSKDataByRow", e);
+    return { error: "Gagal ambil data: " + e.message };
   }
 }
 
-function updateSKData(formData) {
+// --- FUNGSI UPDATE DATA (EDIT) ---
+function updateSKData(form) {
   try {
     const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
     const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => h.trim());
+    const row = parseInt(form.rowIndex);
     
-    const range = sheet.getRange(formData.rowIndex, 1, 1, headers.length);
-    const existingRowValues = range.getDisplayValues()[0];
-    const existingRowObject = {};
-    headers.forEach((header, i) => { existingRowObject[header] = existingRowValues[i]; });
-
-    const mainFolder = DriveApp.getFolderById(FOLDER_CONFIG.MAIN_SK);
-    const tahunAjaranFolderName = existingRowObject['Tahun Ajaran'].replace(/\//g, '-');
-    const tahunAjaranFolder = getOrCreateFolder(mainFolder, tahunAjaranFolderName);
+    // 1. Cek Status Kunci
+    const statusVal = String(sheet.getRange(row, 10).getValue()).trim().toLowerCase();
     
-    let fileUrl = existingRowObject['Dokumen'];
-    const fileUrlIndex = headers.indexOf('Dokumen');
-
-    const newSemesterFolderName = formData['Semester'];
-    const newTargetFolder = getOrCreateFolder(tahunAjaranFolder, newSemesterFolderName);
-    const newFilename = `${existingRowObject['Nama SD']} - ${tahunAjaranFolderName} - ${newSemesterFolderName} - ${formData['Kriteria SK']}.pdf`;
-
-    if (formData.fileData && formData.fileData.data) {
-      if (fileUrlIndex > -1 && existingRowObject['Dokumen']) {
-        try {
-          const fileId = existingRowObject['Dokumen'].match(/[-\w]{25,}/);
-          if (fileId) DriveApp.getFileById(fileId[0]).setTrashed(true);
-        } catch (e) {
-          Logger.log(`Gagal menghapus file lama saat upload baru: ${e.message}`);
-        }
-      }
-      
-      const decodedData = Utilities.base64Decode(formData.fileData.data);
-      const blob = Utilities.newBlob(decodedData, formData.fileData.mimeType, newFilename);
-      const newFile = newTargetFolder.createFile(blob);
-      fileUrl = newFile.getUrl();
-
-    } else if (fileUrlIndex > -1 && existingRowObject['Dokumen']) {
-        const fileIdMatch = existingRowObject['Dokumen'].match(/[-\w]{25,}/);
-        if (fileIdMatch) {
-            const fileId = fileIdMatch[0];
-            const file = DriveApp.getFileById(fileId);
-            const currentFileName = file.getName();
-            const currentParentFolder = file.getParents().next();
-
-            if (currentFileName !== newFilename || currentParentFolder.getName() !== newSemesterFolderName) {
-                file.moveTo(newTargetFolder);
-                file.setName(newFilename);
-                fileUrl = file.getUrl();
-            }
-        }
+    // Cegah edit jika OK atau Dihapus
+    if (['ok', 'v', 'disetujui'].includes(statusVal)) {
+        throw new Error("Data sudah disetujui (OK) dan tidak dapat diedit.");
     }
-    
-    formData['Dokumen'] = fileUrl;
-    formData['Update'] = new Date();
-
-    const newRowValuesForSheet = headers.map(header => {
-      return formData.hasOwnProperty(header) ? formData[header] : existingRowObject[header];
-    });
-
-    sheet.getRange(formData.rowIndex, 1, 1, headers.length).setValues([newRowValuesForSheet]);
-    
-    const tanggalSKIndex = headers.indexOf('Tanggal SK');
-    if (tanggalSKIndex !== -1) {
-      sheet.getRange(formData.rowIndex, tanggalSKIndex + 1).setNumberFormat("dd-MM-yyyy");
+    if (statusVal === 'dihapus') {
+        throw new Error("Data yang sudah dihapus tidak dapat diedit.");
     }
+
+    // 2. Pindah File jika perlu
+    const targetFolder = getTargetFolder(form.tahunAjaran, form.semester);
+    const oldFileUrl = sheet.getRange(row, 9).getValue();
     
-    return "Data berhasil diperbarui!";
+    if (form.fileData && form.fileData.data) {
+       const blob = Utilities.newBlob(Utilities.base64Decode(form.fileData.data), form.fileData.mimeType, form.fileData.fileName);
+       const file = targetFolder.createFile(blob);
+       sheet.getRange(row, 9).setValue(file.getUrl());
+    } 
+    else if (oldFileUrl && String(oldFileUrl).includes("drive.google.com")) {
+       try {
+           const fileIdMatch = oldFileUrl.match(/[-\w]{25,}/);
+           if (fileIdMatch) {
+               DriveApp.getFileById(fileIdMatch[0]).moveTo(targetFolder);
+           }
+       } catch(err) {}
+    }
+
+    // 3. Logika Status Baru
+    let newStatus = statusVal;
+    if (['diproses', 'revisi', ''].includes(statusVal)) newStatus = 'Diproses';
+    else if (['ditolak', 'x'].includes(statusVal)) newStatus = 'Revisi';
+    
+    let currentKet = String(sheet.getRange(row, 11).getValue() || "-");
+    const suffix = " (Direvisi oleh user.)";
+    let newKet = currentKet.replace(suffix, "") === "-" ? suffix.trim() : currentKet.replace(suffix, "") + suffix;
+
+    // 4. Simpan Data Utama
+    const rangeData = sheet.getRange(row, 2, 1, 7); 
+    rangeData.setValues([[
+        form.statusSekolah, form.namaSekolah, form.tahunAjaran, 
+        form.semester, form.nomorSK, form.tanggalSK, form.kriteriaSK
+    ]]);
+
+    // 5. UPDATE STATUS, KETERANGAN, WAKTU & USER (INI YANG BENAR)
+    
+    // Kolom J (10): Status
+    sheet.getRange(row, 10).setValue(newStatus); 
+    
+    // Kolom K (11): Keterangan
+    sheet.getRange(row, 11).setValue(newKet);
+    
+    // Kolom L (12): Update Waktu (Format Tanggal & Jam Lengkap)
+    const timeStamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+    sheet.getRange(row, 12).setValue(timeStamp); 
+
+    // Kolom M (13): Update User (Siapa yang mengedit)
+    // Pastikan frontend mengirim 'editorName'
+    sheet.getRange(row, 13).setValue(form.editorName || "User"); 
+
+    return "Data berhasil diperbarui.";
+    
   } catch (e) {
-    return handleError('updateSKData', e);
+    throw new Error(e.message);
   }
 }
 
-function deleteSKData(rowIndex, deleteCode) {
-  try {
-    const todayCode = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd");
-    if (String(deleteCode).trim() !== todayCode) throw new Error("Kode Hapus salah.");
+// --- FUNGSI HAPUS (PINDAH KE TRASH DENGAN NAMA & ROLE) ---
+function deleteSKData(idx, code, actorName, actorRole) {
+    try {
+        const today = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "yyyyMMdd");
+        if(String(code).trim() !== today) throw new Error("Kode hapus salah.");
+        
+        const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
+        const ss = SpreadsheetApp.openById(config.id);
+        const sheet = ss.getSheetByName(config.sheet);
+        
+        const range = sheet.getRange(idx, 1, 1, sheet.getLastColumn());
+        const values = range.getValues()[0];
+        const tahun = values[3]; const smt = values[4]; const fileUrl = values[8];
 
-    const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    
-    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-    const fileUrlIndex = headers.findIndex(h => h.trim().toLowerCase() === 'dokumen');
-    
-    if (fileUrlIndex !== -1) {
-        const fileUrl = sheet.getRange(rowIndex, fileUrlIndex + 1).getValue();
-        if (fileUrl && typeof fileUrl === 'string') {
-            const fileId = fileUrl.match(/[-\w]{25,}/);
-            if (fileId) {
-                try {
-                    DriveApp.getFileById(fileId[0]).setTrashed(true);
-                } catch (err) {
-                    Logger.log(`Gagal menghapus file dengan ID ${fileId[0]}: ${err.message}`);
-                }
-            }
+        // --- UPDATE DATA UNTUK TRASH ---
+        const timeStamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+        
+        values[9] = "Dihapus"; 
+        
+        // KETERANGAN: Diisi Nama Orang ("Dihapus oleh Budi")
+        values[10] = "Dihapus oleh " + (actorName || "User"); 
+        
+        values[11] = timeStamp; 
+        
+        // USER: Diisi Role ("Administrator")
+        values[12] = actorRole || "User"; 
+
+        // Pindah ke Trash
+        let trashSheet = ss.getSheetByName('Trash');
+        if (!trashSheet) {
+            trashSheet = ss.insertSheet('Trash');
+            const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
+            trashSheet.appendRow(headers);
         }
+        trashSheet.appendRow(values); 
+
+        // Pindah File
+        if (fileUrl && String(fileUrl).includes("drive")) {
+            try { DriveApp.getFileById(fileUrl.match(/[-\w]{25,}/)[0]).moveTo(getTrashTargetFolder(tahun, smt)); } catch(e){}
+        }
+
+        sheet.deleteRow(idx);
+        return "Data berhasil dihapus.";
+    } catch(e) { throw new Error(e.message); }
+}
+
+// --- FUNGSI VERIFIKASI (ADMIN) ---
+function updateSKVerificationStatus(idx, statusInput, ket, adminName) {
+    try {
+        const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
+        const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
+        
+        // Status Final
+        let finalStatus = statusInput; // OK, Ditolak, Revisi, Diproses
+
+        // Timestamp
+        const timeStamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
+        
+        // Update Kolom J (10) s.d N (14)
+        // J=Status, K=Ket, L=Update, M=User(skip), N=Verifikator
+        sheet.getRange(idx, 10).setValue(finalStatus);
+        sheet.getRange(idx, 11).setValue(ket || "-");
+        sheet.getRange(idx, 12).setValue(timeStamp);
+        // Kolom 13 (User) jangan diubah karena itu user pengupload/pengedit
+        sheet.getRange(idx, 14).setValue(adminName);
+        
+        return "Verifikasi berhasil disimpan.";
+        
+    } catch(e) {
+        throw new Error(e.message);
     }
+}
+
+// --- FUNGSI UNGGAH BARU ---
+function processManualForm(form) {
+    try {
+        const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
+        const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
+        const targetFolder = getTargetFolder(form.tahunAjaran, form.semester);
+        
+        const blob = Utilities.newBlob(Utilities.base64Decode(form.fileData.data), form.fileData.mimeType, form.fileData.fileName);
+        const file = targetFolder.createFile(blob);
+        
+        const row = [
+            new Date(),
+            form.statusSekolah, form.namaSekolah, form.tahunAjaran, form.semester,
+            form.nomorSK, new Date(form.tanggalSK), form.kriteriaSK,
+            file.getUrl(),
+            'Diproses', '-', '', form.loggedInUser || 'User', '-'
+        ];
+        
+        sheet.appendRow(row);
+        return "Berhasil disimpan.";
+    } catch(e) { throw new Error(e.message); }
+}
+
+function getMasterSkOptions() {
+  const ss = SpreadsheetApp.openById(SPREADSHEET_CONFIG.ID_UTAMA);
+  const getCol = (name) => { const s = ss.getSheetByName(name); return s ? s.getRange('A2:A').getValues().flat().filter(String) : []; };
+  const sdSheet = ss.getSheetByName('Nama SDNS');
+  let statusList = [], schoolMap = {};
+  if (sdSheet) {
+    const data = sdSheet.getRange(2, 1, sdSheet.getLastRow(), 2).getValues();
+    data.forEach(r => { if(r[0] && r[1]) { if(!schoolMap[r[0]]) { schoolMap[r[0]] = []; statusList.push(r[0]); } schoolMap[r[0]].push(r[1]); } });
+  }
+  return { 'Status Sekolah': statusList.sort(), 'Nama Sekolah List': schoolMap, 'Tahun Ajaran': getCol('Tahun Ajaran'), 'Semester': getCol('Semester'), 'Kriteria SK': getCol('Kriteria SK') };
+}
+
+// --- FUNGSI AMBIL DATA STATUS (DAFTAR KIRIM - MATRIKS) ---
+function getSKStatusData() {
+  try {
+    // ID dan Sheet
+    const idSpreadsheet = '1AmvOJAhOfdx09eT54x62flWzBZ1xNQ8Sy5lzvT9zJA4'; 
+    const ss = SpreadsheetApp.openById(idSpreadsheet);
+    const sheet = ss.getSheetByName('Daftar Kirim SK');
     
-    sheet.deleteRow(rowIndex);
-    return "Data dan file terkait berhasil dihapus.";
+    if (!sheet) throw new Error("Sheet 'Daftar Kirim SK' tidak ditemukan.");
+
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 3) return { error: "Data kosong." };
+
+    // Mapping Data Matriks
+    const formattedData = data.map((row, rowIndex) => {
+        if (rowIndex < 2) return row; // Header biarkan saja
+
+        return row.map((cell, colIndex) => {
+            if (colIndex === 0) return cell; // Kolom Nama Sekolah biarkan
+
+            // Format Status -> Ke Class CSS Baru
+            let s = String(cell).trim();
+            const sl = s.toLowerCase();
+            let css = 'status-diproses'; // Default
+            let label = s;
+
+            if (['v', 'ok', 'disetujui', 'sudah'].includes(sl)) {
+                css = 'status-ok'; label = 'OK';
+            }
+            else if (['x', 'ditolak'].includes(sl)) {
+                css = 'status-ditolak'; label = 'Ditolak';
+            }
+            else if (['revisi'].includes(sl)) {
+                css = 'status-revisi'; label = 'Revisi';
+            }
+            else if (['belum', '-', ''].includes(sl)) {
+                css = 'status-belum'; label = 'Belum';
+            }
+            
+            return `<span class="status-badge ${css}">${label}</span>`;
+        });
+    });
+
+    return formattedData;
+
   } catch (e) {
-    return handleError("deleteSKData", e);
+    return { error: e.message };
+  }
+}
+
+function getSKRiwayatData() { return getSKTableData(false); }
+function getSKKelolaData() { return getSKTableData(true); }
+
+function getDriveContents(folderId) {
+  try {
+    const id = folderId || ARSIP_ROOT_ID;
+    const folder = DriveApp.getFolderById(id);
+    
+    const folders = folder.getFolders();
+    const files = folder.getFiles();
+    
+    let items = [];
+
+    // 1. Ambil Folder
+    while (folders.hasNext()) {
+      const f = folders.next();
+      items.push({
+        id: f.getId(),
+        name: f.getName(),
+        type: 'folder',
+        mime: 'application/vnd.google-apps.folder',
+        updated: Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), "dd/MM/yyyy")
+      });
+    }
+
+    // 2. Ambil File (Khusus PDF atau semua, kita ambil PDF utamanya)
+    while (files.hasNext()) {
+      const f = files.next();
+      // Filter opsional: if (f.getMimeType() === MimeType.PDF)
+      items.push({
+        id: f.getId(),
+        name: f.getName(),
+        type: 'file',
+        mime: f.getMimeType(),
+        url: f.getUrl(),
+        size: (f.getSize() / 1024).toFixed(0) + ' KB',
+        updated: Utilities.formatDate(f.getLastUpdated(), Session.getScriptTimeZone(), "dd/MM/yyyy")
+      });
+    }
+
+    // Sortir: Folder dulu, baru File (A-Z)
+    items.sort((a, b) => {
+        if (a.type === b.type) return a.name.localeCompare(b.name);
+        return a.type === 'folder' ? -1 : 1;
+    });
+
+    return { 
+        currentId: id, 
+        currentName: folder.getName(), 
+        items: items 
+    };
+
+  } catch (e) {
+    return { error: "Gagal memuat arsip: " + e.message };
+  }
+}
+
+// --- FUNGSI AMBIL DATA TRASH (FIX NULL ERROR) ---
+function getSKTrashData() {
+  try {
+    const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
+    const ss = SpreadsheetApp.openById(config.id);
+    let sheet = ss.getSheetByName('Trash');
+    
+    // SKENARIO 1: Jika sheet Trash belum ada (Baru pertama kali atau habis dihapus)
+    if (!sheet) {
+        // Buat Sheet Baru
+        sheet = ss.insertSheet('Trash');
+        // Buat Header (Copy dari Sheet Utama agar sama persis)
+        const mainSheet = ss.getSheetByName(config.sheet);
+        const headers = mainSheet.getRange(1, 1, 1, mainSheet.getLastColumn()).getValues()[0];
+        sheet.appendRow(headers);
+        
+        // PENTING: Kembalikan Array Kosong agar Frontend tidak CRASH
+        return []; 
+    }
+
+    const data = sheet.getDataRange().getValues();
+    
+    // SKENARIO 2: Sheet ada tapi isinya cuma header (Belum ada sampah)
+    if (data.length < 2) {
+        return []; // Kembalikan Array Kosong
+    }
+
+    const rows = data.slice(1); // Skip Header
+
+    // Format Tanggal
+    const safeDate = (v) => (v instanceof Date) ? Utilities.formatDate(v, Session.getScriptTimeZone(), "dd/MM/yyyy") : (v || '-');
+    const safeTime = (v) => (v instanceof Date) ? Utilities.formatDate(v, Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss") : (v || '-');
+
+    // MAPPING DATA TRASH (SAMA PERSIS DENGAN TABEL UTAMA)
+    // Karena kita memindahkan data 1:1, maka urutan kolomnya SAMA dengan Sheet Utama
+    // A=Timestamp, B=StatusSek, C=Nama, D=Tahun, E=Smt, F=No, G=Tgl, H=Kriteria, I=Dok, J=Status, K=Ket, L=Update, M=User, N=Verif
+    
+    const result = rows.map((r) => {
+        return {
+            'Nama Sekolah': r[2] || '-', 
+            'Tahun Ajaran': r[3] || '-', 
+            'Semester': r[4] || '-',     
+            'Nomor SK': r[5] || '-',     
+            'Tanggal SK': safeDate(r[6]),
+            'Kriteria SK': r[7] || '-',  
+            'Dokumen': r[8] || '',       
+            // Paksa Status jadi Merah
+            'Status': `<span class="status-badge status-rejected">${r[9] || 'Dihapus'}</span>`,
+            'Keterangan': r[10] || '-',
+            'Update': safeTime(r[11]),   // Waktu Hapus
+            'User': r[12] || '-',        // Siapa yang menghapus
+            'Verifikator': r[13] || '-'
+        };
+    });
+
+    // Urutkan dari yang paling baru dihapus (Paling bawah di sheet = Paling baru)
+    return result.reverse();
+
+  } catch (e) {
+    // Kembalikan Object Error
+    return { error: "Gagal memuat Trash: " + e.message };
+  }
+}
+
+// ==========================================
+// FUNGSI PEMANGGIL HALAMAN (WAJIB ADA)
+// ==========================================
+function getPageContent(filename) {
+  try {
+    return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
+  } catch (e) {
+    return '<div style="color:red; padding:20px; text-align:center;">Error: Halaman "' + filename + '" tidak ditemukan.<br><small>' + e.message + '</small></div>';
+  }
+}
+
+// --- FUNGSI WAJIB UNTUK LOAD HALAMAN ---
+function srvLoadPage(filename) {
+  try {
+    return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
+  } catch (e) {
+    return '<div style="color:red; text-align:center; padding:20px;">Error: Halaman <b>' + filename + '</b> tidak ditemukan.<br>Detail: ' + e.message + '</div>';
+  }
+}
+
+// ==========================================
+// FUNGSI PENGHUBUNG HALAMAN (WAJIB ADA)
+// ==========================================
+// Tanpa fungsi ini, layar akan blank saat ganti menu
+function include(filename) {
+  try {
+    return HtmlService.createTemplateFromFile(filename).evaluate().getContent();
+  } catch (e) {
+    return '<div style="color:red; text-align:center; padding:20px;">' +
+           '<h3>Gagal Memuat Halaman</h3>' +
+           '<p>File <b>' + filename + '</b> tidak ditemukan.</p>' +
+           '<small>Error: ' + e.message + '</small>' +
+           '</div>';
   }
 }
