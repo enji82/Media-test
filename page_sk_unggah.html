@@ -5,51 +5,58 @@
 <div class="std-content-wrapper">
 
     <div class="form-container">
-        <form id="skUploadForm">
+        <form id="skUnggahForm">
             
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 
                 <div class="form-group">
                     <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Tahun Ajaran</label>
-                    <select id="uploadTahun" name="tahunAjaran" class="std-input" style="width:100%" required>
+                    <select id="unggahTahun" name="tahunAjaran" class="std-input" style="width:100%" required>
                         <option value="">Memuat...</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Semester</label>
-                    <select id="uploadSemester" name="semester" class="std-input" style="width:100%" required>
+                    <select id="unggahSemester" name="semester" class="std-input" style="width:100%" required>
                         <option value="">Memuat...</option>
                     </select>
                 </div>
 
-                <div class="form-group" style="grid-column: span 2;">
+                <div class="form-group">
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Status Sekolah</label>
+                    <select id="unggahStatusSekolah" name="statusSekolah" class="std-input" style="width:100%" required>
+                        <option value="">-- Pilih Status --</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
                     <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Nama Sekolah</label>
-                    <select id="uploadSekolah" name="namaSekolah" class="std-input" style="width:100%" required>
-                        <option value="">Memuat...</option>
+                    <select id="unggahNamaSekolah" name="namaSekolah" class="std-input" style="width:100%" required>
+                        <option value="">-- Pilih Status Dahulu --</option>
                     </select>
                 </div>
 
                 <div class="form-group">
                     <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Nomor SK</label>
-                    <input type="text" name="nomorSK" class="std-input" style="width:100%" placeholder="Contoh: 800/..." required>
+                    <input type="text" id="unggahNomorSK" name="nomorSK" class="std-input" style="width:100%" placeholder="Contoh: 800/..." required>
                 </div>
 
                 <div class="form-group">
                     <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Tanggal SK</label>
-                    <input type="date" name="tanggalSK" class="std-input" style="width:100%" required>
+                    <input type="date" id="unggahTanggalSK" name="tanggalSK" class="std-input" style="width:100%" required>
                 </div>
 
                 <div class="form-group" style="grid-column: span 2;">
                     <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Kriteria SK</label>
-                    <select id="uploadKriteria" name="kriteriaSK" class="std-input" style="width:100%" required>
+                    <select id="unggahKriteria" name="kriteriaSK" class="std-input" style="width:100%" required>
                         <option value="">Memuat...</option>
                     </select>
                 </div>
 
                 <div class="form-group" style="grid-column: span 2;">
                     <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Unggah File (PDF, Maks 1MB)</label>
-                    <input type="file" id="uploadFile" name="file" class="std-input" style="width:100%; padding: 5px;" accept="application/pdf" required>
+                    <input type="file" id="unggahFile" name="file" class="std-input" style="width:100%; padding: 5px;" accept="application/pdf" required>
                     <small style="color:#64748b;">Scan SK asli dalam format PDF. Pastikan file terbaca jelas dan sudah ditandatangani.</small>
                 </div>
 
