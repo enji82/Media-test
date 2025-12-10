@@ -167,64 +167,55 @@ function updateSKData(form) {
     
     // 1. Cek Status Kunci
     const statusVal = String(sheet.getRange(row, 10).getValue()).trim().toLowerCase();
-    
-    // Cegah edit jika OK atau Dihapus
     if (['ok', 'v', 'disetujui'].includes(statusVal)) {
         throw new Error("Data sudah disetujui (OK) dan tidak dapat diedit.");
     }
-    if (statusVal === 'dihapus') {
-        throw new Error("Data yang sudah dihapus tidak dapat diedit.");
-    }
 
-    // 2. Pindah File jika perlu
+    // 2. Pindah File (Jika ada upload baru)
     const targetFolder = getTargetFolder(form.tahunAjaran, form.semester);
-    const oldFileUrl = sheet.getRange(row, 9).getValue();
-    
     if (form.fileData && form.fileData.data) {
        const blob = Utilities.newBlob(Utilities.base64Decode(form.fileData.data), form.fileData.mimeType, form.fileData.fileName);
-       const file = targetFolder.createFile(blob);
-       sheet.getRange(row, 9).setValue(file.getUrl());
+       sheet.getRange(row, 9).setValue(targetFolder.createFile(blob).getUrl());
     } 
-    else if (oldFileUrl && String(oldFileUrl).includes("drive.google.com")) {
-       try {
-           const fileIdMatch = oldFileUrl.match(/[-\w]{25,}/);
-           if (fileIdMatch) {
-               DriveApp.getFileById(fileIdMatch[0]).moveTo(targetFolder);
-           }
-       } catch(err) {}
+    // Logika pindah folder jika tahun/smt berubah (opsional, aman dihapus jika error)
+    else {
+       const oldUrl = sheet.getRange(row, 9).getValue();
+       if(oldUrl && String(oldUrl).includes("drive")) {
+           try { DriveApp.getFileById(oldUrl.match(/[-\w]{25,}/)[0]).moveTo(targetFolder); } catch(e){}
+       }
     }
 
-    // 3. Logika Status Baru
-    let newStatus = statusVal;
-    if (['diproses', 'revisi', ''].includes(statusVal)) newStatus = 'Diproses';
-    else if (['ditolak', 'x'].includes(statusVal)) newStatus = 'Revisi';
+    // 3. LOGIKA BARU: KETERANGAN REVISI DINAMIS
+    const editorName = form.editorName || "User"; // Nama dari Frontend
     
-    let currentKet = String(sheet.getRange(row, 11).getValue() || "-");
-    const suffix = " (Direvisi oleh user.)";
-    let newKet = currentKet.replace(suffix, "") === "-" ? suffix.trim() : currentKet.replace(suffix, "") + suffix;
+    // Ambil Keterangan Lama
+    let oldKet = String(sheet.getRange(row, 11).getValue() || "-");
+    if (oldKet === "-") oldKet = "";
 
-    // 4. Simpan Data Utama
-    const rangeData = sheet.getRange(row, 2, 1, 7); 
-    rangeData.setValues([[
+    // Bersihkan tag revisi lama (Regex: hapus text dalam kurung yang diawali 'Direvisi oleh')
+    // Agar tidak menumpuk: "Ket (Direvisi oleh A) (Direvisi oleh B)"
+    let cleanKet = oldKet.replace(/\s*\(Direvisi oleh.*?\)/gi, "").trim();
+
+    // Buat Tag Baru
+    let newKet = cleanKet + " (Direvisi oleh " + editorName + ")";
+
+    // 4. Update Status (Jika status 'Ditolak', kembalikan ke 'Revisi')
+    let newStatus = statusVal;
+    if (['ditolak', 'x'].includes(statusVal)) newStatus = 'Revisi';
+    else if (['diproses', '', '-'].includes(statusVal)) newStatus = 'Diproses';
+
+    // 5. SIMPAN KE SHEET
+    // Data Utama (Kolom B s.d H)
+    sheet.getRange(row, 2, 1, 7).setValues([[
         form.statusSekolah, form.namaSekolah, form.tahunAjaran, 
         form.semester, form.nomorSK, form.tanggalSK, form.kriteriaSK
     ]]);
 
-    // 5. UPDATE STATUS, KETERANGAN, WAKTU & USER (INI YANG BENAR)
-    
-    // Kolom J (10): Status
+    // Data Admin (Kolom J, K, L, M)
     sheet.getRange(row, 10).setValue(newStatus); 
-    
-    // Kolom K (11): Keterangan
-    sheet.getRange(row, 11).setValue(newKet);
-    
-    // Kolom L (12): Update Waktu (Format Tanggal & Jam Lengkap)
-    const timeStamp = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss");
-    sheet.getRange(row, 12).setValue(timeStamp); 
-
-    // Kolom M (13): Update User (Siapa yang mengedit)
-    // Pastikan frontend mengirim 'editorName'
-    sheet.getRange(row, 13).setValue(form.editorName || "User"); 
+    sheet.getRange(row, 11).setValue(newKet); // <-- Keterangan Baru
+    sheet.getRange(row, 12).setValue(Utilities.formatDate(new Date(), Session.getScriptTimeZone(), "dd/MM/yyyy HH:mm:ss"));
+    sheet.getRange(row, 13).setValue(editorName); // User Update
 
     return "Data berhasil diperbarui.";
     
@@ -329,16 +320,112 @@ function processManualForm(form) {
     } catch(e) { throw new Error(e.message); }
 }
 
+// --- FUNGSI AMBIL DATA DROPDOWN (WAJIB ADA) ---
 function getMasterSkOptions() {
-  const ss = SpreadsheetApp.openById(SPREADSHEET_CONFIG.ID_UTAMA);
-  const getCol = (name) => { const s = ss.getSheetByName(name); return s ? s.getRange('A2:A').getValues().flat().filter(String) : []; };
-  const sdSheet = ss.getSheetByName('Nama SDNS');
-  let statusList = [], schoolMap = {};
-  if (sdSheet) {
-    const data = sdSheet.getRange(2, 1, sdSheet.getLastRow(), 2).getValues();
-    data.forEach(r => { if(r[0] && r[1]) { if(!schoolMap[r[0]]) { schoolMap[r[0]] = []; statusList.push(r[0]); } schoolMap[r[0]].push(r[1]); } });
+  try {
+    // 1. Coba ambil dari Sheet 'DropdownData' (Prioritas Utama)
+    const config = SPREADSHEET_CONFIG.DROPDOWN_DATA; // Ambil dari Code.gs
+    const ss = SpreadsheetApp.openById(config.id);
+    const sheet = ss.getSheetByName(config.sheet);
+    
+    // Objek penampung hasil
+    let options = {
+        'Tahun Ajaran': [],
+        'Semester': [],
+        'Kriteria SK': [],
+        'Nama Sekolah List': {} // Format: {'Negeri': ['SD A', 'SD B'], 'Swasta': ['SD C']}
+    };
+
+    if (sheet) {
+        // Asumsi di Sheet DropdownData:
+        // Kolom A: Tahun, B: Semester, C: Kriteria, D: Status Sek, E: Nama Sek
+        const data = sheet.getDataRange().getValues();
+        // Skip header (baris 1)
+        for (let i = 1; i < data.length; i++) {
+            if(data[i][0]) options['Tahun Ajaran'].push(data[i][0]);
+            if(data[i][1]) options['Semester'].push(data[i][1]);
+            if(data[i][2]) options['Kriteria SK'].push(data[i][2]);
+            
+            // Mapping Nama Sekolah berdasarkan Status (Kolom D & E)
+            let status = data[i][3]; // Misal: Negeri/Swasta
+            let nama = data[i][4];   // Misal: SDN 1 Secang
+            if (status && nama) {
+                if (!options['Nama Sekolah List'][status]) {
+                    options['Nama Sekolah List'][status] = [];
+                }
+                options['Nama Sekolah List'][status].push(nama);
+            }
+        }
+    } 
+    
+    // 2. FALLBACK (Jaga-jaga jika sheet DropdownData kosong/hilang)
+    // Kita ambil data unik dari Sheet 'Respon SK' agar dropdown tidak kosong melompong
+    else {
+        const dbSheet = SpreadsheetApp.openById(SPREADSHEET_CONFIG.SK_FORM_RESPONSES.id)
+                                      .getSheetByName(SPREADSHEET_CONFIG.SK_FORM_RESPONSES.sheet);
+        if(dbSheet) {
+            const data = dbSheet.getDataRange().getValues();
+            // Ambil unik dari kolom yang sudah ada (Hanya darurat)
+            let tahunSet = new Set(), smtSet = new Set(), namaSet = new Set();
+            for(let i=1; i<data.length; i++) {
+                if(data[i][3]) tahunSet.add(data[i][3]); // Kolom D (Tahun)
+                if(data[i][4]) smtSet.add(data[i][4]);   // Kolom E (Semester)
+                if(data[i][2]) namaSet.add(data[i][2]);  // Kolom C (Nama)
+            }
+            options['Tahun Ajaran'] = Array.from(tahunSet);
+            options['Semester'] = Array.from(smtSet);
+            // Struktur Sekolah Sederhana
+            options['Nama Sekolah List'] = { 'Semua': Array.from(namaSet) };
+        }
+    }
+
+    // Bersihkan duplikat & Sortir
+    options['Tahun Ajaran'] = [...new Set(options['Tahun Ajaran'])].sort().reverse();
+    options['Semester'] = [...new Set(options['Semester'])];
+    options['Kriteria SK'] = [...new Set(options['Kriteria SK'])];
+
+    return options;
+
+  } catch (e) {
+    // Kembalikan error agar frontend tahu
+    return { error: e.message };
   }
-  return { 'Status Sekolah': statusList.sort(), 'Nama Sekolah List': schoolMap, 'Tahun Ajaran': getCol('Tahun Ajaran'), 'Semester': getCol('Semester'), 'Kriteria SK': getCol('Kriteria SK') };
+}
+
+// --- FUNGSI PROSES UPLOAD (WAJIB ADA JUGA) ---
+function processManualForm(form) {
+    try {
+        const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
+        const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
+        
+        // 1. Upload File ke Drive
+        // Fungsi getTargetFolder ada di script sebelumnya, pastikan ada!
+        // Jika hilang, gunakan folder root sementara
+        let folderId = FOLDER_CONFIG.MAIN_SK; 
+        try { folderId = getTargetFolder(form.tahunAjaran, form.semester).getId(); } catch(e){}
+        
+        const folder = DriveApp.getFolderById(folderId);
+        const blob = Utilities.newBlob(Utilities.base64Decode(form.fileData.data), form.fileData.mimeType, form.fileData.fileName);
+        const file = folder.createFile(blob);
+        
+        // 2. Simpan ke Spreadsheet
+        // Urutan: [Timestamp, StatusSek, NamaSek, Tahun, Smt, NoSK, TglSK, Kriteria, LinkFile, Status, Ket, Update, User, Verif]
+        const row = [
+            new Date(),
+            form.statusSekolah, 
+            form.namaSekolah, 
+            form.tahunAjaran, 
+            form.semester, 
+            form.nomorSK, 
+            new Date(form.tanggalSK), 
+            form.kriteriaSK,
+            file.getUrl(),
+            'Diproses', '-', '', form.loggedInUser || 'User', '-'
+        ];
+        
+        sheet.appendRow(row);
+        return "Berhasil disimpan. Data sedang diproses.";
+    } catch(e) { throw new Error(e.message); }
 }
 
 // --- FUNGSI AMBIL DATA STATUS (DAFTAR KIRIM - MATRIKS) ---

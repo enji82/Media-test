@@ -49,7 +49,7 @@
 const App = {}; 
 
 // ===========================================
-// 1. SYSTEM INIT (KODE STABIL ANDA)
+// 1. SYSTEM INIT
 // ===========================================
 App.init = function() {
     document.querySelectorAll('.modal-overlay').forEach(function(el) { el.style.display = 'none'; el.classList.remove('show'); });
@@ -77,7 +77,6 @@ App.init = function() {
         var adminMenus = document.querySelectorAll('.admin-only');
         for(var j=0; j<adminMenus.length; j++) { adminMenus[j].style.display = isAdmin ? 'block' : 'none'; }
         
-        // --- AVATAR & NAMA (LOGIKA ANDA) ---
         setTimeout(function() {
             var elName = document.getElementById('sidebar-user-name');
             var elRole = document.getElementById('sidebar-user-role');
@@ -100,10 +99,10 @@ App.init = function() {
             }
         }, 50);
 
-        // --- SIDEBAR CLICK LISTENER (WAJIB AGAR TIDAK BLANK SAAT KLIK MENU) ---
-        var submenus = document.querySelectorAll('.has-submenu > a');
-        for(var i=0; i<submenus.length; i++) {
-            var menu = submenus[i];
+        // Toggle Folder Sidebar
+        var parentMenus = document.querySelectorAll('.has-submenu > a');
+        for(var i=0; i<parentMenus.length; i++) {
+            var menu = parentMenus[i];
             var newMenu = menu.cloneNode(true);
             menu.parentNode.replaceChild(newMenu, menu);
             newMenu.addEventListener('click', function(e) {
@@ -124,6 +123,26 @@ App.init = function() {
             });
         }
 
+        // Navigasi Link
+        var navLinks = document.querySelectorAll('.sidebar-menu a[data-page]');
+        for(var k=0; k<navLinks.length; k++) {
+            var link = navLinks[k];
+            if(link.getAttribute('data-page') !== 'logout' && !link.parentElement.classList.contains('has-submenu')) {
+                var newLink = link.cloneNode(true);
+                link.parentNode.replaceChild(newLink, link);
+                newLink.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    var page = this.getAttribute('data-page');
+                    App.loadPage(e, page);
+                });
+            }
+        }
+        
+        var logoutLink = document.querySelector('a[data-page="logout"]');
+        if(logoutLink) {
+            logoutLink.onclick = function(e) { e.preventDefault(); localStorage.removeItem('user_session'); location.reload(); };
+        }
+
         var currentContent = mainContent.innerHTML.trim();
         if (!currentContent || document.getElementById('loginForm')) {
             App.loadPage(null, 'home');
@@ -134,35 +153,38 @@ App.init = function() {
 App.loadPage = function(e, p, arg) {
     if(e) e.preventDefault();
     var main = document.getElementById('main-content');
-    
-    // Spinner
     main.innerHTML = '<div class="loading-container"><div class="app-spinner"></div><div class="loading-text">Memuat Halaman...</div></div>';
     
-    // Active Menu
     var menus = document.querySelectorAll('.sidebar-menu a');
     for(var i=0; i<menus.length; i++) menus[i].classList.remove('active');
+    
     var cur = document.querySelector('.sidebar-menu a[data-page="' + p + '"]');
-    if(cur) cur.classList.add('active');
+    if(cur) {
+        cur.classList.add('active');
+        var parentLi = cur.closest('.has-submenu');
+        if(parentLi && !parentLi.classList.contains('open')) {
+            var parentLink = parentLi.querySelector('a');
+            if(parentLink) parentLink.click();
+        }
+    }
 
-    // MENGGUNAKAN '.include' (STANDAR ANDA)
     google.script.run.withSuccessHandler(function(h) {
         main.innerHTML = h;
         if(App.inits[p]) {
             setTimeout(function() { App.inits[p](arg); }, 50);
         }
+    }).withFailureHandler(function(err) {
+        main.innerHTML = '<div style="color:red; text-align:center; padding:50px;">Gagal: ' + err.message + '</div>';
     }).include('page_' + p);
 };
 
-App.logout = function() { localStorage.removeItem('user_session'); location.reload(); };
-
 // ===========================================
-// 2. TABEL ENGINE
+// 2. TABEL ENGINE (PERBAIKAN LOGIKA TOMBOL)
 // ===========================================
 App.initSmartTable = function(cfg) {
     var tb = document.querySelector(`#${cfg.tableId} tbody`);
     var thd = document.querySelector(`#${cfg.tableId} thead`);
     
-    // SAFETY CHECK (Agar tidak blank jika tabel tidak ketemu)
     if(!tb) return;
 
     document.getElementById('tableWrapper').style.display = 'flex';
@@ -190,24 +212,33 @@ App.initSmartTable = function(cfg) {
                         td.innerHTML='<button class="action-btn view-btn" onclick="event.preventDefault();App.showFilePreview(\''+v+'\')"><i class="fas fa-eye"></i> Lihat</button>';
                     }
                     else if(k==='Aksi') { 
-                        td.className='action-buttons';
-                        var lock = ['ok','v','disetujui'].indexOf(String(r._statusRaw||'').toLowerCase())!==-1;
-                        var html = '<div style="display:flex;gap:5px;justify-content:center;">';
+                        // HAPUS: td.className='action-buttons'; (Ini yang bikin garis rusak)
+                        // GANTI DENGAN: Style biasa untuk sel
+                        td.style.textAlign = 'center'; 
+                        td.style.whiteSpace = 'nowrap'; // Agar tidak turun baris
+
+                        var lock = ['ok','v','disetujui'].indexOf(String(r['Status']||'').replace(/<[^>]*>?/gm, '').trim().toLowerCase()) !== -1;
                         
+                        // PINDAHKAN Class 'action-buttons' ke DIV pembungkus
+                        var html = '<div class="action-buttons" style="display:flex; gap:5px; justify-content:center;">';
+                        
+                        // Edit
                         html += '<button class="action-btn edit-btn" '+(lock?'disabled':'')+' onclick="App.loadPage(event,\'sk_edit\',{rowIndex:'+r._rowIndex+'})"><i class="fas fa-pencil-alt"></i></button>';
                         
-                        // HAPUS (FIXED DATA)
+                        // Hapus
                         var json = JSON.stringify({_rowIndex:r._rowIndex, 'Nama Sekolah':r['Nama Sekolah'], 'Tahun Ajaran':r['Tahun Ajaran'], 'Semester':r['Semester']}).replace(/"/g, '&quot;');
                         html += '<button class="action-btn delete-btn" '+(lock?'disabled':'')+' onclick="App.showDeleteConfirmation(this)" data-row-info="'+json+'"><i class="fas fa-trash"></i></button>';
                         
+                        // Verif (Admin)
                         var s=JSON.parse(localStorage.getItem('user_session'));
                         if(s.role.toLowerCase().indexOf('admin')!==-1) {
                            var rowJson = JSON.stringify(r).replace(/"/g, "&quot;");
                            html += '<button class="action-btn submit-btn" onclick=\'App.openVerifModal('+rowJson+')\'><i class="fas fa-check"></i></button>';
                         }
+                        
                         html += '</div>';
                         td.innerHTML = html;
-                    } 
+                    }
                     else if(['Status','Validasi'].indexOf(k)!==-1) td.innerHTML = v;
                     else td.textContent = v;
                     tr.appendChild(td);
@@ -244,7 +275,6 @@ App.initMatrixTable = function(tid, func) {
     document.getElementById('tableWrapper').style.display='flex';
     document.getElementById('loadingStatus').style.display='none';
     if(thd) thd.innerHTML = '<tr><th rowspan="2" class="col-no">No</th><th rowspan="2" class="col-nama">Sekolah</th><th>Loading...</th></tr><tr><th>Loading...</th></tr>';
-    
     google.script.run.withSuccessHandler(function(d) {
         if(!d.length) { tb.innerHTML='<tr><td>Kosong</td></tr>'; return; }
         var h1=d[0], h2=d[1];
@@ -364,11 +394,11 @@ App.openVerifModal = function(row) {
     else sel.value='Diproses';
 
     var url = row['Dokumen'];
-    if(url && url.indexOf('http') !== -1) {
+    if(url && url.includes('http')) {
         document.getElementById('verifNoDoc').style.display='none';
         document.getElementById('verifLoading').style.display='flex';
         var f = document.getElementById('verifPreviewFrame'); f.style.display='block';
-        if(url.indexOf('drive') !== -1) url = url.replace('/view', '/preview');
+        if(url.includes('drive')) url = url.replace('/view', '/preview');
         f.src = url; f.onload = function() { document.getElementById('verifLoading').style.display='none'; };
     } else {
         document.getElementById('verifPreviewFrame').style.display='none';
@@ -389,7 +419,7 @@ App.openVerifModal = function(row) {
 };
 
 // ===========================================
-// 4. MAPPING HALAMAN (SANGAT PENTING)
+// 4. MAPPING & FUNGSI EDIT (LENGKAP)
 // ===========================================
 App.inits = {
     'home': function(){},
@@ -405,7 +435,8 @@ App.inits = {
     'sk_kelola': function() {
         App.initSmartTable({
             tableId: 'kelolaTable', serverFunc: 'getSKKelolaData',
-            headers: ["Nama Sekolah", "Tahun Ajaran", "Semester", "Nomor SK", "Tanggal SK", "Kriteria SK", "Dokumen", "Status", "Keterangan", "Aksi", "Tanggal Unggah", "Update", "User", "Verifikator"],
+            // --- FIX URUTAN KOLOM: KETERANGAN DI AKHIR ---
+            headers: ["Nama Sekolah", "Tahun Ajaran", "Semester", "Nomor SK", "Tanggal SK", "Kriteria SK", "Dokumen", "Status", "Aksi", "Tanggal Unggah", "Update", "User", "Verifikator", "Keterangan"],
             filters: [{id:'filterTahun',col:'Tahun Ajaran',desc:true}, {id:'filterSemester',col:'Semester'}, {id:'filterNamaSekolah',col:'Nama Sekolah'}]
         });
     },
@@ -418,9 +449,212 @@ App.inits = {
     },
     'sk_status': function() { if(App.initMatrixTable) App.initMatrixTable('statusTable', 'getSKStatusData'); },
     'sk_arsip': function() { App.arsipPath=[{id:null,name:'Home'}]; App.loadFolder(null); },
-    'sk_edit': function(arg) { if(typeof initSkEditPage === 'function') initSkEditPage(arg); },
+    
+    'sk_edit': function(arg) { 
+        if(typeof initSkEditPage === 'function') { initSkEditPage(arg); } 
+    },
     'sk_unggah': function() { if(typeof initSkUnggahPage === 'function') initSkUnggahPage(); }
 };
+
+// --- FUNGSI INIT EDIT (TERMASUK KIRIM NAMA EDITOR) ---
+function initSkEditPage(arg) {
+    if (!arg || !arg.rowIndex) { console.error("Row Index tidak ditemukan"); return; }
+    var form = document.getElementById('skEditForm');
+    var rowIndexInput = document.getElementById('editRowIndex');
+    if(!form || !rowIndexInput) return;
+
+    rowIndexInput.value = arg.rowIndex; 
+    App.showAppModal('loading', 'Mengambil data...');
+    
+    google.script.run.withSuccessHandler(function(data) {
+        document.getElementById('appModal').style.display = 'none'; 
+        if (data.error) { alert(data.error); return; }
+
+        document.getElementById('editNamaSekolah').value = data.namaSekolah || '';
+        document.getElementById('editTahun').value = data.tahunAjaran || '';
+        document.getElementById('editSemester').value = data.semester || '';
+        document.getElementById('editNomorSK').value = data.nomorSK || '';
+        document.getElementById('editKriteria').value = data.kriteriaSK || '';
+        document.getElementById('editTanggalSK').value = data.tanggalSK || '';
+        
+        var fileInfo = document.getElementById('editFileInfo');
+        if(fileInfo && data.dokumen) {
+            fileInfo.innerHTML = '<small>File saat ini: <a href="'+data.dokumen+'" target="_blank">Lihat File</a></small>';
+        }
+    }).withFailureHandler(function(e) { alert("Gagal ambil data: " + e.message); }).getSKDataByRow(arg.rowIndex);
+
+    var newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+    
+    newForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        var currentUser = "User";
+        try { 
+            var sess = JSON.parse(localStorage.getItem('user_session')); 
+            if(sess && sess.nama) currentUser = sess.nama;
+            else currentUser = document.getElementById('sidebar-user-name').textContent;
+        } catch(err) {}
+
+        var btn = newForm.querySelector('button[type="submit"]');
+        var originalBtnText = btn.innerHTML;
+        btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Menyimpan...';
+
+        var fileInput = document.getElementById('editFileSK');
+        var fileData = null;
+        if (fileInput.files.length > 0) {
+            var file = fileInput.files[0];
+            var reader = new FileReader();
+            reader.onload = function(ex) {
+                fileData = { fileName: file.name, mimeType: file.type, data: ex.target.result.split(',')[1] };
+                sendData(fileData);
+            };
+            reader.readAsDataURL(file);
+        } else {
+            sendData(null); 
+        }
+
+        function sendData(fData) {
+            var formData = {
+                rowIndex: document.getElementById('editRowIndex').value,
+                statusSekolah: document.getElementById('editStatusSekolah').value,
+                namaSekolah: document.getElementById('editNamaSekolah').value,
+                tahunAjaran: document.getElementById('editTahun').value,
+                semester: document.getElementById('editSemester').value,
+                nomorSK: document.getElementById('editNomorSK').value,
+                tanggalSK: document.getElementById('editTanggalSK').value,
+                kriteriaSK: document.getElementById('editKriteria').value,
+                fileData: fData,
+                editorName: currentUser // KIRIM NAMA KE SERVER
+            };
+            google.script.run.withSuccessHandler(function(res) {
+                App.showAppModal('success', res, 'sk_kelola'); 
+            }).withFailureHandler(function(err) {
+                btn.disabled = false; btn.innerHTML = originalBtnText; alert("Gagal simpan: " + err.message);
+            }).updateSKData(formData);
+        }
+    });
+}
+
+// ===========================================
+// 6. FUNGSI UNGGAH HALAMAN (INIT DROP DOWN)
+// ===========================================
+function initSkUnggahPage() {
+    var form = document.getElementById('skUnggahForm');
+    if (!form) return; // Stop jika bukan halaman unggah
+
+    // 1. Ambil Data Dropdown dari Server
+    // Cari elemen select
+    var elTahun = document.getElementById('unggahTahun');
+    var elSmt = document.getElementById('unggahSemester');
+    var elStatus = document.getElementById('unggahStatusSekolah');
+    var elNama = document.getElementById('unggahNamaSekolah');
+    var elKriteria = document.getElementById('unggahKriteria');
+
+    // Tampilkan loading di dalam dropdown
+    if(elTahun) elTahun.innerHTML = '<option>Memuat...</option>';
+
+    google.script.run.withSuccessHandler(function(opts) {
+        if (opts.error) {
+            console.error("Gagal load dropdown:", opts.error);
+            if(elTahun) elTahun.innerHTML = '<option value="">Gagal memuat data</option>';
+            return;
+        }
+
+        // Helper untuk isi option
+        var populate = function(el, data) {
+            if(!el) return;
+            el.innerHTML = '<option value="">-- Pilih --</option>';
+            data.forEach(function(item) {
+                el.add(new Option(item, item));
+            });
+        };
+
+        // Isi Dropdown Sederhana
+        populate(elTahun, opts['Tahun Ajaran']);
+        populate(elSmt, opts['Semester']);
+        populate(elKriteria, opts['Kriteria SK']);
+
+        // Logika Dropdown Berantai (Status Sekolah -> Nama Sekolah)
+        var schoolMap = opts['Nama Sekolah List'] || {};
+        var statusList = Object.keys(schoolMap).sort();
+        
+        populate(elStatus, statusList);
+
+        // Event saat Status Sekolah dipilih
+        if(elStatus) {
+            elStatus.addEventListener('change', function() {
+                var selectedStatus = this.value;
+                var sekolahList = schoolMap[selectedStatus] || [];
+                populate(elNama, sekolahList);
+            });
+        }
+
+    }).withFailureHandler(function(err) {
+        alert("Gagal menghubungi server: " + err.message);
+    }).getMasterSkOptions();
+
+    // 2. Handle Submit Form Unggah
+    // Hapus listener lama (recreate node)
+    var newForm = form.cloneNode(true);
+    form.parentNode.replaceChild(newForm, form);
+
+    newForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        var btn = newForm.querySelector('button[type="submit"]');
+        var originalText = btn.innerHTML;
+        var fileInput = document.getElementById('unggahFile');
+
+        if (fileInput.files.length === 0) {
+            alert("Harap pilih file PDF SK terlebih dahulu.");
+            return;
+        }
+
+        // Validasi User
+        var currentUser = "User";
+        try { currentUser = document.getElementById('sidebar-user-name').textContent; } catch(err){}
+
+        btn.disabled = true;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Mengunggah...';
+
+        // Baca File
+        var file = fileInput.files[0];
+        if (file.size > 5 * 1024 * 1024) { // Max 5MB
+            alert("Ukuran file terlalu besar (Maks 5MB)");
+            btn.disabled = false; btn.innerHTML = originalText;
+            return;
+        }
+
+        var reader = new FileReader();
+        reader.onload = function(ex) {
+            var fileData = {
+                fileName: file.name,
+                mimeType: file.type,
+                data: ex.target.result.split(',')[1] // Ambil base64
+            };
+
+            var formData = {
+                tahunAjaran: document.getElementById('unggahTahun').value,
+                semester: document.getElementById('unggahSemester').value,
+                statusSekolah: document.getElementById('unggahStatusSekolah').value,
+                namaSekolah: document.getElementById('unggahNamaSekolah').value,
+                nomorSK: document.getElementById('unggahNomorSK').value,
+                tanggalSK: document.getElementById('unggahTanggalSK').value,
+                kriteriaSK: document.getElementById('unggahKriteria').value,
+                fileData: fileData,
+                loggedInUser: currentUser
+            };
+
+            google.script.run.withSuccessHandler(function(res) {
+                App.showAppModal('success', res, 'sk_riwayat'); // Pindah ke Riwayat
+            }).withFailureHandler(function(err) {
+                btn.disabled = false; btn.innerHTML = originalText;
+                App.showAppModal('error', err.message);
+            }).processManualForm(formData);
+        };
+        reader.readAsDataURL(file);
+    });
+}
 
 document.addEventListener('DOMContentLoaded', App.init);
 </script>
