@@ -1,6 +1,6 @@
 /**
  * ===================================================================
- * MODUL SK PEMBAGIAN TUGAS (VERSI BERSIH & FINAL)
+ * MODUL SK PEMBAGIAN TUGAS (FIXED & NO CONFLICT)
  * ===================================================================
  */
 
@@ -46,7 +46,7 @@ function getMasterSkOptions() {
         'Nama Sekolah List': {}
     };
 
-    // A. Coba Ambil dari Spreadsheet
+    // A. Coba Ambil dari Spreadsheet (Hanya jika Config tersedia)
     try {
         if (typeof SPREADSHEET_CONFIG !== 'undefined') {
             const config = SPREADSHEET_CONFIG.DROPDOWN_DATA;
@@ -264,8 +264,5 @@ function getSKTrashData() {
 
 function getDriveContents(fid) { /* Fungsi arsip */ return {}; }
 
-// --- 5. FUNGSI PENGHUBUNG HALAMAN (PENTING!) ---
-// Tanpa ini, halaman akan BLANK
-function include(f) { return HtmlService.createTemplateFromFile(f).evaluate().getContent(); }
-function getPageContent(f) { return include(f); }
-function srvLoadPage(f) { return include(f); }
+// --- TIDAK ADA FUNGSI INCLUDE/SRVLOADPAGE DISINI ---
+// (Karena sudah ada di Code.gs)
