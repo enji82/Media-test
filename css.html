@@ -284,23 +284,65 @@ html, body {
 /* =================================================================== */
 .modal-content {
     background-color: #ffffff;
-    border-radius: 12px; /* Lebih bulat */
+    border-radius: 16px; /* Lebih bulat */
     padding: 30px;
-    width: 420px;
-    max-width: 90%;
+    width: 400px;
+    max-width: 85%;
     text-align: center;
-    box-shadow: 0 20px 40px rgba(0,0,0,0.2); /* Shadow dalam & lembut */
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     border: none;
     position: relative;
     overflow: hidden;
+    transition: all 0.3s ease;
 }
 
-/* Garis aksen merah di atas */
+/* Garis Indikator Atas (Default) */
 .modal-content::before {
-    content: '';
-    position: absolute; top: 0; left: 0; width: 100%; height: 5px;
-    background: #ef4444; 
+    content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 6px;
+    background: #cbd5e1; /* Abu-abu netral */
+    transition: background 0.3s;
 }
+
+/* WARNA STATUS */
+.modal-content.success::before { background: #10b981; } /* Hijau Sukses */
+.modal-content.error::before { background: #ef4444; }   /* Merah Gagal */
+.modal-content.loading::before { background: #3b82f6; } /* Biru Loading */
+
+/* KONTAINER IKON */
+#modalIconBox {
+    font-size: 4.5rem;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 80px;
+}
+
+/* Animasi Pop-in untuk Ikon */
+.animate-pop { animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+@keyframes popIn {
+    0% { transform: scale(0); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+}
+
+/* JUDUL & PESAN */
+#modalTitle { font-weight: 800; font-size: 1.5em; margin: 0 0 10px 0; color: #1e293b; }
+#modalMessage { color: #64748b; font-size: 1em; line-height: 1.5; margin-bottom: 25px; }
+
+/* TOMBOL OK */
+#modalBtnMain {
+    width: 100%; padding: 12px; 
+    border-radius: 8px; border: none; font-weight: 700; font-size: 1em;
+    cursor: pointer; transition: 0.2s;
+    background: #1e293b; color: #fff;
+}
+#modalBtnMain:hover { background: #0f172a; transform: translateY(-2px); }
+
+/* Tombol khusus Sukses/Gagal */
+.modal-content.success #modalBtnMain { background: #10b981; }
+.modal-content.success #modalBtnMain:hover { background: #059669; }
+.modal-content.error #modalBtnMain { background: #ef4444; }
+.modal-content.error #modalBtnMain:hover { background: #dc2626; }
 
 .modal-icon-danger {
     width: 60px; height: 60px;
@@ -319,21 +361,9 @@ html, body {
     margin-bottom: 10px;
 }
 
-.delete-info-card {
-    background-color: #f8fafc; /* Abu sangat muda */
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 15px;
-    margin-bottom: 20px;
-    text-align: left;
-    color: #475569;
-    font-size: 0.95em;
-    line-height: 1.5;
-}
 .delete-info-card strong { color: #1e293b; font-weight: 600; }
 
 .delete-input-group { margin-bottom: 25px; text-align: left; }
-.delete-input-label { display: block; font-size: 0.85em; font-weight: 600; color: #64748b; margin-bottom: 5px; }
 
 .modal-input-code {
     width: 100%;
@@ -381,11 +411,47 @@ html, body {
 .menu-button:hover { transform: translateY(-3px); border-color: var(--primary); }
 .menu-button i { font-size: 3em; margin-bottom: 15px; color: var(--primary); }
 
-/* Skeleton Animation */
-@keyframes shimmer { 0% { background-position: -1000px 0; } 100% { background-position: 1000px 0; } }
-.skeleton-row td { padding: 10px; border-bottom: 1px solid var(--table-border); vertical-align: middle; }
-.skeleton-bar { height: 14px; width: 100%; background: #e2e8f0; background-image: linear-gradient(to right, #e2e8f0 0%, #f1f5f9 20%, #e2e8f0 40%, #e2e8f0 100%); background-repeat: no-repeat; background-size: 1000px 100%; animation: shimmer 1.5s infinite linear; border-radius: 4px; display: block; }
-.fade-in-table { animation: fadeIn 0.5s ease-in; }
+/* =================================================================== */
+/* 12. SKELETON LOADING (EFEK SHIMMER MODERN) */
+/* =================================================================== */
+
+/* Animasi Kilauan */
+@keyframes shimmer {
+    0% { background-position: -1000px 0; }
+    100% { background-position: 1000px 0; }
+}
+
+/* Baris Skeleton */
+.skeleton-row td {
+    padding: 10px;
+    border-bottom: 1px solid #e2e8f0;
+    vertical-align: middle;
+}
+
+/* Batang Abu-abu (Representasi Teks) */
+.skeleton-bar {
+    height: 16px;
+    width: 80%; /* Lebar tidak penuh agar terlihat natural */
+    margin: 0 auto;
+    border-radius: 4px;
+    background: #f1f5f9; /* Warna dasar */
+    
+    /* Gradient untuk efek kilau berjalan */
+    background-image: linear-gradient(
+        to right,
+        #f1f5f9 0%,
+        #e2e8f0 20%, /* Lebih gelap dikit */
+        #f1f5f9 40%,
+        #f1f5f9 100%
+    );
+    background-repeat: no-repeat;
+    background-size: 1000px 100%;
+    animation: shimmer 2s infinite linear; /* Durasi animasi */
+}
+
+/* Variasi lebar agar tidak kaku */
+.skeleton-row td:nth-child(even) .skeleton-bar { width: 60%; }
+.skeleton-row td:nth-child(3) .skeleton-bar { width: 90%; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
 /* =================================================================== */
@@ -556,22 +622,55 @@ html, body {
 }
 
 .fm-breadcrumb-box {
-    display: flex; align-items: center; gap: 8px;
-    font-size: 14px; font-weight: 500; color: #64748b;
+    display: flex; 
+    align-items: center; 
+    gap: 5px;
+    font-size: 14px; 
+    flex-wrap: wrap; /* Agar tidak terpotong jika panjang */
+}
+
+/* Efek Blur saat Loading Folder */
+.blur-loading {
+    filter: blur(3px);
+    opacity: 0.6;
+    pointer-events: none; /* Mencegah klik saat loading */
+    transition: all 0.3s ease;
 }
 
 .breadcrumb-item {
     cursor: pointer;
-    padding: 4px 8px;
-    border-radius: 4px;
-    color: var(--primary);
-    transition: 0.2s;
+    padding: 6px 10px;
+    border-radius: 6px;
+    color: var(--primary); /* Warna Biru */
+    font-weight: 600;
+    transition: all 0.2s;
+    display: inline-flex;
+    align-items: center;
 }
-.breadcrumb-item:hover { background-color: #e0f2fe; }
+
+.breadcrumb-item:hover {
+    background-color: #e0f2fe; /* Latar biru muda saat hover */
+    text-decoration: underline;
+}
+
+/* Item Terakhir (Folder yang sedang dibuka) */
+.breadcrumb-item.active {
+    color: #64748b; /* Abu-abu */
+    font-weight: 700;
+    pointer-events: none; /* Matikan klik */
+    text-decoration: none;
+    background: none;
+    cursor: default;
+}
+.breadcrumb-item.active:hover { background: none; }
 .breadcrumb-item:last-child { 
     color: #334155; font-weight: 700; pointer-events: none; 
 }
-.breadcrumb-sep { color: #cbd5e1; font-size: 0.8em; }
+.breadcrumb-sep {
+    color: #cbd5e1;
+    font-size: 0.8em;
+    margin: 0 2px;
+}
 
 /* Container Grid */
 .fm-container {
@@ -659,7 +758,7 @@ html, body {
 .fm-empty i { font-size: 4em; margin-bottom: 10px; color: #e2e8f0; }
 
 /* =================================================================== */
-/* 11. GLOBAL LOADER (MODERN RING SPINNER) */
+/* GLOBAL LOADER (MODERN RING SPINNER) - GANTI BAGIAN INI */
 /* =================================================================== */
 
 /* Container Tengah Layar */
@@ -674,17 +773,18 @@ html, body {
 }
 
 /* Spinner Cincin (Standard) */
-.app-spinner, .fm-spinner {
-    width: 40px; height: 40px;
-    border: 4px solid #e2e8f0;       /* Abu Muda */
-    border-top-color: var(--primary); /* Biru Utama */
+.app-spinner {
+    width: 45px; 
+    height: 45px;
+    border: 4px solid #e2e8f0;       /* Warna dasar (Abu Muda) */
+    border-top-color: var(--primary); /* Warna putaran (Biru Utama) */
     border-radius: 50%;
     animation: spin-ring 0.8s linear infinite;
 }
 
 /* Teks Loading Berdenyut */
-.loading-text, .fm-loader-text {
-    margin-top: 15px; 
+.loading-text {
+    margin-top: 20px; 
     color: #64748b; 
     font-weight: 600; 
     font-size: 13px;
@@ -692,8 +792,16 @@ html, body {
     animation: pulse-text 1.5s infinite ease-in-out;
 }
 
-@keyframes spin-ring { to { transform: rotate(360deg); } }
-@keyframes pulse-text { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+/* Animasi Putar */
+@keyframes spin-ring { 
+    to { transform: rotate(360deg); } 
+}
+
+/* Animasi Teks Kedip Halus */
+@keyframes pulse-text { 
+    0%, 100% { opacity: 1; } 
+    50% { opacity: 0.6; } 
+}
 
 /* Overlay (Khusus File Manager / Modal) */
 .fm-loader-overlay {
@@ -720,6 +828,160 @@ html, body {
     font-size: 13px;
     letter-spacing: 0.5px;
     animation: pulse-text 1.5s infinite ease-in-out;
+}
+
+/* --- TAMPILAN LIST VIEW (ARSIB SK) --- */
+
+/* Container List */
+.file-list-view {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* Item List (Baris) */
+.file-list-view .fm-card {
+    display: flex;
+    flex-direction: row; /* Mendatar */
+    align-items: center;
+    text-align: left;
+    padding: 12px 15px;
+    height: auto;
+    width: 100%;
+    max-width: 100%;
+}
+
+/* Penyesuaian Ikon di List */
+.file-list-view .fm-icon {
+    font-size: 1.5em; /* Lebih kecil */
+    margin-bottom: 0;
+    margin-right: 15px;
+}
+
+/* Penyesuaian Nama File di List */
+.file-list-view .fm-name {
+    font-size: 14px;
+    flex: 1; /* Ambil sisa ruang */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block;
+    -webkit-line-clamp: unset; /* Matikan truncate 2 baris */
+}
+
+/* Info Tambahan (Tanggal/Size) */
+.file-list-view .fm-meta {
+    margin-top: 0;
+    min-width: 120px;
+    text-align: right;
+    margin-left: 20px;
+}
+
+/* Tombol Toggle View */
+.view-toggle-btn {
+    background: transparent;
+    border: 1px solid #cbd5e1;
+    color: #64748b;
+    width: 35px; height: 35px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.2s;
+}
+.view-toggle-btn:hover, .view-toggle-btn.active {
+    background: #e0f2fe;
+    color: var(--primary);
+    border-color: var(--primary);
+}
+
+/* Tombol Download di Preview */
+.btn-download {
+    background-color: #10b981;
+    color: white;
+    border: none;
+    padding: 6px 15px;
+    border-radius: 4px;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-flex; align-items: center; gap: 8px;
+    text-decoration: none;
+    font-size: 0.9em;
+    margin-right: 10px;
+}
+.btn-download:hover { background-color: #059669; }
+
+/* --- FIX SKELETON MATRIKS --- */
+
+/* Paksa lebar kolom saat mode Matriks */
+.matrix-mode .col-no {
+    width: 50px;      /* Lebar fix untuk No */
+    min-width: 50px;
+    text-align: center;
+}
+
+.matrix-mode .col-nama {
+    width: 350px;     /* Lebar fix untuk Nama Sekolah */
+    min-width: 250px;
+    max-width: 400px;
+}
+
+/* Style khusus bar skeleton agar tidak gepeng */
+.skeleton-bar.short { width: 30px; margin: 0 auto; } /* Untuk No */
+.skeleton-bar.medium { width: 60%; }                 /* Untuk Nama (Variatif) */
+.skeleton-bar.status {                               /* Untuk Kolom Data */
+    width: 40px; 
+    height: 20px; 
+    margin: 0 auto; 
+    border-radius: 4px;
+}
+
+/* --- UPDATE STYLE MODAL HAPUS --- */
+
+/* Kotak Informasi Sekolah (yang sebelumnya kosong) */
+.delete-info-card {
+    background-color: #f1f5f9; /* Abu-abu muda */
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 15px 0 25px 0; /* Jarak atas bawah */
+    text-align: left; /* Rata kiri agar rapi */
+}
+
+/* Item di dalam kotak info */
+.delete-detail-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.95em;
+    color: #334155;
+    border-bottom: 1px dashed #e2e8f0;
+    padding-bottom: 4px;
+}
+.delete-detail-row:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+.delete-detail-label { font-weight: 600; color: #64748b; }
+.delete-detail-value { font-weight: 700; color: #0f172a; text-align: right; }
+
+/* Label Kode Konfirmasi (Diperbesar) */
+.delete-input-label {
+    display: block;
+    text-align: center;
+    font-size: 1.2rem; /* Lebih besar */
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 12px;
+}
+
+/* Keterangan Admin (Di bawah input) */
+.delete-helper-text {
+    display: block;
+    text-align: center;
+    font-size: 0.85rem;
+    color: #64748b;
+    margin-top: 8px;
+    font-style: italic;
 }
 
 </style>

@@ -26,28 +26,21 @@
             <label class="std-filter-label">Semester:</label>
             <select id="filterSemester" class="std-filter-select"><option value="">Semua</option></select>
         </div>
-        <div class="filter-group">
-            <label class="std-filter-label">Nama Sekolah:</label>
-            <select id="filterNamaSekolah" class="std-filter-select"><option value="">Semua</option></select>
-        </div>
         
         <div class="filter-group" style="margin-left: auto;">
-            <input type="text" id="searchFilter" class="std-filter-input std-search-input" placeholder="Cari data...">
+            <div style="position: relative;">
+                <i class="fas fa-search" style="position: absolute; left: 10px; top: 9px; color: #94a3b8;"></i>
+                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data..." style="padding-left: 30px;">
+            </div>
         </div>
-    </div>
-
-    <div id="loadingStatus" class="loading-container" style="display: none;">
-        <div class="spinner-container">
-            <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
-        </div>
-        <p style="color:#64748b;">Memuat Data...</p>
     </div>
 
     <div class="std-table-container">
         <table id="riwayatTable" class="std-table">
-            <thead></thead>
-            <tbody id="riwayatTableBody"></tbody>
-            <tfoot class="has-content"></tfoot>
+            <thead>
+                </thead>
+            <tbody>
+                </tbody>
         </table>
     </div>
 

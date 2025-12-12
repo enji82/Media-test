@@ -143,3 +143,8 @@ function getOrCreateFolder(parentFolder, folderName) {
   if (folders.hasNext()) return folders.next();
   return parentFolder.createFolder(folderName);
 }
+
+// Pengaman jika form submit secara native (mencegah blank)
+function doPost(e) {
+  return doGet(e);
+}

@@ -14,14 +14,221 @@
 
   <div class="app-container">
       
-      <?!= include('sidebar'); ?>
+      <div class="sidebar">
 
+        <div class="sidebar-header">
+            <div class="logo-container">
+                <svg class="sidebar-logo" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+            </div>
+            <div class="sidebar-title-container">
+                <span class="title-main">MEDIA INFORMASI</span>
+                <span class="title-sub">Korwil Disdik Secang</span>
+            </div>
+        </div>
+
+        <div class="user-profile-box">
+            <div class="user-avatar-small"><i class="fas fa-user"></i></div>
+            <div class="user-text">
+                <span id="sidebar-user-name" class="u-name">Memuat...</span>
+                <span id="sidebar-user-role" class="u-role">...</span>
+            </div>
+        </div>
+
+        <ul class="sidebar-menu">
+            <li><a href="#" data-page="home" title="Menu Utama" class="active"><i class="fas fa-home"></i><span>Menu Utama</span></a></li>
+            
+            <li class="has-submenu">
+                <a href="#" data-page-parent="sk" data-page="sk_menu">
+                    <i class="fas fa-file-signature"></i><span>SK Pembagian Tugas</span><i class="fas fa-chevron-right submenu-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li><a href="#" data-page="sk_unggah"><span>Unggah SK</span></a></li>
+                    <li><a href="#" data-page="sk_riwayat"><span>Riwayat Pengiriman</span></a></li>
+                    <li><a href="#" data-page="sk_status"><span>Status Pengiriman</span></a></li>
+                    <li><a href="#" data-page="sk_arsip"><span>Arsip SK</span></a></li>
+                    <li><a href="#" data-page="sk_kelola"><span>Kelola Data SK</span></a></li>
+                    <li class="admin-only" style="display:none; border-top:1px solid rgba(255,255,255,0.1); margin-top:5px; padding-top:5px;">
+                        <a href="#" data-page="sk_trash" style="color:#f87171;"><i class="fas fa-trash-alt"></i><span>Trash</span></a>
+                    </li>
+                </ul>
+            </li>
+            
+            <li class="has-submenu">
+                <a href="#" data-page-parent="lapbul" data-page="lapbul_menu">
+                    <i class="fas fa-chart-line"></i><span>Laporan Bulan</span><i class="fas fa-chevron-right submenu-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li><a href="#" data-page="lapbul_unggah"><span>Unggah File</span></a></li>
+                    <li><a href="#" data-page="lapbul_riwayat"><span>Riwayat Pengiriman</span></a></li>
+                    <li><a href="#" data-page="lapbul_status"><span>Daftar Pengiriman</span></a></li>
+                    <li><a href="#" data-page="lapbul_arsip"><span>Arsip</span></a></li>
+                    <li><a href="#" data-page="lapbul_kelola"><span>Kelola Data</span></a></li>
+                    <li><a href="#" data-page="lapbul_unduh_format"><span>Unduh Format</span></a></li>
+                </ul>
+            </li>
+
+            <li class="has-submenu">
+                <a href="#" data-page-parent="ptk" data-page="ptk_menu">
+                    <i class="fas fa-users"></i><span>Data PTK</span><i class="fas fa-chevron-right submenu-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li class="has-submenu">
+                        <a href="#" data-page="ptk_paud_menu"><span>PAUD</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="ptk_keadaan_paud"><span>Keadaan PTK</span></a></li>
+                            <li><a href="#" data-page="ptk_jumlah_bulanan_paud"><span>Jumlah Bulanan</span></a></li>
+                            <li><a href="#" data-page="ptk_daftar_paud"><span>Daftar Nominatif</span></a></li>
+                            <li><a href="#" data-page="ptk_kelola_paud"><span>Kelola Data</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="ptk_sd_menu"><span>SD</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="ptk_keadaan_sd"><span>Keadaan PTK</span></a></li>
+                            <li><a href="#" data-page="ptk_jumlah_bulanan_sd"><span>Jumlah Bulanan</span></a></li>
+                            <li><a href="#" data-page="ptk_daftar_sd_negeri"><span>Daftar SDN</span></a></li>
+                            <li><a href="#" data-page="ptk_daftar_sd_swasta"><span>Daftar SD Swasta</span></a></li>
+                            <li><a href="#" data-page="ptk_kelola_sd"><span>Kelola Data</span></a></li>
+                            <li><a href="#" data-page="ptk_kebutuhan_sd_negeri"><span>Kebutuhan Guru</span></a></li>
+                            <li><a href="#" data-page="ptk_bezetting_sd_negeri"><span>Bezetting</span></a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="has-submenu">
+                <a href="#" data-page-parent="murid" data-page="murid_menu">
+                    <i class="fas fa-user-graduate"></i><span>Data Murid</span><i class="fas fa-chevron-right submenu-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li class="has-submenu">
+                        <a href="#" data-page="murid_paud_menu"><span>PAUD</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="murid_paud_kelas_usia"><span>Kelas & Usia</span></a></li>
+                            <li><a href="#" data-page="murid_paud_jenis_kelamin"><span>Jenis Kelamin</span></a></li>
+                            <li><a href="#" data-page="murid_paud_jumlah_bulanan"><span>Jumlah Bulanan</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="murid_sd_menu"><span>SD</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="murid_sd_kelas"><span>Per Kelas</span></a></li>
+                            <li><a href="#" data-page="murid_sd_rombel"><span>Per Rombel</span></a></li>
+                            <li><a href="#" data-page="murid_sd_jenis_kelamin"><span>Jenis Kelamin</span></a></li>
+                            <li><a href="#" data-page="murid_sd_agama"><span>Agama</span></a></li>
+                            <li><a href="#" data-page="murid_sd_jumlah_bulanan"><span>Jumlah Bulanan</span></a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="has-submenu">
+                <a href="#" data-page-parent="siaba" data-page="siaba_menu">
+                    <i class="fas fa-fingerprint"></i><span>SIABA</span><i class="fas fa-chevron-right submenu-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li><a href="#" data-page="siaba_panduan"><span>Panduan</span></a></li>
+                    <li><a href="#" data-page="siaba_daftar_presensi"><span>Daftar Presensi</span></a></li>
+                    <li><a href="#" data-page="siaba_tidak_presensi"><span>Tidak Presensi</span></a></li>
+                    <li><a href="#" data-page="siaba_apel_upacara"><span>Apel & Upacara</span></a></li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="siaba_lupa_presensi"><span>Lupa Presensi</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="siaba_lupa_unduh"><span>Unduh Format</span></a></li>
+                            <li><a href="#" data-page="siaba_lupa_unggah"><span>Unggah Surat</span></a></li>
+                            <li><a href="#" data-page="siaba_lupa_cek"><span>Cek Status</span></a></li>
+                            <li><a href="#" data-page="siaba_lupa_rekap"><span>Rekap Bulanan</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="siaba_salah_presensi"><span>Salah Klik</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="siaba_salah_form"><span>Formulir</span></a></li>
+                            <li><a href="#" data-page="siaba_salah_cek"><span>Cek Perbaikan</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="siaba_perjalanan_dinas"><span>Perjalanan Dinas</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="siaba_dinas_unduh"><span>Unduh SPT</span></a></li>
+                            <li><a href="#" data-page="siaba_dinas_unggah"><span>Unggah SPT</span></a></li>
+                            <li><a href="#" data-page="siaba_dinas_cek"><span>Cek Status</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="siaba_cuti_menu"><span>Cuti Pegawai</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="siaba_cuti_sisa"><span>Sisa Cuti</span></a></li>
+                            <li><a href="#" data-page="siaba_cuti_unduh"><span>Unduh Surat Cuti</span></a></li>
+                            <li><a href="#" data-page="siaba_cuti_unggah"><span>Unggah Surat Cuti</span></a></li>
+                            <li><a href="#" data-page="siaba_cuti_cek"><span>Cek Status</span></a></li>
+                            <li class="admin-only" style="display:none;"><a href="#" data-page="siaba_cuti_data"><span>Data Cuti (Admin)</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="siaba_unduh_rekap"><span>Rekapitulasi</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="siaba_rekap_terlambat"><span>Datang Terlambat</span></a></li>
+                            <li><a href="#" data-page="siaba_rekap_pulang_awal"><span>Pulang Awal</span></a></li>
+                        </ul>
+                    </li>
+                </ul>
+            </li>
+
+            <li class="has-submenu">
+                <a href="#" data-page-parent="asn" data-page="asn_menu">
+                    <i class="fas fa-id-badge"></i><span>ASN</span><i class="fas fa-chevron-right submenu-icon"></i>
+                </a>
+                <ul class="submenu">
+                    <li class="has-submenu">
+                        <a href="#" data-page="asn_skp_menu"><span>SKP</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="asn_skp_unggah"><span>Unggah SKP</span></a></li>
+                            <li><a href="#" data-page="asn_skp_kelola"><span>Kelola SKP</span></a></li>
+                            <li><a href="#" data-page="asn_skp_kirim"><span>Daftar Kirim</span></a></li>
+                        </ul>
+                    </li>
+                    <li class="has-submenu">
+                        <a href="#" data-page="asn_pak_menu"><span>PAK</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <ul class="submenu">
+                            <li><a href="#" data-page="asn_pak_unggah"><span>Unggah PAK</span></a></li>
+                            <li><a href="#" data-page="asn_pak_kelola"><span>Kelola PAK</span></a></li>
+                            <li><a href="#" data-page="asn_pak_kirim"><span>Daftar Kirim</span></a></li>
+                        </ul>
+                    </li>
+                    <li><a href="#" data-page="asn_kp"><span>Kenaikan Pangkat</span></a></li>
+                    <li><a href="#" data-page="asn_kgb"><span>KGB</span></a></li>
+                    <li><a href="#" data-page="asn_kp4"><span>KP4</span></a></li>
+                </ul>
+            </li>
+
+            <li><a href="#" data-page="rapor_pendidikan_menu"><i class="fas fa-book-reader"></i><span>Rapor Pendidikan</span></a></li>
+            <li><a href="#" data-page="tata_naskah_menu"><i class="fas fa-envelope-open-text"></i><span>Tata Naskah</span></a></li>
+            <li><a href="#" data-page="mutasi_murid_menu"><i class="fas fa-exchange-alt"></i><span>Mutasi Murid</span></a></li>
+            <li><a href="#" data-page="tapera_sitara_menu"><i class="fas fa-home"></i><span>Tapera / Sitara</span></a></li>
+            <li><a href="#" data-page="administrasi_sekolah_menu"><i class="fas fa-folder-open"></i><span>Adm. Sekolah</span></a></li>
+            <li><a href="#" data-page="data_sekolah_menu"><i class="fas fa-school"></i><span>Data Sekolah</span></a></li>
+            <li><a href="#" data-page="komunitas_belajar_menu"><i class="fas fa-users-cog"></i><span>Komunitas Belajar</span></a></li>
+            <li><a href="#" data-page="gelar_karya_menu"><i class="fas fa-palette"></i><span>Gelar Karya</span></a></li>
+            
+            <li style="margin-top: auto;">
+                <a href="#" data-page="logout" title="Keluar Aplikasi" style="color: #f87171;">
+                    <i class="fas fa-sign-out-alt"></i><span>Keluar Aplikasi</span>
+                </a>
+            </li>
+        </ul>
+
+        <div class="sidebar-footer">
+            © 2025 Korwil Disdikbud<br>Kecamatan Secang
+        </div>
+
+      </div>
       <div id="main-content" class="main-content">
           <div class="loading-container">
-              <div class="spinner-container">
-                  <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
-              </div>
-              <p>Memuat Aplikasi...</p>
+              <div class="app-spinner"></div>
+              <p class="loading-text">Memuat Aplikasi...</p>
           </div>
       </div>
 
@@ -30,8 +237,7 @@
   <div id="appModal" class="modal-overlay" style="display: none;">
       <div class="modal-content">
           <div id="modalIconBox" style="font-size: 3rem; margin-bottom: 10px;"></div>
-          <h3 id="modalTitle"></h3>
-          <p id="modalMessage"></p>
+          <h3 id="modalTitle"></h3><p id="modalMessage"></p>
           <div class="modal-actions" id="modalActions">
               <button id="modalBtnMain" class="modal-btn">OK</button>
           </div>
@@ -51,15 +257,113 @@
   </div>
 
   <div id="deleteModal" class="modal-overlay" style="display: none;">
-      <div class="modal-content">
-          <h3 id="deleteModalTitle">Konfirmasi Hapus</h3>
-          <div id="deleteModalBody"></div>
-          <div class="modal-actions">
-              <button id="cancelDeleteBtn" class="cancel-btn">Batal</button>
-              <button id="confirmDeleteBtn" class="delete-btn">Ya, Hapus</button>
+      <div class="modal-content" style="max-width: 450px;">
+          
+          <div class="modal-icon-danger"><i class="fas fa-trash-alt"></i></div>
+          <h3 class="modal-title-danger">Konfirmasi Hapus</h3>
+          
+          <div class="delete-info-card"></div>
+          
+          <div class="delete-input-group" style="margin-top:15px;">
+             <label class="delete-input-label">Masukkan Kode Konfirmasi</label>
+             
+             <input type="text" id="delCode" class="modal-input-code" maxlength="8" style="text-align:center; letter-spacing: 2px; font-weight:bold;">
+             
+             <small class="delete-helper-text">Hubungi admin untuk mendapatkan kode.</small>
+          </div>
+
+          <div class="modal-actions-right">
+              <button id="cancelDeleteBtn" class="btn-md btn-outline-gray">Batal</button>
+              <button id="confirmDeleteBtn" class="btn-md btn-solid-red">Ya, Hapus</button>
           </div>
       </div>
   </div>
+  
+  <div id="modalVerifikasi" class="modal-overlay" style="display: none;">
+    <div class="modal-content" style="width: 95%; max-width: 1200px; height: 90vh; padding: 0; display: flex; flex-direction: column; overflow: hidden; background: #f8fafc;">
+        
+        <div style="padding: 15px 20px; background: white; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; align-items: center; gap: 10px;">
+                <div style="width: 32px; height: 32px; background: #dbeafe; color: #2563eb; border-radius: 50%; display: flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-check-double"></i>
+                </div>
+                <h3 style="margin: 0; color: #1e293b;">Verifikasi Data SK</h3>
+            </div>
+            <button onclick="App.tutupVerifikasi()" style="border: none; background: none; font-size: 1.5rem; cursor: pointer; color: #64748b;">&times;</button>
+        </div>
+
+        <div style="flex: 1; display: flex; overflow: hidden;">
+            
+            <div id="v-preview-area" style="flex: 1.3; background: #334155; position: relative; border-right: 1px solid #cbd5e1;">
+                <div id="v-preview-placeholder" style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; color: white;">
+                    <i class="fas fa-file-pdf" style="font-size: 3rem; margin-bottom: 10px; opacity: 0.5;"></i>
+                    <span>Memuat Dokumen...</span>
+                </div>
+            </div>
+
+            <div style="flex: 0.7; background: white; padding: 25px; overflow-y: auto; min-width: 350px;">
+                
+                <form id="formVerifikasi">
+                    <input type="hidden" id="v-row-index">
+
+                    <div style="border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; margin-bottom: 25px;">
+                        <div style="background: #f1f5f9; padding: 10px 15px; border-bottom: 1px solid #e2e8f0;">
+                            <h4 style="margin: 0; color: #334155; font-size: 0.95rem; font-weight: 700;">Data SK Pembagian Tugas</h4>
+                        </div>
+                        
+                        <div style="padding: 15px; display: flex; flex-direction: column; gap: 12px;">
+                            
+                            <div><label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;">Nama Sekolah</label><div id="v-nama" style="font-size: 1rem; font-weight: 600; color: #0f172a;">-</div></div>
+
+                            <div style="border-top: 1px dashed #f1f5f9; padding-top: 8px;"><label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;">Tahun Ajaran</label><div id="v-tahun" style="font-size: 1rem; font-weight: 600; color: #334155;">-</div></div>
+
+                            <div style="border-top: 1px dashed #f1f5f9; padding-top: 8px;"><label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;">Semester</label><div id="v-semester" style="font-size: 1rem; font-weight: 600; color: #334155;">-</div></div>
+
+                            <div style="border-top: 1px dashed #f1f5f9; padding-top: 8px;"><label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;">Nomor SK</label><div id="v-nomor" style="font-size: 1rem; font-weight: 600; color: #334155;">-</div></div>
+
+                            <div style="border-top: 1px dashed #f1f5f9; padding-top: 8px;"><label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;">Tanggal SK</label><div id="v-tanggal" style="font-size: 1rem; font-weight: 600; color: #334155;">-</div></div>
+
+                            <div style="border-top: 1px dashed #f1f5f9; padding-top: 8px;"><label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;">Kriteria SK</label><div id="v-kriteria" style="font-size: 1rem; font-weight: 600; color: #334155;">-</div></div>
+
+                            <div style="border-top: 1px dashed #e2e8f0; padding-top: 8px; padding-bottom: 8px; margin-top: 5px; background: #fffbeb;">
+                                <label style="display: block; font-size: 0.75rem; color: #64748b; margin-bottom: 3px;">Status Saat Ini</label>
+                                <div id="v-status-current" style="font-size: 1rem; font-weight: 600; color: #334155;">-</div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                    <div style="background: #eff6ff; padding: 20px; border-radius: 8px; border: 1px solid #bfdbfe;">
+                        <h4 style="margin: 0 0 15px 0; font-size: 1rem; color: #1e40af; border-bottom: 1px solid #dbeafe; padding-bottom: 10px;">Hasil Verifikasi</h4>
+                        
+                        <div style="margin-bottom: 15px;">
+                            <label style="font-weight: 600; font-size: 0.9rem; color: #1e3a8a;">Keputusan</label>
+                            <select id="v-status" class="std-input" style="width: 100%; font-weight: bold; margin-top: 5px; height: 40px; border: 2px solid #3b82f6;">
+                                <option value="" selected>-- Pilih Status --</option>
+                                <option value="Diproses">Diproses</option>
+                                <option value="OK" style="color: green;">✅ OK (Disetujui)</option>
+                                <option value="Revisi" style="color: orange;">⚠️ Revisi</option>
+                                <option value="Ditolak" style="color: red;">❌ Ditolak</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label style="font-weight: 600; font-size: 0.9rem; color: #1e3a8a;">Catatan / Keterangan</label>
+                            <textarea id="v-keterangan" class="std-input" style="width: 100%; margin-top: 5px; min-height: 80px; resize: vertical;" placeholder="Tuliskan catatan verifikasi di sini..."></textarea>
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 25px;">
+                        <button type="submit" class="submit-btn" style="width: 100%; height: 45px; font-size: 1rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+                            <i class="fas fa-save"></i> SIMPAN PERUBAHAN
+                        </button>
+                    </div>
+
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
 
   <?!= include('javascript'); ?>
 </body>

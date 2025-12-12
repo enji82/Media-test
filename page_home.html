@@ -1,31 +1,21 @@
-<header>
-    <h1>DASHBOARD</h1>
-    <h2 id="welcomeMsg">Selamat Datang</h2>
-</header>
+<div class="std-content-wrapper" style="padding: 20px; animation: fadeIn 0.5s ease;">
+    
+    <header style="margin-bottom: 30px; text-align: center;">
+        <h1 style="color: #1e293b; margin: 0; font-size: 2em;">DASHBOARD</h1>
+        <h2 id="welcomeMsg" style="color: #64748b; margin: 5px 0 0 0; font-weight: 400; font-size: 1.1em;">
+            Selamat Datang di Sistem Informasi Manajemen
+        </h2>
+    </header>
 
-<div class="menu-grid">
-    <a href="#" class="menu-button" onclick="App.loadPage(event, 'sk_menu')">
-        <i class="fas fa-file-signature" style="color: #3498db;"></i>
-        <span>SK Pembagian Tugas</span>
-    </a>
-    <a href="#" class="menu-button" onclick="App.loadPage(event, 'lapbul_menu')">
-        <i class="fas fa-chart-line" style="color: #2ecc71;"></i>
-        <span>Laporan Bulan</span>
-    </a>
-    <a href="#" class="menu-button" onclick="App.loadPage(event, 'ptk_menu')">
-        <i class="fas fa-chalkboard-teacher" style="color: #f1c40f;"></i>
-        <span>Data PTK</span>
-    </a>
-    <a href="#" class="menu-button" onclick="App.loadPage(event, 'murid_menu')">
-        <i class="fas fa-user-graduate" style="color: #e74c3c;"></i>
-        <span>Data Murid</span>
-    </a>
-    <a href="#" class="menu-button" onclick="App.loadPage(event, 'siaba_menu')">
-        <i class="fas fa-fingerprint" style="color: #9b59b6;"></i>
-        <span>SIABA</span>
-    </a>
-    <a href="#" class="menu-button" onclick="App.loadPage(event, 'asn_menu')">
-        <i class="fas fa-user-tie" style="color: #f8f3d4;"></i>
-        <span>ASN (SKP/PAK)</span>
-    </a>
+    <div class="menu-grid">
+        <a href="#" class="menu-button" onclick="App.loadPage(event, 'sk_menu')">
+            <i class="fas fa-file-signature" style="color: #3498db;"></i>
+            <span style="font-weight:600; margin-top:10px;">SK Pembagian Tugas</span>
+        </a>
+        <a href="#" class="menu-button" onclick="App.loadPage(event, 'lapbul_menu')">
+            <i class="fas fa-chart-line" style="color: #2ecc71;"></i>
+            <span style="font-weight:600; margin-top:10px;">Laporan Bulan</span>
+        </a>
+    </div>
+
 </div>

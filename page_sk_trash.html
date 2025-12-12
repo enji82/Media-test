@@ -1,37 +1,20 @@
 <div class="std-header">
-    <h1 style="color:#dc2626;"><i class="fas fa-trash-alt"></i> Data Terhapus (Trash)</h1>
+    <h1 style="color:#ef4444;"><i class="fas fa-trash-alt"></i> Trash (Data Dihapus)</h1>
 </div>
 
 <div id="tableWrapper" class="std-content-wrapper">
-
+    
     <div class="std-filter-card">
-        <div class="filter-group">
-            <label class="std-filter-label">Tahun:</label>
-            <select id="filterTahun" class="std-filter-select"><option value="">Semua</option></select>
+        <div class="filter-group" style="flex:1;">
+            <label class="std-filter-label">Cari Data:</label>
+            <input type="text" id="trashSearch" class="std-filter-select" placeholder="Ketik nama sekolah..." style="padding:5px;">
         </div>
-        <div class="filter-group">
-            <label class="std-filter-label">Sekolah:</label>
-            <select id="filterNamaSekolah" class="std-filter-select"><option value="">Semua</option></select>
-        </div>
-        
-        <div class="filter-group" style="margin-left: auto;">
-            <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data sampah...">
-        </div>
-    </div>
-
-    <div id="loadingStatus" class="loading-container" style="display: none;">
-        <div class="spinner-container">
-            <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
-        </div>
-        <p style="color:#64748b;">Memuat Sampah...</p>
     </div>
 
     <div class="std-table-container">
         <table id="trashTable" class="std-table">
             <thead></thead>
-            <tbody id="trashTableBody"></tbody>
-            <tfoot class="has-content"></tfoot>
+            <tbody></tbody>
         </table>
     </div>
-
 </div>

@@ -1,18 +1,36 @@
 <div class="std-header">
-    <h1>Daftar Pengiriman SK</h1>
+    <h1>Status Pengiriman SK Pembagian Tugas</h1>
 </div>
 
 <div id="tableWrapper" class="std-content-wrapper">
 
-    <div id="loadingStatus" class="loading-container" style="display: none;">
-        <div class="spinner-container">
-            <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+    <div class="std-filter-card">
+        <div class="filter-group" style="flex: 1; max-width: 400px; position: relative;">
+            <i class="fas fa-search" style="position: absolute; left: 10px; top: 9px; color: #94a3b8;"></i>
+            <input type="text" id="matrixSearch" class="std-search-input" placeholder="Cari Nama Sekolah..." style="width: 100%; padding-left: 35px;">
         </div>
-        <p style="color:#64748b;">Memuat Matriks Data...</p>
+
+        <div class="filter-group" style="margin-left: auto; display: flex; gap: 15px; font-size: 0.85em; color: #64748b;">
+            <div style="display:flex; align-items:center; gap:5px;">
+                <span class="status-badge status-ok" style="min-width: 25px; padding: 2px;">OK</span>
+                <span>Disetujui</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <span class="status-badge status-diproses" style="min-width: 25px; padding: 2px;">Proses</span>
+                <span>Menunggu</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:5px;">
+                <span class="status-badge status-belum" style="min-width: 25px; padding: 2px;">-</span>
+                <span>Belum</span>
+            </div>
+        </div>
     </div>
 
     <div class="std-table-container">
         <table id="statusTable" class="std-table">
-            <thead></thead> <tbody></tbody> </table>
+            <thead></thead>
+            <tbody id="statusTableBody"></tbody>
+        </table>
     </div>
+
 </div>

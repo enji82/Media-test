@@ -1,26 +1,33 @@
 <div class="std-header">
-    <h1>Edit Data SK</h1>
+    <h1>Edit Data SK Pembagian Tugas</h1>
 </div>
 
 <div class="std-content-wrapper">
     <div class="form-container">
         <form id="skEditForm">
             <input type="hidden" name="rowIndex" id="editRowIndex">
-            <input type="hidden" name="statusSekolah" id="editStatusSekolah"> <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <input type="hidden" name="statusSekolah" id="editStatusSekolah">
+            
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
                 
                 <div class="form-group" style="grid-column: span 2;">
-                    <label style="font-weight:600; color:#475569;">Nama Sekolah</label>
-                    <input type="text" id="editNamaSekolah" name="namaSekolah" class="std-input" style="width:100%; background:#f1f5f9;" readonly>
+                    <label style="font-weight:600; color:#475569;">Nama Sekolah <small style="color:#ef4444;">(Tidak dapat diubah)</small></label>
+                    <input type="text" id="editNamaSekolah" name="namaSekolah" class="std-input" 
+                           style="width:100%; background:#f1f5f9; color:#64748b; cursor:not-allowed;" readonly>
                 </div>
 
                 <div class="form-group">
                     <label style="font-weight:600; color:#475569;">Tahun Ajaran</label>
-                    <select id="editTahun" name="tahunAjaran" class="std-input" style="width:100%" required></select>
+                    <select id="editTahun" name="tahunAjaran" class="std-input" style="width:100%" required>
+                        <option value="">Memuat...</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
                     <label style="font-weight:600; color:#475569;">Semester</label>
-                    <select id="editSemester" name="semester" class="std-input" style="width:100%" required></select>
+                    <select id="editSemester" name="semester" class="std-input" style="width:100%" required>
+                        <option value="">Memuat...</option>
+                    </select>
                 </div>
 
                 <div class="form-group">
@@ -35,23 +42,38 @@
 
                 <div class="form-group" style="grid-column: span 2;">
                     <label style="font-weight:600; color:#475569;">Kriteria SK</label>
-                    <select id="editKriteria" name="kriteriaSK" class="std-input" style="width:100%" required></select>
+                    <select id="editKriteria" name="kriteriaSK" class="std-input" style="width:100%" required>
+                        <option value="">Memuat...</option>
+                    </select>
                 </div>
 
-                <div class="form-group" style="grid-column: span 2; border: 1px dashed #cbd5e1; padding: 15px; border-radius: 6px;">
-                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:10px;">File SK</label>
+                <div class="form-group" style="grid-column: span 2; background:#f8fafc; border: 1px dashed #cbd5e1; padding: 20px; border-radius: 8px;">
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:15px;">Dokumen SK</label>
                     
-                    <div id="currentFileLink" style="margin-bottom: 15px;"></div>
+                    <div id="currentFileArea" style="display:flex; align-items:center; gap:10px; margin-bottom: 20px; padding-bottom:15px; border-bottom:1px solid #e2e8f0;">
+                        <span style="font-size:0.9em; color:#64748b;">File Saat Ini:</span>
+                        <div id="currentFileLink"></div> </div>
                     
-                    <label style="font-size:0.9em; color:#64748b;">Ganti File (Opsional):</label>
-                    <input type="file" id="editFile" name="file" class="std-input" style="width:100%; padding: 5px;" accept="application/pdf">
+                    <label style="font-size:0.95em; color:#334155; font-weight:600;">Unggah File Baru</label>
+                    <p style="font-size:0.85em; color:#64748b; margin: 5px 0 10px 0;">
+                        (Lewati apabila tidak ingin mengganti file)<br>
+                        Scan SK asli dalam format PDF ukuran maksimal 1 MB. Pastikan file terbaca jelas dan sudah ditandatangani.
+                    </p>
+                    <input type="file" id="editFile" name="file" class="std-input" style="width:100%; padding: 8px; background:white;" accept="application/pdf">
                 </div>
 
             </div>
 
             <div style="margin-top: 30px; display:flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                <button type="button" class="action-btn" style="background:#fff; color:#64748b; border:1px solid #cbd5e1;" onclick="App.loadPage(event, 'sk_kelola')">Batal</button>
-                <button type="submit" class="submit-btn" style="min-width: 120px;">Simpan Perubahan</button>
+                <button type="button" class="action-btn" 
+                        style="height: 42px; background:#fff; color:#64748b; border:1px solid #cbd5e1; padding: 0 25px; display:inline-flex; align-items:center; justify-content:center;" 
+                        onclick="App.loadPage(event, 'sk_kelola')">
+                    Batal
+                </button>
+                <button type="submit" class="submit-btn" 
+                        style="height: 42px; min-width: 150px; display:inline-flex; align-items:center; justify-content:center;">
+                    Simpan Perubahan
+                </button>
             </div>
 
         </form>
