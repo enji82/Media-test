@@ -556,3 +556,89 @@ function apiGetArsipFiles(folderId) {
     return { status: 'error', message: e.message };
   }
 }
+
+// --- FUNGSI STATISTIK DASHBOARD SK (FINAL FIX) ---
+function getSKDashboardStats() {
+  try {
+    const config = SPREADSHEET_CONFIG.SK_FORM_RESPONSES;
+    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
+    if(!sheet) return { error: "Sheet tidak ditemukan" };
+    
+    const data = sheet.getDataRange().getValues();
+    if (data.length < 2) return { total: 0 }; 
+    
+    const rows = data.slice(1);
+    
+    let stats = {
+        total: rows.length,
+        today: 0,
+        status: { ok: 0, revisi: 0, ditolak: 0, proses: 0 },
+        monthlyTrend: Array(12).fill(0),
+        semesters: {}, // Untuk menyimpan hitungan per semester
+        recent: []
+    };
+    
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const todayStr = Utilities.formatDate(now, Session.getScriptTimeZone(), "yyyyMMdd");
+    
+    rows.forEach(row => {
+        // 1. PARSING TANGGAL (Kolom A / Index 0)
+        // Kita paksa ubah jadi objek Date yang valid
+        let dateObj = null;
+        let rawDate = row[0];
+        
+        if (rawDate instanceof Date) {
+            dateObj = rawDate;
+        } else if (typeof rawDate === 'string') {
+            // Coba parsing format string 'dd/MM/yyyy'
+            let parts = rawDate.split(' ')[0].split('/');
+            if (parts.length === 3) dateObj = new Date(parts[2], parts[1]-1, parts[0]);
+        }
+
+        // Hitung Tren & Hari Ini
+        if (dateObj && !isNaN(dateObj.getTime())) {
+            // Trend hanya tahun ini
+            if (dateObj.getFullYear() === currentYear) {
+                stats.monthlyTrend[dateObj.getMonth()]++;
+            }
+            // Hitung Hari Ini
+            let rowDateStr = Utilities.formatDate(dateObj, Session.getScriptTimeZone(), "yyyyMMdd");
+            if (rowDateStr === todayStr) stats.today++;
+        }
+
+        // 2. HITUNG STATUS (Kolom J / Index 9)
+        let st = String(row[9] || '').toLowerCase();
+        if (st.includes('ok') || st.includes('setuju') || st === 'v') stats.status.ok++;
+        else if (st.includes('revisi')) stats.status.revisi++;
+        else if (st.includes('tolak') || st === 'x') stats.status.ditolak++;
+        else stats.status.proses++; // Default Diproses
+
+        // 3. HITUNG SEMESTER (Kolom D=Tahun, E=Semester -> Index 3 & 4)
+        let semKey = (row[3] || '?') + " (" + (row[4] || '?') + ")";
+        if (!stats.semesters[semKey]) stats.semesters[semKey] = 0;
+        stats.semesters[semKey]++;
+    });
+
+    // 4. SORTIR SEMESTER (Ambil 2 Terbanyak/Terbaru)
+    // Kita ubah object ke array untuk disortir
+    let semArray = [];
+    for (let key in stats.semesters) {
+        semArray.push({ label: key, count: stats.semesters[key] });
+    }
+    // Sortir berdasarkan Tahun (String descending) agar yang terbaru muncul
+    stats.topSemesters = semArray.sort((a,b) => b.label.localeCompare(a.label)).slice(0, 2);
+
+    // 5. RECENT ACTIVITY (5 Terakhir)
+    // Ambil dari bawah (data baru biasanya di bawah)
+    let recentRows = rows.length > 5 ? rows.slice(rows.length - 5) : rows;
+    stats.recent = recentRows.reverse().map(r => ({
+        sekolah: r[2],
+        waktu: r[0] instanceof Date ? Utilities.formatDate(r[0], Session.getScriptTimeZone(), "dd/MM/yy HH:mm") : String(r[0]).substring(0,16),
+        status: r[9]
+    }));
+    
+    return stats;
+    
+  } catch(e) { return { error: e.message }; }
+}

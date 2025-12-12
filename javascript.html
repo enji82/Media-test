@@ -76,6 +76,15 @@ App.init = function() {
         if (!currentContent || document.getElementById('loginForm')) {
             App.loadPage(null, 'home');
         }
+        // PATCH: Agar klik menu induk 'SK Pembagian Tugas' juga membuka dashboard
+        var skMenuLink = document.querySelector('a[data-page="sk_menu"]');
+        if (skMenuLink) {
+            skMenuLink.addEventListener('click', function(e) {
+                // Jangan preventDefault sepenuhnya agar submenu tetap toggle (jika pakai CSS/JS lain)
+                // Tapi kita paksa load halaman dashboard
+                App.loadPage(e, 'sk_menu');
+            });
+        }
     }
 };
 
@@ -278,6 +287,132 @@ App.inits = {
     'sk_arsip': function() { App.arsipPath=[{id:null,name:'Home'}]; App.loadFolder(null); },
     'sk_edit': function(arg) { if(typeof initSkEditPage === 'function') initSkEditPage(arg); },
     'sk_unggah': function() { if(typeof initSkUnggahPage === 'function') initSkUnggahPage(); },
+    'sk_menu': function() {
+        // --- 1. SET LOADING STATE (6 ITEM) ---
+        ['statTotal', 'statToday', 'statProses', 'statOK', 'statRevisi', 'statDitolak'].forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) el.innerHTML = '<i class="fas fa-spinner fa-spin" style="font-size:0.6em"></i>';
+        });
+        document.getElementById('listRecent').innerHTML = '<div style="text-align:center; padding:10px;">Memuat...</div>';
+
+        // --- 2. REQUEST DATA ---
+        google.script.run.withSuccessHandler(function(stats) {
+            if(stats.error) { console.error(stats.error); return; }
+
+            // A. ISI KARTU (ANIMASI)
+            var animate = function(id, val) {
+                var el = document.getElementById(id);
+                if(el) el.textContent = val || 0;
+            };
+            animate('statTotal', stats.total);
+            animate('statToday', stats.today);
+            animate('statProses', stats.status.proses);
+            animate('statOK', stats.status.ok);
+            animate('statRevisi', stats.status.revisi);
+            animate('statDitolak', stats.status.ditolak); // <-- TAMBAHAN INI
+
+            // B. UPDATE SEMESTER
+            var semHtml = '';
+            if (stats.topSemesters && stats.topSemesters.length > 0) {
+                stats.topSemesters.forEach(function(s) {
+                    semHtml += '<div class="sem-badge">' + 
+                               '<i class="fas fa-tag" style="color:#64748b"></i> ' + s.label + 
+                               '<span class="sem-count">' + s.count + '</span></div>';
+                });
+            } else {
+                semHtml = '<span style="color:#94a3b8; font-size:0.9em;">Belum ada data semester</span>';
+            }
+            var elSem = document.getElementById('semesterStats');
+            if(elSem) elSem.innerHTML = semHtml;
+
+            // C. RENDER CHART
+            if(typeof Chart !== 'undefined') {
+                
+                // Chart Tren
+                var ctxTrend = document.getElementById('chartTrend');
+                if (ctxTrend) {
+                    if (ctxTrend.chartInstance) ctxTrend.chartInstance.destroy();
+                    
+                    ctxTrend.chartInstance = new Chart(ctxTrend.getContext('2d'), {
+                        type: 'bar',
+                        data: {
+                            labels: ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Ags', 'Sep', 'Okt', 'Nov', 'Des'],
+                            datasets: [{
+                                label: 'Data Masuk',
+                                data: stats.monthlyTrend,
+                                backgroundColor: '#3b82f6',
+                                borderRadius: 4,
+                                barPercentage: 0.6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { display: false } },
+                            scales: { 
+                                y: { beginAtZero: true, ticks: { precision: 0 } }, 
+                                x: { grid: { display: false } } 
+                            }
+                        }
+                    });
+                }
+
+                // Chart Status
+                var ctxStatus = document.getElementById('chartStatus');
+                if (ctxStatus) {
+                    if (ctxStatus.chartInstance) ctxStatus.chartInstance.destroy();
+
+                    ctxStatus.chartInstance = new Chart(ctxStatus.getContext('2d'), {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Diproses', 'OK', 'Revisi', 'Ditolak'],
+                            datasets: [{
+                                data: [
+                                    stats.status.proses, 
+                                    stats.status.ok, 
+                                    stats.status.revisi, 
+                                    stats.status.ditolak
+                                ],
+                                backgroundColor: ['#3b82f6', '#10b981', '#f59e0b', '#ef4444'],
+                                borderWidth: 2,
+                                borderColor: '#ffffff'
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            cutout: '65%',
+                            plugins: { 
+                                legend: { position: 'right', labels: { boxWidth: 12, usePointStyle: true } } 
+                            }
+                        }
+                    });
+                }
+            }
+
+            // D. RECENT ACTIVITY
+            var listHtml = '';
+            if(stats.recent.length === 0) listHtml = '<div style="padding:10px; color:#ccc;">Belum ada aktivitas</div>';
+            else {
+                stats.recent.forEach(function(r) {
+                    var st = String(r.status).replace(/<[^>]*>?/gm, '').trim(); 
+                    var color = '#64748b';
+                    if(st.includes('OK') || st.includes('Setuju')) color='#10b981';
+                    else if(st.includes('Revisi')) color='#f59e0b';
+                    else if(st.includes('Ditolak')) color='#ef4444';
+                    
+                    listHtml += '<div style="display:flex; justify-content:space-between; align-items:center; padding:8px 0; border-bottom:1px solid #f1f5f9;">' +
+                                '<div><div style="font-weight:600; font-size:0.85em; color:#334155;">'+r.sekolah+'</div>' +
+                                '<div style="font-size:0.75em; color:#94a3b8;">'+r.waktu+'</div></div>' +
+                                '<div style="font-size:0.75em; font-weight:bold; color:'+color+';">'+st+'</div>' +
+                                '</div>';
+                });
+            }
+            var elList = document.getElementById('listRecent');
+            if(elList) elList.innerHTML = listHtml;
+
+        }).getSKDashboardStats();
+    },
     
     // Tambahkan init modul lain di sini jika perlu
 };
@@ -818,7 +953,6 @@ App.arsipViewMode = 'grid';
 
 // 1. Fungsi Load Folder (Navigasi)
 App.loadFolder = function(fid, isBack) {
-    // Langkah 1: Sterilisasi Area (Tutup Preview)
     App.closePreview(); 
     
     var grid = document.getElementById('fileGrid'); 
@@ -827,25 +961,28 @@ App.loadFolder = function(fid, isBack) {
     
     if(!grid) return;
 
-    // Langkah 2: UI Loading Cepat
-    grid.innerHTML = ''; 
-    grid.className = ''; 
+    // --- PERBAIKAN: JANGAN KOSONGKAN GRID ---
+    // Biarkan item lama tetap terlihat tapi blur
     grid.classList.add('blur-loading'); 
     
-    if(emptyMsg) emptyMsg.style.display = 'none'; 
+    // Tampilkan loader overlay di tengah
     if(loader) loader.style.display = 'flex'; 
+    if(emptyMsg) emptyMsg.style.display = 'none';
 
-    // Init Home
+    // Init Home Path
     if (!fid && App.arsipPath.length === 0) {
         App.arsipPath.push({id: null, name: 'Home'});
     }
 
     google.script.run.withSuccessHandler(function(d) {
-        // Gunakan Timeout kecil agar render UI mulus
         setTimeout(function() {
+            // Hapus blur dan loader
             grid.classList.remove('blur-loading');
             loader.style.display = 'none';
             
+            // BARU SEKARANG KITA GANTI ISINYA
+            grid.innerHTML = ''; 
+
             if (d.status === 'error') { 
                 grid.innerHTML = '<div style="color:red;padding:20px;text-align:center;">'+d.message+'</div>'; 
                 return; 
@@ -864,11 +1001,12 @@ App.loadFolder = function(fid, isBack) {
             App.currentArsipItems = d.items || [];
             renderBreadcrumb();
             
+            // Set Class Grid/List
             if (App.arsipViewMode === 'list') grid.className = 'file-list-view';
             else grid.className = 'file-grid';
 
             App.renderCurrentItems();
-        }, 10);
+        }, 50); // Delay sedikit agar mata sempat melihat transisi blur-clear
 
     }).withFailureHandler(function(e) {
         grid.classList.remove('blur-loading');
