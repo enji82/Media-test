@@ -138,62 +138,60 @@ function processLapbulFormPaud(formData) {
   }
 }
 
+// --- FUNGSI SIMPAN SD (AUTO MAPPING BERDASARKAN HEADER) ---
 function processLapbulFormSd(formData) {
-  // CATATAN: Variabel 'formData' ini berisi SEMUA data formulir
-  // ditambah objek file data (formData.fileData) dari client-side JS.
   try {
-    const mainFolder = DriveApp.getFolderById(FOLDER_CONFIG.LAPBUL_SD);
+    const config = SPREADSHEET_CONFIG.LAPBUL_FORM_RESPONSES_SD;
+    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
+    if (!sheet) throw new Error("Sheet Input SD tidak ditemukan.");
 
-    // Menggunakan nama properti yang dikirim dari JavaScript
+    // 1. SETUP FOLDER
+    const mainFolder = DriveApp.getFolderById(FOLDER_CONFIG.LAPBUL_SD);
     const tahunFolder = getOrCreateFolder(mainFolder, formData.Tahun);
     const bulanFolder = getOrCreateFolder(tahunFolder, formData.Bulan);
     
-    const fileData = formData.fileData;
-    const decodedData = Utilities.base64Decode(fileData.data);
-    const blob = Utilities.newBlob(decodedData, fileData.mimeType, fileData.fileName);
+    // 2. PROSES FILE
+    let fileUrl = "";
+    if (formData.fileData && formData.fileData.data) {
+        const decoded = Utilities.base64Decode(formData.fileData.data);
+        const blob = Utilities.newBlob(decoded, formData.fileData.mimeType, formData.fileData.fileName);
+        const newName = `${formData['Nama Sekolah']} - Lapbul SD ${formData.Bulan} ${formData.Tahun}.pdf`;
+        const file = bulanFolder.createFile(blob).setName(newName);
+        fileUrl = file.getUrl();
+    }
+
+    // 3. AUTO MAPPING (Input HTML -> Header Spreadsheet)
+    // Ambil baris header (Baris 1)
+    const headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
     
-    // Menggunakan nama properti yang benar untuk nama file
-    const newFileName = `${formData['Nama Sekolah']} - Lapbul ${formData.Bulan} ${formData.Tahun}.pdf`;
-    
-    const newFile = bulanFolder.createFile(blob).setName(newFileName);
-    const fileUrl = newFile.getUrl();
-    const config = SPREADSHEET_CONFIG.LAPBUL_FORM_RESPONSES_SD;
-    const sheet = SpreadsheetApp.openById(config.id).getSheetByName(config.sheet);
-    
-    // Ambil Peta Data (SD_FORM_INDEX_MAP) sebagai "Kebenaran"
-    const headersMap = SD_FORM_INDEX_MAP;
-    // Ambil nilai helper
-    const getValue = (key) => formData[key] || 0;
-    
-    const newRow = headersMap.map(headerName => {
-        // Cek Pengecualian
-        if (headerName === 'Tanggal Unggah') return new Date();
-        if (headerName === 'Jenjang') return "SD"; 
-        if (headerName === 'Dokumen') return fileUrl;
-        if (headerName === 'Update') return ""; 
-    
-        // Jika nama header ada di formData, ambil nilainya
-        if (formData.hasOwnProperty(headerName)) {
-            return getValue(headerName);
-        }
+    // Siapkan baris kosong
+    let newRow = new Array(headers.length).fill("");
+
+    // Loop setiap kolom header untuk mencari pasangannya di formData
+    headers.forEach((h, index) => {
+        const header = String(h).trim();
         
-        // Jika tidak ada (misal: header lama yang sudah tidak dipakai), isi 0
-        return 0; 
+        // A. Metadata Otomatis
+        if (header === 'Tanggal Unggah') newRow[index] = new Date();
+        else if (header === 'Dokumen') newRow[index] = fileUrl;
+        else if (header === 'Update') newRow[index] = "";
+        else if (header === 'Jenjang') newRow[index] = "SD";
+        
+        // B. Data dari Form
+        else if (formData.hasOwnProperty(header)) {
+            let val = formData[header];
+            // Jika angka kosong, simpan sebagai 0 agar bisa dihitung spreadsheet
+            if (val === "" && !isNaN(Number(val))) newRow[index] = 0; 
+            else newRow[index] = val;
+        }
     });
 
+    // 4. SIMPAN
     sheet.appendRow(newRow);
-    
-    // Return Sukses
-    return "Sukses! Laporan Bulan SD berhasil dikirim.";
-    
+    return "Sukses! Laporan Bulan SD berhasil disimpan.";
+
   } catch (e) {
-    // ⚠️ INI ADALAH PERBAIKAN KRITIS UNTUK MENGHENTIKAN 'MACET'
-    // Kita log errornya, lalu melempar error agar google.script.run 
-    // di browser segera mengaktifkan .withFailureHandler()
-    Logger.log(`Error di processLapbulFormSd: ${e.message} - Stack: ${e.stack}`);
-    
-    // Baris ini akan mengirim error ke browser dan menghentikan macet.
-    throw new Error(`Gagal mengirim laporan: ${e.message}`);
+    throw new Error("Gagal menyimpan data SD: " + e.message);
   }
 }
 
