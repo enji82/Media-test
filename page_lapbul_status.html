@@ -1,40 +1,40 @@
-<header>
-  <h2>DAFTAR PENGIRIMAN LAPORAN BULAN</h2>
-</header>
-
-<div class="filter-container">
-  <div class="filter-group">
-    <label for="filterTahun">Tahun:</label>
-    <select id="filterTahun"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterJenjang">Jenjang:</label>
-    <select id="filterJenjang"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterNamaSekolah">Nama Sekolah:</label>
-    <select id="filterNamaSekolah"></select>
-  </div>
+<div class="std-header">
+    <h1><i class="fas fa-chart-bar" style="color:var(--primary); margin-right:10px;"></i> Status Pengiriman Laporan Bulan</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Matriks kelengkapan laporan bulan per sekolah.</p>
 </div>
 
-<main class="table-view-container">
-  <div id="loadingStatus" class="loading-container">
-      <div class="spinner-container">
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-    </div>
-    <p>Memuat data, mohon tunggu...</p>
-</div>
+<div id="tableWrapper" class="std-content-wrapper">
 
-<div id="tableWrapper" style="display:none;">
-    <div class="table-container">
-      <table id="lapbulStatusTable" class="data-table freeze-pane-table">
-        <thead></thead>
-        <tbody></tbody>
-      </table>
+    <div class="std-filter-card" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        
+        <div style="display: flex; gap: 10px;">
+            <select id="filterTahun" class="std-filter-select" style="width: 100px;">
+                </select>
+            <select id="filterJenjang" class="std-filter-select" style="width: 120px;">
+                </select>
+        </div>
+
+        <select id="filterNamaSekolah" class="std-filter-select" style="flex-grow: 1; min-width: 150px;">
+            </select>
+
+        <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
+            <div class="filter-group search-group" style="position: relative; width: 200px; margin: 0;">
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari..." 
+                       style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+            </div>
+            
+            <button onclick="App.inits['lapbul_status']()" class="btn-icon-refresh" title="Refresh Data">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+
     </div>
-    <div id="pagination-container" class="pagination-container"></div>
-  </div>
-</main>
+
+    <div class="std-table-container table-responsive">
+        <table id="lapbulStatusTable" class="std-table">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>

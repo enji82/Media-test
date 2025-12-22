@@ -10,6 +10,8 @@
   <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
   
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
   
   <?!= include('css'); ?>
 </head>
@@ -59,22 +61,25 @@
             </li>
             
             <li class="has-submenu">
-                <a href="#" data-page-parent="lapbul" data-page="lapbul_menu">
-                    <i class="fas fa-chart-line"></i><span>Laporan Bulan</span><i class="fas fa-chevron-right submenu-icon"></i>
+                <a href="#" onclick="App.loadPage(null, 'lapbul_menu')">
+                    <i class="fas fa-file-invoice"></i>
+                    <span>Laporan Bulan</span>
+                    <i class="fas fa-chevron-right submenu-icon"></i>
                 </a>
+                
                 <ul class="submenu">
-                    <li class="has-submenu">
-                        <a href="#"><span>Unggah File</span><i class="fas fa-chevron-right submenu-icon"></i></a>
-                        <ul class="submenu">
-                            <li><a href="#" data-page="lapbul_form_paud" style="padding-left: 35px;"><i class="fas fa-cubes"></i> PAUD</a></li>
-                            <li><a href="#" data-page="lapbul_form_sd" style="padding-left: 35px;"><i class="fas fa-school"></i> SD</a></li>
-                        </ul>
+                    
+                    <li>
+                        <a href="#" data-page="lapbul_landing">
+                            Unggah File
+                        </a>
                     </li>
-                    <li><a href="#" data-page="lapbul_riwayat"><span>Riwayat Pengiriman</span></a></li>
-                    <li><a href="#" data-page="lapbul_status"><span>Daftar Pengiriman</span></a></li>
-                    <li><a href="#" data-page="lapbul_arsip"><span>Arsip</span></a></li>
-                    <li><a href="#" data-page="lapbul_kelola"><span>Kelola Data</span></a></li>
-                    <li><a href="#" data-page="lapbul_unduh_format"><span>Unduh Format</span></a></li>
+
+                    <li><a href="#" data-page="lapbul_riwayat">Riwayat Pengiriman</a></li>
+                    <li><a href="#" data-page="lapbul_status">Status Laporan</a></li>
+                    <li><a href="#" data-page="lapbul_kelola">Kelola Data</a></li>
+                    <li><a href="#" data-page="lapbul_unduh_format">Unduh Format</a></li>
+                    <li class="admin-only"><a href="#" data-page="lapbul_trash" style="color:#ef4444;">Trash</a></li>
                 </ul>
             </li>
 
@@ -83,25 +88,35 @@
                     <i class="fas fa-users"></i><span>Data PTK</span><i class="fas fa-chevron-right submenu-icon"></i>
                 </a>
                 <ul class="submenu">
+                    
                     <li class="has-submenu">
-                        <a href="#" data-page="ptk_paud_menu"><span>PAUD</span><i class="fas fa-chevron-right submenu-icon"></i></a>
+                        <a href="javascript:void(0)" onclick="App.loadPage(null, 'ptk_paud_menu')" data-page-parent="ptk"> 
+                            <i class="fas fa-users"></i>
+                            <span>PAUD</span>
+                            <i class="fas fa-chevron-right submenu-icon"></i>
+                        </a>
                         <ul class="submenu">
+                            </li>
                             <li><a href="#" data-page="ptk_keadaan_paud"><span>Keadaan PTK</span></a></li>
                             <li><a href="#" data-page="ptk_jumlah_bulanan_paud"><span>Jumlah Bulanan</span></a></li>
-                            <li><a href="#" data-page="ptk_daftar_paud"><span>Daftar Nominatif</span></a></li>
-                            <li><a href="#" data-page="ptk_kelola_paud"><span>Kelola Data</span></a></li>
+                            <li><a href="#" data-page="ptk_daftar_paud"><span>Daftar PTK</span></a></li>
+                            
+                            <li><a href="#" data-page="ptk_kelola_paud"><span>Kelola Data PTK</span></a></li>
+                            <li class="admin-only" style="display:none;">
+                                <a href="#" data-page="ptk_non_aktif_paud">
+                                    <span style="color:#ef4444;">Non Aktif (Arsip)</span>
+                                </a>
+                            </li>
                         </ul>
                     </li>
+
                     <li class="has-submenu">
                         <a href="#" data-page="ptk_sd_menu"><span>SD</span><i class="fas fa-chevron-right submenu-icon"></i></a>
                         <ul class="submenu">
-                            <li><a href="#" data-page="ptk_keadaan_sd"><span>Keadaan PTK</span></a></li>
-                            <li><a href="#" data-page="ptk_jumlah_bulanan_sd"><span>Jumlah Bulanan</span></a></li>
-                            <li><a href="#" data-page="ptk_daftar_sd_negeri"><span>Daftar SDN</span></a></li>
-                            <li><a href="#" data-page="ptk_daftar_sd_swasta"><span>Daftar SD Swasta</span></a></li>
-                            <li><a href="#" data-page="ptk_kelola_sd"><span>Kelola Data</span></a></li>
-                            <li><a href="#" data-page="ptk_kebutuhan_sd_negeri"><span>Kebutuhan Guru</span></a></li>
-                            <li><a href="#" data-page="ptk_bezetting_sd_negeri"><span>Bezetting</span></a></li>
+                            <li><a href="#" data-page="ptk_keadaan_sd"><span>Keadaan PTK</span></a></li> <li><a href="#" data-page="ptk_jumlah_bulanan_sd"><span>Jumlah Bulanan</span></a></li> <li><a href="#" data-page="ptk_daftar_sd_negeri"><span>Daftar PTK SD Negeri</span></a></li> <li><a href="#" data-page="ptk_daftar_sd_swasta"><span>Daftar PTK SD Swasta</span></a></li> <li><a href="#" data-page="ptk_kelola_sd"><span>Kelola Data PTK</span></a></li>
+                            
+                            <li><a href="#" data-page="ptk_kebutuhan_sd_negeri"><span>Kebutuhan Guru SD Negeri</span></a></li>
+                            <li><a href="#" data-page="ptk_bezetting_sd_negeri"><span>Bezetting Guru SD Negeri</span></a></li>
                         </ul>
                     </li>
                 </ul>
@@ -243,12 +258,13 @@
 
   </div>
 
-  <div id="appModal" class="modal-overlay" style="display: none;">
+  <div id="appModal" class="modal-overlay">
       <div class="modal-content">
-          <div id="modalIconBox" style="font-size: 3rem; margin-bottom: 10px;"></div>
-          <h3 id="modalTitle"></h3><p id="modalMessage"></p>
-          <div class="modal-actions" id="modalActions">
-              <button id="modalBtnMain" class="modal-btn">OK</button>
+          <div id="modalIconBox"></div>
+          <h3 id="modalTitle"></h3>
+          <p id="modalMessage"></p>
+          <div class="modal-actions">
+              <button id="modalBtnMain">OK</button>
           </div>
       </div>
   </div>

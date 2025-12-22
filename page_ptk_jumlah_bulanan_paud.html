@@ -1,90 +1,55 @@
-<header>
-  <h2>JUMLAH PTK PAUD BULANAN</h2>
-</header>
-
-<div class="filter-container">
-  <div class="filter-group">
-    <label for="filterTahun">Tahun:</label>
-    <select id="filterTahun"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterBulan">Bulan:</label>
-    <select id="filterBulan"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterJenjang">Jenjang:</label>
-    <select id="filterJenjang"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterNamaLembaga">Nama Lembaga:</label>
-    <select id="filterNamaLembaga"></select>
-  </div>
+<div class="std-header">
+    <h1><i class="fas fa-users" style="color:#f1c40f; margin-right:10px;"></i> Jumlah PTK PAUD Bulanan</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">
+        Rekapitulasi data jumlah Pendidik dan Tenaga Kependidikan per lembaga berdasarkan Laporan Bulanan.
+    </p>
 </div>
 
-<main class="table-view-container">
-  <div id="loadingStatus" class="loading-container">
-    <div class="spinner-container">
-      <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
-    </div>
-    <p>Memuat data, mohon tunggu...</p>
-  </div>
+<div id="tableWrapper" class="std-content-wrapper">
 
-  <div id="tableWrapper" style="display:none;">
-    <div class="table-container">
-      <table id="ptkJumlahBulananPaudTable" class="data-table freeze-pane-table">
-        <thead></thead>
-        <tbody></tbody>
-        <tfoot></tfoot>
-      </table>
+    <div class="std-filter-card" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        
+        <div style="display: flex; gap: 10px; flex-grow: 1; flex-wrap: wrap;">
+            
+            <select id="filterTahun" class="std-filter-select" style="min-width: 100px;">
+                <option value="">-- Tahun --</option>
+            </select>
+            
+            <select id="filterBulan" class="std-filter-select" style="min-width: 120px;">
+                <option value="">-- Bulan --</option>
+            </select>
+            
+            <select id="filterJenjang" class="std-filter-select" style="min-width: 120px;">
+                <option value="">-- Jenjang --</option>
+            </select>
+            
+            <select id="filterNamaLembaga" class="std-filter-select" style="min-width: 200px; flex-grow: 1;">
+                <option value="">-- Nama Lembaga --</option>
+            </select>
+            
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            
+            <div class="filter-group search-group" style="position: relative; width: 200px; margin: 0;">
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari sekolah..." 
+                       style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+            </div>
+            
+            <button onclick="App.inits['ptk_jumlah_bulanan_paud']()" class="btn-icon-refresh" title="Refresh Data">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+            
+        </div>
+
+    </div>
+
+    <div class="std-table-container">
+        <table id="ptkJumlahBulananPaudTable" class="std-table">
+            <thead></thead>
+            <tbody></tbody>
+            <tfoot></tfoot> </table>
     </div>
     
-    <div class="table-footer-note">
-      Sumber data: laporan bulan.
-    </div>
-
-  </div>
-</main>
-
-<style>
-  /* 1. Paksa halaman (#main-content) untuk TIDAK scroll */
-  #main-content {
-    overflow-y: hidden !important;
-  }
-
-  /* 2. Paksa <main> (pembungkus halaman) untuk mengisi sisa ruang */
-  main.table-view-container {
-    flex-grow: 1 !important;
-    min-height: 0 !important; 
-    display: flex !important;
-    flex-direction: column !important;
-  }
-
-  /* 3. Paksa #tableWrapper untuk mengisi sisa ruang di dalam <main> */
-  #tableWrapper {
-    flex-grow: 1 !important;
-    min-height: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
-
-  /* 4. INTI: Perintahkan .table-container untuk mengisi sisa ruang DAN SCROLL */
-  #tableWrapper .table-container {
-    flex-grow: 1 !important;
-    overflow-y: auto !important; /* Aktifkan scrollbar vertikal HANYA di sini */
-  }
-
-  /* 5. PERBAIKAN Z-INDEX: (Menargetkan ID tabel halaman ini) */
-  #ptkJumlahBulananPaudTable thead th:nth-child(1),
-  #ptkJumlahBulananPaudTable thead th:nth-child(2) {
-    z-index: 7 !important;
-  }
-
-  /* 6. PERBAIKAN SCROLLBAR: Sembunyikan scrollbar */
-  #tableWrapper .table-container::-webkit-scrollbar {
-    display: none !important; 
-  }
-  #tableWrapper .table-container {
-    scrollbar-width: none !important; 
-    -ms-overflow-style: none !important; 
-  }
-</style>
+</div>

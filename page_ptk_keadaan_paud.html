@@ -1,80 +1,98 @@
-<header>
-  <h2>KEADAAN PTK PAUD</h2>
-</header>
-
-<div class="filter-container">
-  <div class="filter-group">
-    <label for="filterJenjang">Jenjang:</label>
-    <select id="filterJenjang"></select>
-  </div>
-</div>
-
-<main class="table-view-container">
-  <div id="loadingStatus" class="loading-container">
-      <div class="spinner-container">
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-    </div>
-      <p>Memuat data, mohon tunggu...</p>
-  </div>
-  
-  <div id="tableWrapper" style="display:none;">
-    
-    <div class="table-container">
-        <table id="keadaanPtkPaudTable" class="data-table freeze-pane-table">
-          <thead></thead>
-          <tbody></tbody>
-          <tfoot></tfoot> 
-        </table>
-    </div>
-    <div class="table-footer-note">
-      Sumber data: laporan bulan terakhir.
-    </div>
-  </div>
-</main>
-
 <style>
-  /* 1. Paksa halaman (#main-content) untuk TIDAK scroll */
-  #main-content {
-    overflow-y: hidden !important;
-  }
+    /* --- 1. PERBAIKAN LAYOUT (Agar Scroll Berjalan tapi HTML tetap Standar) --- */
+    /* Kita targetkan ID halaman ini saja agar tidak merusak halaman lain */
+    #view_ptk_keadaan_paud {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden; /* Mencegah double scrollbar */
+    }
 
-  /* 2. Paksa <main> (pembungkus halaman) untuk mengisi sisa ruang */
-  main.table-view-container {
-    flex-grow: 1 !important;
-    min-height: 0 !important; 
-    display: flex !important;
-    flex-direction: column !important;
-  }
+    #view_ptk_keadaan_paud .std-content-wrapper {
+        flex-grow: 1;
+        overflow-y: auto; /* Scroll Vertical Aktif */
+        display: flex;
+        flex-direction: column;
+    }
 
-  /* 3. Paksa #tableWrapper untuk mengisi sisa ruang di dalam <main> */
-  #tableWrapper {
-    flex-grow: 1 !important;
-    min-height: 0 !important;
-    display: flex !important;
-    flex-direction: column !important;
-  }
+    /* --- 2. PERBAIKAN TABEL (Agar Scroll Horizontal Muncul) --- */
+    #keadaanPtkPaudTable th, 
+    #keadaanPtkPaudTable td {
+        white-space: nowrap; /* Teks dilarang turun baris -> Memicu scroll samping */
+        vertical-align: middle;
+        padding: 8px 12px;
+    }
 
-  /* 4. INTI: Perintahkan .table-container untuk mengisi sisa ruang DAN SCROLL */
-  #tableWrapper .table-container {
-    flex-grow: 1 !important;
-    overflow-y: auto !important; /* Aktifkan scrollbar vertikal HANYA di sini */
-  }
+    .std-table-container {
+        overflow-x: auto; /* Scroll Horizontal Aktif */
+        width: 100%;
+        flex-grow: 1; /* Memastikan tabel mengisi ruang sisa */
+    }
 
-  /* 5. PERBAIKAN Z-INDEX: Paksa header pojok (Kolom 1 & 2) ke lapisan paling atas */
-  #keadaanPtkPaudTable thead th:nth-child(1),
-  #keadaanPtkPaudTable thead th:nth-child(2) {
-    z-index: 7 !important;
-  }
+    /* --- 3. STYLING KOLOM (Warna & Posisi) --- */
+    /* Rata Tengah Kolom Angka (Mulai kolom ke-7) */
+    #keadaanPtkPaudTable th:nth-child(n+7),
+    #keadaanPtkPaudTable td:nth-child(n+7) {
+        text-align: center;
+        min-width: 60px;
+    }
 
-  /* 6. PERBAIKAN SCROLLBAR: Sembunyikan scrollbar */
-  #tableWrapper .table-container::-webkit-scrollbar {
-    display: none !important; 
-  }
-  #tableWrapper .table-container {
-    scrollbar-width: none !important; 
-    -ms-overflow-style: none !important; 
-  }
+    /* Warna Kolom Terakhir (Body) */
+    #keadaanPtkPaudTable tbody td:last-child {
+        background-color: #e2e8f0 !important; 
+        color: #1e293b !important;
+        font-weight: 700 !important;
+        border-left: 2px solid #cbd5e1;
+    }
+
+    /* Warna Kolom Terakhir (Footer) */
+    #keadaanPtkPaudTable tfoot td:last-child {
+        background-color: #e2e8f0 !important;
+        font-weight: 800 !important;
+        border-left: 2px solid #94a3b8;
+    }
 </style>
+
+<div id="view_ptk_keadaan_paud" class="content-section">
+
+    <div class="std-header">
+        <h1><i class="fas fa-chart-pie" style="color:#1abc9c; margin-right:10px;"></i> Keadaan PTK PAUD</h1>
+        <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">
+            Data rekapitulasi keadaan Pendidik dan Tenaga Kependidikan berdasarkan Laporan Bulan terakhir.
+        </p>
+    </div>
+
+    <div id="tableWrapper" class="std-content-wrapper">
+
+        <div class="std-filter-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+            
+            <div style="flex-grow: 1;">
+                <select id="filterJenjang" class="std-filter-select" style="min-width: 150px;">
+                    <option value="">-- Semua Jenjang --</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="filter-group search-group" style="position: relative; width: 250px; margin: 0;">
+                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                    <input type="text" id="searchKeadaanPaud" class="std-search-input" placeholder="Cari Lembaga..." 
+                           style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+                </div>
+                
+                <button onclick="App.inits['ptk_keadaan_paud']()" class="btn-icon-refresh" title="Muat Ulang Data">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+
+        </div>
+
+        <div class="std-table-container">
+            <table id="keadaanPtkPaudTable" class="std-table">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot> 
+            </table>
+        </div>
+        
+    </div>
+</div>

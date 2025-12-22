@@ -1,0 +1,89 @@
+<form id="formPtk" onsubmit="App.ptkKelola.submit(event)">
+    <input type="hidden" name="rowId" id="rowId">
+    <input type="hidden" name="targetJenjang" id="targetJenjang">
+
+    <div class="form-grid-2">
+        
+        <div class="form-section">
+            <label>Nama Lengkap</label>
+            <input type="text" name="namaLengkap" required class="std-input">
+
+            <label>NIP</label>
+            <input type="text" name="nip" class="std-input">
+
+            <label>Jenis Kelamin (L/P)</label>
+            <select name="gender" class="std-input">
+                <option value="L">L</option>
+                <option value="P">P</option>
+            </select>
+
+            <label>Tempat Lahir</label>
+            <input type="text" name="tempatLahir" class="std-input">
+
+            <label>Tanggal Lahir</label>
+            <input type="date" name="tanggalLahir" class="std-input">
+
+            <label>Agama</label> <select name="agama" class="std-input">
+                <option value="Islam">Islam</option>
+                <option value="Kristen">Kristen</option>
+                <option value="Katolik">Katolik</option>
+                <option value="Hindu">Hindu</option>
+                <option value="Buddha">Buddha</option>
+                <option value="Konghucu">Konghucu</option>
+            </select>
+
+            <label>Pendidikan Terakhir</label>
+            <input type="text" name="pendidikan" class="std-input">
+
+            <label>Jurusan</label>
+            <input type="text" name="jurusan" class="std-input">
+            
+            <label>Tahun Lulus</label>
+            <input type="number" name="tahunLulus" class="std-input">
+        </div>
+
+        <div class="form-section">
+            <label>Nama Sekolah</label> <input type="text" name="namaSekolah" required class="std-input">
+
+            <label>Status Pegawai</label>
+            <input type="text" name="status" class="std-input">
+
+            <label>TMT</label> <input type="text" name="tmt" class="std-input">
+
+            <label>Pangkat, Gol./Ruang</label>
+            <input type="text" name="pangkat" class="std-input">
+
+            <label>Jabatan</label>
+            <input type="text" name="jabatan" class="std-input">
+
+            <label>Tugas</label> <input type="text" name="tugas" class="std-input" placeholder="Guru Kelas / Mapel">
+
+            <label>Tugas Tambahan</label> <input type="text" name="tugasTambahan" class="std-input">
+
+            <label>NUPTK</label>
+            <input type="text" name="nuptk" class="std-input">
+
+            <div style="display:flex; gap:10px;">
+                <div style="flex:1;">
+                    <label>Serdik</label>
+                    <select name="serdik" class="std-input">
+                        <option value="Sudah">Sudah</option>
+                        <option value="Belum">Belum</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label>Dapodik</label>
+                    <select name="dapodik" class="std-input">
+                        <option value="Terdaftar">Terdaftar</option>
+                        <option value="Belum">Belum</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-footer">
+        <button type="button" onclick="App.ptkKelola.closeModal()" class="btn-cancel">Batal</button>
+        <button type="submit" class="btn-save">Simpan Data</button>
+    </div>
+</form>

@@ -1,22 +1,108 @@
-<header>
-  <h2>DATA PTK - PAUD</h2>
-</header>
+<div id="view_ptk_paud_menu" class="content-section" style="height: 100%; display: flex; flex-direction: column; overflow: hidden;">
+    
+    <div class="std-header" style="flex-shrink: 0;">
+        <h1><i class="fas fa-chart-pie" style="color:#3b82f6; margin-right:10px;"></i> Dashboard PTK PAUD</h1>
+    </div>
 
-<main class="menu-grid" style="max-width: 700px;">
-  <a href="#" data-page="ptk_keadaan_paud" class="menu-button">
-    <i class="fas fa-chart-pie" style="color: #1abc9c;"></i>
-    <span>Keadaan PTK</span>
-  </a>
-  <a href="#" data-page="ptk_jumlah_bulanan_paud" class="menu-button">
-    <i class="fas fa-users" style="color: #f1c40f;"></i>
-    <span>Jumlah PTK Bulanan</span>
-  </a>
-  <a href="#" data-page="ptk_daftar_paud" class="menu-button">
-    <i class="fas fa-list-ol" style="color: #3498db;"></i>
-    <span>Daftar PTK</span>
-  </a>
-  <a href="#" data-page="ptk_kelola_paud" class="menu-button">
-    <i class="fas fa-user-edit" style="color: #e67e22;"></i>
-    <span>Kelola Daftar PTK</span>
-  </a>
-</main>
+    <div class="std-content-wrapper" style="flex-grow: 1; overflow-y: auto; background: #f8fafc; padding: 20px;">
+        
+        <style>
+            .dash-sub-big { font-size: 1.1rem !important; color: #475569 !important; font-weight: 600; margin-top: 5px; display:flex; gap:15px; }
+            .dash-sub-big span i { opacity: 0.5; margin-right: 5px; }
+            .chart-mini-container { height: 250px; position: relative; width: 100%; }
+        </style>
+
+        <div class="dash-grid">
+            <div class="dash-card c-blue">
+                <div class="dash-title">TOTAL LEMBAGA</div>
+                <div class="dash-value" id="c-lembaga-tot">...</div>
+                <div class="dash-sub-big">
+                    <span>KB: <b id="c-lembaga-kb">-</b></span>
+                    <span>TK: <b id="c-lembaga-tk">-</b></span>
+                </div>
+                <i class="fas fa-school dash-icon"></i>
+            </div>
+            <div class="dash-card c-green">
+                <div class="dash-title">TOTAL KEPALA SEKOLAH</div>
+                <div class="dash-value" id="c-ks-tot">...</div>
+                <div class="dash-sub-big">
+                    <span>KB: <b id="c-ks-kb">-</b></span>
+                    <span>TK: <b id="c-ks-tk">-</b></span>
+                </div>
+                <i class="fas fa-user-tie dash-icon"></i>
+            </div>
+            <div class="dash-card c-orange">
+                <div class="dash-title">TOTAL GURU</div>
+                <div class="dash-value" id="c-guru-tot">...</div>
+                <div class="dash-sub-big">
+                    <span>KB: <b id="c-guru-kb">-</b></span>
+                    <span>TK: <b id="c-guru-tk">-</b></span>
+                </div>
+                <i class="fas fa-chalkboard-teacher dash-icon"></i>
+            </div>
+            <div class="dash-card c-purple">
+                <div class="dash-title">TOTAL TENAGA KEPENDIDIKAN</div>
+                <div class="dash-value" id="c-tendik-tot">...</div>
+                <div class="dash-sub-big">
+                    <span>KB: <b id="c-tendik-kb">-</b></span>
+                    <span>TK: <b id="c-tendik-tk">-</b></span>
+                </div>
+                <i class="fas fa-user-cog dash-icon"></i>
+            </div>
+        </div>
+
+        <div class="chart-grid" style="grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            
+            <div class="chart-box">
+                <div class="chart-header">Status Kepegawaian</div>
+                <div class="chart-mini-container">
+                    <canvas id="chartStatus"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <div class="chart-header">Kualifikasi Pendidikan</div>
+                <div class="chart-mini-container">
+                    <canvas id="chartEdu"></canvas>
+                </div>
+            </div>
+
+            <div class="chart-box">
+                <div class="chart-header">Status Sertifikasi (KS & Guru)</div>
+                <div class="chart-mini-container">
+                    <canvas id="chartCert"></canvas>
+                </div>
+            </div>
+
+        </div>
+
+        <div class="warning-grid" style="grid-template-columns: repeat(3, 1fr);">
+            <div class="warning-box">
+                <div class="w-header w-pensiun">
+                    <span><i class="fas fa-hourglass-half"></i> Akan Pensiun</span>
+                </div>
+                <ul class="w-list" id="listPensiun">
+                    <li><span style="color:#94a3b8; text-align:center; width:100%;">Memuat...</span></li>
+                </ul>
+            </div>
+            <div class="warning-box">
+                <div class="w-header w-update">
+                    <span><i class="fas fa-certificate"></i> KS/Guru Belum Serdik</span>
+                </div>
+                <ul class="w-list" id="listNoSerdik">
+                    <li><span style="color:#94a3b8; text-align:center; width:100%;">Memuat...</span></li>
+                </ul>
+            </div>
+            <div class="warning-box">
+                <div class="w-header w-kosong">
+                    <span><i class="fas fa-database"></i> Belum Masuk Dapodik</span>
+                </div>
+                <ul class="w-list" id="listNoDapodik">
+                    <li><span style="color:#94a3b8; text-align:center; width:100%;">Memuat...</span></li>
+                </ul>
+            </div>
+        </div>
+        
+        <div style="height: 50px;"></div>
+    </div>
+</div>

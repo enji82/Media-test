@@ -1,69 +1,66 @@
-<header>
-  <h2>DAFTAR PENDIDIK DAN TENAGA KEPENDIDIKAN (PTK) PAUD</h2>
-</header>
-
-<div class="filter-container">
-    <div class="filter-group">
-      <label for="filterJenjang">Jenjang:</label>
-      <select id="filterJenjang"></select>
-    </div>
-    <div class="filter-group">
-      <label for="filterNamaLembaga">Nama Lembaga:</label>
-      <select id="filterNamaLembaga"></select>
-    </div>
-    <div class="filter-group">
-      <label for="filterStatus">Status:</label>
-      <select id="filterStatus"></select>
-    </div>
-    <div class="filter-group">
-      <label for="filterPendidikan">Pendidikan:</label>
-      <select id="filterPendidikan"></select>
-    </div>
-    <div class="filter-group">
-      <label for="filterSerdik">Serdik:</label>
-      <select id="filterSerdik"></select>
-    </div>
-    <div class="filter-group">
-      <label for="filterDapodik">Dapodik:</label>
-      <select id="filterDapodik"></select>
-    </div>
+<div class="std-header">
+    <h1><i class="fas fa-address-book" style="color:#3498db; margin-right:10px;"></i> Daftar Nominatif PTK PAUD</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">
+        Data lengkap profil Pendidik dan Tenaga Kependidikan (PTK) PAUD.
+    </p>
 </div>
 
+<div id="tableWrapper" class="std-content-wrapper">
 
-<main class="table-view-container">
-  <div id="loadingStatus" class="loading-container">
-    <div class="spinner-container">
-      <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+    <div class="std-filter-card" style="display: flex; flex-direction: column; gap: 15px;">
+        
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between;">
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; flex-grow: 1;">
+                <select id="filterJenjang" class="std-filter-select" style="min-width: 120px;">
+                    <option value="">-- Jenjang --</option>
+                </select>
+                
+                <select id="filterNamaLembaga" class="std-filter-select" style="min-width: 200px; flex-grow: 1;">
+                    <option value="">-- Nama Lembaga --</option>
+                </select>
+            </div>
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="filter-group search-group" style="position: relative; width: 220px; margin: 0;">
+                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                    <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari Nama / NUPTK..." 
+                           style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+                </div>
+                
+                <button onclick="App.inits['ptk_daftar_paud']()" class="btn-icon-refresh" title="Refresh Data">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div style="display: flex; flex-wrap: wrap; gap: 10px; padding-top: 10px; border-top: 1px solid #f1f5f9;">
+            
+            <select id="filterStatus" class="std-filter-select" style="flex: 1; min-width: 130px;">
+                <option value="">-- Status Pegawai --</option>
+            </select>
+
+            <select id="filterPendidikan" class="std-filter-select" style="flex: 1; min-width: 130px;">
+                <option value="">-- Pendidikan --</option>
+            </select>
+
+            <select id="filterSerdik" class="std-filter-select" style="flex: 1; min-width: 130px;">
+                <option value="">-- Sertifikasi --</option>
+            </select>
+
+            <select id="filterDapodik" class="std-filter-select" style="flex: 1; min-width: 130px;">
+                <option value="">-- Status Dapodik --</option>
+            </select>
+
+        </div>
+
     </div>
-    <p>Memuat data PTK, mohon tunggu...</p>
-  </div>
 
-  <div id="tableWrapper" style="display:none;">
-    <div class="table-container">
-      <table id="daftarPtkPaudTable" class="data-table freeze-pane-table">
-        <thead></thead>
-        <tbody></tbody>
-      </table>
+    <div class="std-table-container">
+        <table id="daftarPtkPaudTable" class="std-table">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
     </div>
-    <div id="pagination-container" class="pagination-container"></div>
-  </div>
-</main>
-
-<style>
-  /* PERINTAH RATA KIRI (Sesuai permintaan G18 Anda) */
-  #daftarPtkPaudTable td:nth-child(2),  /* Nama */
-  #daftarPtkPaudTable td:nth-child(3),  /* Nama Lembaga */
-  #daftarPtkPaudTable td:nth-child(7),  /* Pangkat */
-  #daftarPtkPaudTable td:nth-child(9),  /* Jabatan */
-  #daftarPtkPaudTable td:nth-child(12), /* Tempat, Tgl Lahir */
-  #daftarPtkPaudTable td:nth-child(14)  /* Jurusan */
-  {
-    text-align: left !important;
-  }
-
-  /* Lawan aturan global dan paksa Kolom 4 (Jenjang) kembali ke tengah */
-  #daftarPtkPaudTable td:nth-child(4)
-  {
-    text-align: center !important;
-  }
-</style>
+    
+</div>

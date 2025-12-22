@@ -1,19 +1,39 @@
-<header>
-  <h2>ARSIP LAPORAN BULAN</h2>
-</header>
+<div class="std-header">
+    <h1><i class="fas fa-archive" style="color:var(--primary); margin-right:10px;"></i> Arsip Laporan Bulan</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Penelusuran berkas laporan bulanan.</p>
+</div>
 
-<main class="arsip-container">
-  <div id="breadcrumb" class="breadcrumb"></div>
-  
-  <div id="view-container">
-    <div class="loading-container">
-        <div class="spinner-container">
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
-        <div class="spinner-bar"></div>
+<div class="std-content-wrapper" style="display:flex; flex-direction:column; gap:15px; position:relative; min-height: 400px;">
+
+    <div id="arsipLoader" class="loading-overlay" style="display:none;">
+        <div class="app-spinner"></div>
+        <p style="color:#64748b; margin-top:15px; font-weight:500;">Memuat folder...</p>
     </div>
-    <p>Memuat data arsip, mohon tunggu...</p>
+
+    <div class="explorer-toolbar" style="background:#fff; padding:10px 15px; border-radius:10px; border:1px solid #e2e8f0; display:flex; align-items:center; justify-content:space-between;">
+        
+        <div id="arsipBreadcrumb" style="display:flex; align-items:center; gap:8px; font-size:0.95em; color:#64748b; font-weight:500;"></div>
+
+        <div style="display:flex; gap:5px;">
+            <button onclick="App.toggleArsipView('grid')" class="btn-icon-refresh" id="btnGrid" title="Tampilan Grid" style="background:#f1f5f9;">
+                <i class="fas fa-th-large"></i>
+            </button>
+            <button onclick="App.toggleArsipView('list')" class="btn-icon-refresh" id="btnList" title="Tampilan Detail">
+                <i class="fas fa-list"></i>
+            </button>
+            <div style="width:1px; background:#e2e8f0; margin:0 5px;"></div>
+            <button onclick="App.refreshArsip()" class="btn-icon-refresh" title="Refresh">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
     </div>
-  </div>
-</main>
+
+    <div id="arsipGrid" style="display:grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap:15px; align-content: start;">
+        </div>
+    
+    <div id="arsipEmpty" style="display:none; text-align:center; padding:50px; color:#94a3b8;">
+        <i class="far fa-folder-open" style="font-size:3em; margin-bottom:10px; opacity:0.5;"></i>
+        <p>Folder ini kosong</p>
+    </div>
+
+</div>

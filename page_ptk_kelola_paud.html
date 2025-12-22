@@ -1,43 +1,292 @@
-<header>
-  <h2>KELOLA DAFTAR PTK PAUD</h2>
-</header>
-
-<div class="filter-container">
-  <div class="filter-group">
-    <label for="filterJenjang">Jenjang:</label>
-    <select id="filterJenjang"></select>
-  </div>
-  <div class="filter-group">
-    <label for="filterNamaLembaga">Nama Lembaga:</label>
-    <select id="filterNamaLembaga"></select>
-  </div>
-
-  <div class="filter-group" style="margin-left: auto;">
-    <label for="searchFilter" class="search-icon-label">
-      <i class="fas fa-search"></i>
-    </label>
-    <input type="search" id="searchFilter" class="search-input" placeholder="Cari di tabel...">
-  </div>
-  <button id="tambahPtkBtn" class="submit-btn" style="width: auto; padding: 10px 20px;">
-    <i class="fas fa-plus" style="margin-right: 8px;"></i> Tambah PTK
-  </button>
+<div class="std-header">
+    <h1><i class="fas fa-child" style="color:#e67e22; margin-right:10px;"></i> Kelola Data PTK PAUD</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">
+        Manajemen data Pendidik & Tenaga Kependidikan khusus jenjang PAUD (TK, KB, SPS, TPA).
+    </p>
 </div>
 
-<main class="table-view-container">
-  <div id="loadingStatus" class="loading-container">
-    <div class="spinner-container">
-      <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
-    </div>
-    <p>Memuat data PTK, mohon tunggu...</p>
-  </div>
+<div id="tableWrapper" class="std-content-wrapper">
+    <div class="std-filter-card" style="display: flex; justify-content: space-between; align-items: center;">
+        <button onclick="App.ptkKelolaPaud.openModal()" class="action-btn" style="background:#27ae60; color:white; border:none;">
+            <i class="fas fa-plus"></i> Tambah Data PTK PAUD
+        </button>
 
-  <div id="tableWrapper" style="display:none;">
-    <div class="table-container">
-      <table id="kelolaPtkPaudTable" class="data-table freeze-pane-table">
-        <thead></thead>
-        <tbody></tbody>
-      </table>
+        <div style="display: flex; gap: 10px;">
+            <div class="filter-group search-group" style="position: relative; width: 250px; margin: 0;">
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                <input type="text" id="searchFilterPaud" class="std-search-input" placeholder="Cari Nama / Lembaga..." 
+                       style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+            </div>
+            <button onclick="App.ptkKelolaPaud.refresh()" class="btn-icon-refresh" title="Refresh Tabel">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
     </div>
-    <div id="pagination-container" class="pagination-container"></div>
-  </div>
-</main>
+
+    <div class="std-table-container">
+        <table id="kelolaPaudTable" class="std-table">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>
+
+<div id="modalFormPaud" class="modal-backdrop" style="display:none;">
+    <div class="modal-content" style="max-width: 800px;">
+        
+        <div class="modal-header">
+            <h3 id="modalTitlePaud">Form Data PTK PAUD</h3>
+            <button onclick="App.ptkKelolaPaud.closeModal()" class="close-btn">&times;</button>
+        </div>
+        
+        <form id="formPtkPaud" onsubmit="App.ptkKelolaPaud.submit(event)">
+            <input type="hidden" name="rowId" id="rowIdPaud">
+            <input type="hidden" name="userPenginput" id="userPenginput">
+            
+            <input type="hidden" name="isRestore" id="isRestorePaud" value="false">
+            <input type="hidden" name="rowIdSource" id="rowIdSourcePaud" value="">
+
+            <div class="tab-header">
+                <button type="button" class="tab-link active" id="btnTab1">1. Data Lembaga</button>
+                <button type="button" class="tab-link" id="btnTab2" disabled>2. Data Pribadi</button>
+                <button type="button" class="tab-link" id="btnTab3" disabled>3. Kepegawaian</button>
+            </div>
+
+            <div id="tab1" class="tab-content active">
+                <div class="form-section">
+                    <label>Jenjang <span style="color:red">*</span></label>
+                    <select name="jenjang" id="inputJenjang" class="std-input" required onchange="App.ptkKelolaPaud.filterLembaga()">
+                        <option value="">-- Pilih Jenjang --</option>
+                        <option value="KB">KB</option>
+                        <option value="TK">TK</option>
+                    </select>
+
+                    <label>Nama Lembaga <span style="color:red">*</span></label>
+                    <select name="namaLembaga" id="inputNamaLembaga" class="std-input" required>
+                        <option value="">-- Pilih Jenjang Dahulu --</option>
+                    </select>
+                </div>
+                <div class="tab-footer">
+                    <button type="button" onclick="App.ptkKelolaPaud.closeModal()" class="btn-cancel">Batal</button>
+                    <button type="button" onclick="App.ptkKelolaPaud.nextTab(2)" class="btn-next">Berikutnya <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div id="tab2" class="tab-content">
+                <div class="form-grid-2">
+                    <div>
+                        <label>Nama Lengkap <span style="color:red">*</span></label>
+                        <input type="text" name="namaLengkap" required class="std-input">
+
+                        <label>Jenis Kelamin <span style="color:red">*</span></label>
+                        <select name="gender" class="std-input" required>
+                            <option value="">-- Pilih --</option>
+                            <option value="L">Laki-laki</option>
+                            <option value="P">Perempuan</option>
+                        </select>
+
+                        <label>Tempat Lahir <span style="color:red">*</span></label>
+                        <input type="text" name="tempatLahir" class="std-input" required>
+
+                        <label>Tanggal Lahir <span style="color:red">*</span></label>
+                        <input type="date" name="tanggalLahir" class="std-input" required>
+                    </div>
+                    <div>
+                        <label>Pendidikan Terakhir <span style="color:red">*</span></label>
+                        <select name="pendidikan" id="inputPendidikan" class="std-input" required onchange="App.ptkKelolaPaud.checkJurusan()">
+                            <option value="">-- Pilih --</option>
+                            <option value="S2">S2</option>
+                            <option value="S1">S1</option>
+                            <option value="D3">D3</option>
+                            <option value="D2">D2</option>
+                            <option value="D1">D1</option>
+                            <option value="SMA/SMK Sederajat">SMA/SMK Sederajat</option>
+                            <option value="SMP Sederajat">SMP Sederajat</option>
+                            <option value="SD Sederajat">SD Sederajat</option>
+                        </select>
+
+                        <label>Jurusan <span id="labelJurusanReq" style="color:red; display:none">*</span></label>
+                        <input type="text" name="jurusan" id="inputJurusan" class="std-input">
+
+                        <label>Tahun Lulus <span style="color:red">*</span></label>
+                        <input type="text" name="tahunLulus" class="std-input" placeholder="Contoh: 2015" required
+                               pattern="^(19|20)\d{2}$" title="Format 4 digit (misal: 2020)" maxlength="4" 
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 4);">
+
+                        <label>NUPTK (Opsional)</label>
+                        <input type="text" name="nuptk" class="std-input" placeholder="16 Digit Angka"
+                               pattern="\d{16}" title="Harus 16 digit angka" maxlength="16"
+                               oninput="this.value = this.value.replace(/[^0-9]/g, '').slice(0, 16);">
+                        
+                        <div style="display:flex; gap:10px;">
+                            <div style="flex:1;">
+                                <label>Serdik <span style="color:red">*</span></label>
+                                <select name="serdik" class="std-input" required>
+                                    <option value="">-- Pilih --</option>
+                                    <option value="Belum">Belum</option>
+                                    <option value="Sudah">Sudah</option>
+                                    <option value="Sedang PPG">Sedang PPG</option>
+                                </select>
+                            </div>
+                            <div style="flex:1;">
+                                <label>Dapodik <span style="color:red">*</span></label>
+                                <select name="dapodik" class="std-input" required>
+                                    <option value="">-- Pilih --</option>
+                                    <option value="Belum">Belum</option>
+                                    <option value="Sudah">Sudah</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="tab-footer">
+                    <button type="button" onclick="App.ptkKelolaPaud.prevTab(1)" class="btn-prev"><i class="fas fa-arrow-left"></i> Sebelumnya</button>
+                    <button type="button" onclick="App.ptkKelolaPaud.nextTab(3)" class="btn-next">Berikutnya <i class="fas fa-arrow-right"></i></button>
+                </div>
+            </div>
+
+            <div id="tab3" class="tab-content">
+                <div class="form-grid-2">
+                    <div>
+                        <label>Status Pegawai <span style="color:red">*</span></label>
+                        <select name="status" class="std-input" required>
+                            <option value="">-- Pilih --</option>
+                            <option value="GTY">GTY</option>
+                            <option value="GTT">GTT</option>
+                            <option value="PTY">PTY</option>
+                            <option value="PTT">PTT</option>
+                            <option value="PNS">PNS</option>
+                            <option value="PPPK">PPPK</option>
+                            <option value="PPPK Paruh Waktu">PPPK Paruh Waktu</option>
+                        </select>
+
+                        <label>NIP / NIY (Opsional)</label>
+                        <input type="text" name="nip" class="std-input">
+
+                        <label>Pangkat, Gol./Ruang (Opsional)</label>
+                        <input type="text" name="pangkat" class="std-input">
+                    </div>
+                    <div>
+                        <label>Jabatan <span style="color:red">*</span></label>
+                        <select name="jabatan" class="std-input" required>
+                            <option value="">-- Pilih --</option>
+                            <option value="Kepala Sekolah">Kepala Sekolah</option>
+                            <option value="Guru Kelas">Guru Kelas</option>
+                            <option value="Guru PAI">Guru PAI</option>
+                            <option value="Guru PJOK">Guru PJOK</option>
+                            <option value="Guru PA Kristen">Guru PA Kristen</option>
+                            <option value="Guru PA Katolik">Guru PA Katolik</option>
+                            <option value="Guru Bhs. Inggris">Guru Bhs. Inggris</option>
+                            <option value="Guru TIK">Guru TIK</option>
+                            <option value="Guru Inklusi">Guru Inklusi</option>
+                            <option value="Guru Mapel Lainnya">Guru Mapel Lainnya</option>
+                            <option value="Operator Layanan Operasional">Operator Layanan Operasional</option>
+                            <option value="Pengelola Umum Operasional">Pengelola Umum Operasional</option>
+                            <option value="Pengelola Layanan Operasional">Pengelola Layanan Operasional</option>
+                            <option value="Penata Layanan Operasional">Penata Layanan Operasional</option>
+                            <option value="Pengadministrasi Perkantoran">Pengadministrasi Perkantoran</option>
+                            <option value="Penjaga">Penjaga</option>
+                            <option value="Tenaga Administrasi">Tenaga Administrasi</option>
+                            <option value="Tenaga Perpustakaan">Tenaga Perpustakaan</option>
+                            <option value="Tendik Lainnya">Tendik Lainnya</option>
+                        </select>
+
+                        <label>TMT Kerja <span style="color:red">*</span></label>
+                        <input type="date" name="tmt" class="std-input" required>
+                    </div>
+                </div>
+                <div class="tab-footer">
+                    <button type="button" onclick="App.ptkKelolaPaud.prevTab(2)" class="btn-prev"><i class="fas fa-arrow-left"></i> Sebelumnya</button>
+                    <button type="submit" class="btn-save"><i class="fas fa-save"></i> Simpan Data</button>
+                </div>
+            </div>
+
+        </form>
+    </div>
+</div>
+
+<div id="modalMutasiPaud" class="modal-backdrop" style="display:none;">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header" style="background: #f1f5f9; border-bottom: 1px solid #e2e8f0;">
+            <h3 style="color: #334155;"><i class="fas fa-exchange-alt"></i> Kelola Status PTK</h3>
+            <button onclick="App.ptkKelolaPaud.closeMutasiModal()" class="close-btn">&times;</button>
+        </div>
+
+        <form id="formMutasiPaud" onsubmit="App.ptkKelolaPaud.submitMutasi(event)">
+            <input type="hidden" name="rowIdMutasi" id="rowIdMutasi">
+            <input type="hidden" name="userMutasi" id="userMutasi">
+            
+            <div style="padding: 20px;">
+                <div style="background: #e0f2fe; padding: 10px; border-radius: 6px; margin-bottom: 15px; border-left: 4px solid #0ea5e9;">
+                    <strong id="mutasiNamaPtk" style="display:block; font-size:1.1em;">Nama PTK</strong>
+                    <span id="mutasiLembagaAsal" style="font-size:0.9em; color:#64748b;">Lembaga Asal</span>
+                </div>
+
+                <label style="font-weight:bold;">Pilih Tindakan</label>
+                <select name="jenisTindakan" id="jenisTindakan" class="std-input" required onchange="App.ptkKelolaPaud.toggleMutasiForm()">
+                    <option value="">-- Pilih --</option>
+                    <option value="pindah">Pindah Lembaga (Mutasi dalam satu Kecamatan)</option>
+                    <option value="keluar">Nonaktifkan (Keluar/Pensiun/Wafat)</option>
+                </select>
+
+                <hr style="margin: 15px 0; border: 0; border-top: 1px dashed #cbd5e1;">
+
+                <div id="panelPindah" style="display:none;">
+                    <label>Jenjang Tujuan <span style="color:red">*</span></label>
+                    <select id="mutasiJenjang" class="std-input" onchange="App.ptkKelolaPaud.filterLembagaMutasi()">
+                        <option value="">-- Pilih Jenjang --</option>
+                        </select>
+
+                    <label style="margin-top:10px; display:block;">Lembaga Tujuan <span style="color:red">*</span></label>
+                    <select name="lembagaBaru" id="mutasiLembagaBaru" class="std-input" disabled>
+                        <option value="">-- Pilih Jenjang Terlebih Dahulu --</option>
+                    </select>
+                </div>
+
+                <div id="panelKeluar" style="display:none;">
+                    <label>Alasan Nonaktif <span style="color:red">*</span></label>
+                    <select name="alasanMutasi" id="alasanMutasi" class="std-input">
+                        <option value="">-- Pilih Alasan --</option>
+                        <option value="Resign / Mengundurkan Diri">Resign / Mengundurkan Diri</option>
+                        <option value="Pensiun">Pensiun</option>
+                        <option value="Meninggal Dunia">Meninggal Dunia</option>
+                        <option value="Mutasi Ke Luar Daerah">Mutasi Ke Luar Daerah</option>
+                        <option value="Diberhentikan">Diberhentikan</option>
+                        <option value="Hilang / Tidak Aktif">Hilang / Tidak Aktif</option>
+                    </select>
+                </div>
+
+                <div id="panelUmum" style="display:none; margin-top:10px;">
+                    <label>TMT <span style="color:red">*</span></label>
+                    <input type="date" name="tmtMutasi" id="tmtMutasi" class="std-input" required>
+
+                    <label>Keterangan Tambahan (Opsional)</label>
+                    <textarea name="keteranganMutasi" class="std-input" rows="2" placeholder="Contoh: Nomor SK Mutasi..."></textarea>
+                    
+                    <div style="margin-top: 15px; padding-top:15px; border-top:1px solid #eee;">
+                        <label style="color:#ef4444; font-weight:bold;">Kode Konfirmasi Admin <span style="color:red">*</span></label>
+                        <input type="password" name="kodeAdmin" class="std-input" placeholder="Masukkan Kode Otorisasi" required>
+                        <small style="color:#94a3b8;"><i class="fas fa-info-circle"></i> Hubungi admin untuk mendapatkan kode konfirmasi.</small>
+                    </div>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" onclick="App.ptkKelolaPaud.closeMutasiModal()" class="btn-cancel">Batal</button>
+                <button type="submit" class="btn-save" style="background:#f59e0b; border-color:#d97706;">
+                    <i class="fas fa-check"></i> Proses Mutasi
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div id="viewPtkNonAktif" style="display:none;">
+    <div class="toolbar">
+        <input type="text" id="searchFilterNonAktif" class="search-input" placeholder="Cari Nama PTK Non-Aktif...">
+        <button onclick="App.ptkNonAktifPaud.refresh()" class="btn-refresh"><i class="fas fa-sync"></i></button>
+    </div>
+    <div class="table-responsive">
+        <table id="ptkNonAktifTable" class="smart-table"></table>
+    </div>
+</div>

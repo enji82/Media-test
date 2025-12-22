@@ -1,0 +1,163 @@
+<div id="view_ptk_non_aktif_paud" class="content-section">
+    <div class="std-header">
+        <h1><i class="fas fa-trash-restore" style="color:#ef4444; margin-right:10px;"></i> Data PTK PAUD Non-Aktif (Arsip)</h1>
+        <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">
+            Daftar data PTK yang telah dinonaktifkan. Gunakan tombol Pulihkan untuk mengaktifkan kembali.
+        </p>
+    </div>
+
+    <div class="std-content-wrapper">
+        <div class="std-filter-card" style="display: flex; justify-content: flex-end; padding: 10px;">
+             <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="filter-group search-group" style="position: relative; width: 250px; margin: 0;">
+                    <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                    <input type="text" id="searchFilterNonAktifPaud" class="std-search-input" placeholder="Cari Nama / Lembaga..." 
+                           style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+                </div>
+                <button onclick="App.ptkNonAktifPaud.refresh()" class="btn-icon-refresh" title="Muat Ulang Data">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="std-table-container">
+            <table id="tableNonAktifPaud" class="std-table">
+                <thead></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div id="modalPtkPaud" class="modal-overlay" style="display:none;">
+    <div class="modal-content" style="width: 90%; max-width: 800px; padding: 0; border-radius: 8px; overflow: hidden;">
+        
+        <div class="modal-header" style="padding: 15px 20px; background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; justify-content: space-between; align-items: center;">
+            <h3 id="modalTitlePaud" style="margin: 0; color: #22c55e;">Aktifkan Kembali / Perbaikan Data</h3>
+            <button onclick="App.ptkNonAktifPaud.closeModal()" style="border:none; background:none; font-size:1.5rem; cursor:pointer;">&times;</button>
+        </div>
+
+        <div class="modal-body" style="padding: 0;">
+            
+            <div class="tab-nav" style="display: flex; background: #f1f5f9; padding: 0 20px; border-bottom: 1px solid #e2e8f0;">
+                <button type="button" class="tab-btn active" onclick="App.ptkNonAktifPaud.showTab(1)" id="tabBtn1" style="padding: 12px 20px; border:none; background:none; border-bottom: 3px solid #3b82f6; color: #3b82f6; font-weight: 600; cursor:pointer;">1. Data Pribadi</button>
+                <button type="button" class="tab-btn" onclick="App.ptkNonAktifPaud.showTab(2)" id="tabBtn2" style="padding: 12px 20px; border:none; background:none; border-bottom: 3px solid transparent; color: #64748b; font-weight: 600; cursor:pointer;">2. Kepegawaian</button>
+                <button type="button" class="tab-btn" onclick="App.ptkNonAktifPaud.showTab(3)" id="tabBtn3" style="padding: 12px 20px; border:none; background:none; border-bottom: 3px solid transparent; color: #64748b; font-weight: 600; cursor:pointer;">3. Pendidikan</button>
+            </div>
+
+            <form id="formPtkPaud" onsubmit="App.ptkNonAktifPaud.submitRestore(event)" style="padding: 25px;">
+                
+                <input type="hidden" name="rowId" id="rowIdPaud">
+                <input type="hidden" name="userPenginput" id="userPenginput">
+                <input type="hidden" name="isRestore" id="isRestorePaud" value="true">
+                <input type="hidden" name="rowIdSource" id="rowIdSourcePaud" value="">
+
+                <div id="tab1" class="tab-content active">
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Nama Lengkap (Tanpa Gelar)</label>
+                        <input type="text" name="namaLengkap" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;" required>
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Jenis Kelamin</label>
+                            <select name="gender" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                <option value="">- Pilih -</option>
+                                <option value="L">Laki-laki</option>
+                                <option value="P">Perempuan</option>
+                            </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Tempat Lahir</label>
+                            <input type="text" name="tempatLahir" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Tanggal Lahir</label>
+                        <input type="date" name="tanggalLahir" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div id="tab2" class="tab-content" style="display: none;">
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Jenjang</label>
+                            <select name="jenjang" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                </select>
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Nama Lembaga</label>
+                            <select name="namaLembaga" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                </select>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Status Kepegawaian</label>
+                        <select name="status" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                             </select>
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">NIP / NIY</label>
+                            <input type="text" name="nip" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">NUPTK</label>
+                            <input type="text" name="nuptk" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Pangkat/Golongan</label>
+                            <input type="text" name="pangkat" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Jabatan</label>
+                            <select name="jabatan" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                 </select>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">TMT</label>
+                        <input type="date" name="tmt" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    </div>
+                </div>
+
+                <div id="tab3" class="tab-content" style="display: none;">
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Pendidikan Terakhir</label>
+                        <select name="pendidikan" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                            </select>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Jurusan</label>
+                        <input type="text" name="jurusan" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                    </div>
+                    <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Tahun Lulus</label>
+                            <input type="number" name="tahunLulus" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                        </div>
+                        <div style="flex: 1;">
+                            <label style="font-weight: 600; display: block; margin-bottom: 5px;">Sertifikasi</label>
+                            <select name="serdik" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                                </select>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="font-weight: 600; display: block; margin-bottom: 5px;">Status Dapodik</label>
+                        <select name="dapodik" class="std-input" style="width: 100%; padding: 8px; border: 1px solid #cbd5e1; border-radius: 4px;">
+                             </select>
+                    </div>
+                </div>
+
+                <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #e2e8f0; text-align: right;">
+                    <button type="button" onclick="App.ptkNonAktifPaud.closeModal()" style="padding: 10px 20px; background: #cbd5e1; color: #334155; border: none; border-radius: 4px; font-weight: 600; margin-right: 10px; cursor: pointer;">Batal</button>
+                    <button type="submit" style="padding: 10px 20px; background: #22c55e; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer;">
+                        <i class="fas fa-recycle"></i> Simpan & Pulihkan
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+</div>

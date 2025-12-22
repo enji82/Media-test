@@ -1,0 +1,112 @@
+<header class="std-header" style="border:none; padding-bottom:10px; text-align:center;">
+  <h2 style="margin:0; font-size:1.6em; color:#1e293b;">
+      Pilih Jenjang Sekolah
+  </h2>
+  <p style="margin:10px 0 0 0; color:#64748b;">
+      Silakan pilih jenjang laporan bulan yang ingin Anda unggah.
+  </p>
+</header>
+
+<main style="display:flex; flex-direction:column; align-items:center; padding:20px; gap:40px;">
+
+    <div style="display:flex; justify-content:center; gap:30px; flex-wrap:wrap;">
+        
+        <div class="landing-card" onclick="App.loadPage(null, 'lapbul_form_paud')">
+            <div class="card-icon" style="background:#dcfce7; color:#10b981;">
+                <i class="fas fa-child"></i>
+            </div>
+            <h3>Laporan PAUD</h3>
+            <p>Input data siswa, PTK, dan unggah dokumen untuk TK/KB/SPS.</p>
+            <button class="btn-action">Buka Form PAUD <i class="fas fa-arrow-right"></i></button>
+        </div>
+
+        <div class="landing-card" onclick="App.loadPage(null, 'lapbul_form_sd')">
+            <div class="card-icon" style="background:#dbeafe; color:#3b82f6;">
+                <i class="fas fa-school"></i>
+            </div>
+            <h3>Laporan SD</h3>
+            <p>Input data rombel, murid, guru, dan unggah dokumen untuk Sekolah Dasar.</p>
+            <button class="btn-action">Buka Form SD <i class="fas fa-arrow-right"></i></button>
+        </div>
+
+    </div>
+
+    <div style="width: 100%; max-width: 600px;">
+        <div class="dropdown-wrapper">
+            
+            <button id="btnTogglePetunjuk" class="info-btn">
+                <span style="display:flex; align-items:center; gap:10px;">
+                    <i class="fas fa-info-circle" style="font-size:1.1em;"></i> 
+                    Petunjuk Pengisian & Unggah
+                </span>
+                <i id="iconChevron" class="fas fa-chevron-down" style="transition: transform 0.3s;"></i>
+            </button>
+            
+            <div id="contentPetunjuk" class="info-content" style="display:none;">
+                <ul style="margin:0; padding-left:20px; line-height:1.6;">
+                    <li>Laporan bulan dilaporkan dengan cara mengunggah <strong>scan PDF secara mandiri</strong>.</li>
+                    <li>Data digunakan sebagai laporan keadaan sekolah setiap bulannya ke <strong>Korwil Disdikbud</strong>.</li>
+                    <li>File PDF yang diunggah adalah scan laporan bulan <strong>ASLI</strong> yang sudah ditandatangani.</li>
+                    <li>Ukuran file maksimal adalah <strong>300 KB</strong>.</li>
+                    <li>Laporan wajib diunggah <strong>sebelum tanggal 10</strong> bulan berikutnya.</li>
+                    <li style="color:#b91c1c; font-weight:500; margin-top:5px;">
+                        <i class="fas fa-exclamation-triangle" style="margin-right:5px;"></i>
+                        Disarankan untuk tidak memindai menggunakan HP, gunakan mesin scanner untuk hasil terbaik.
+                    </li>
+                </ul>
+            </div>
+
+        </div>
+    </div>
+
+</main>
+
+<style>
+    /* STYLE KARTU (SAMA SEPERTI SEBELUMNYA) */
+    .landing-card {
+        background: white; width: 300px; padding: 40px 30px; border-radius: 20px; text-align: center;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.05); border: 1px solid #f1f5f9; cursor: pointer;
+        transition: all 0.3s ease; position: relative; overflow: hidden;
+    }
+    .landing-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0,0,0,0.1); border-color: var(--primary, #3b82f6); }
+    .card-icon { width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 2.5rem; margin: 0 auto 20px auto; }
+    .landing-card h3 { color: #334155; margin-bottom: 10px; font-size: 1.4rem; }
+    .landing-card p { color: #64748b; margin-bottom: 25px; line-height: 1.6; }
+    .btn-action { background: transparent; border: 2px solid #e2e8f0; padding: 10px 20px; border-radius: 50px; color: #475569; font-weight: 600; cursor: pointer; transition: all 0.3s; }
+    .landing-card:hover .btn-action { background: var(--primary, #3b82f6); border-color: var(--primary, #3b82f6); color: white; }
+
+    /* STYLE DROPDOWN BARU (Meniru Halaman Unduh Format) */
+    .dropdown-wrapper {
+        border: 1px solid #bfdbfe;
+        border-radius: 8px;
+        overflow: hidden;
+        background: white;
+    }
+    .info-btn {
+        width: 100%;
+        background: #eff6ff; /* Biru sangat muda */
+        border: none;
+        padding: 15px 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        color: #1e40af;
+        font-weight: 600;
+        font-size: 0.95em;
+        transition: background 0.2s;
+    }
+    .info-btn:hover {
+        background: #dbeafe;
+    }
+    .info-content {
+        padding: 20px;
+        background: white;
+        border-top: 1px solid #bfdbfe;
+        color: #475569;
+        font-size: 0.9em;
+    }
+    .info-content li {
+        margin-bottom: 8px;
+    }
+</style>

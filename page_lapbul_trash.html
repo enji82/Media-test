@@ -1,0 +1,49 @@
+<div class="std-header">
+    <h1><i class="fas fa-trash-alt" style="color:#ef4444; margin-right:10px;"></i> Trash</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Menampilkan data yang sudah dihapus. Tersimpan di folder Trash Drive.</p>
+</div>
+
+<div id="tableWrapper" class="std-content-wrapper">
+
+    <div class="std-filter-card" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+        
+        <div style="display: flex; gap: 10px; flex-grow: 1;">
+            <select id="filterTrashTahun" class="std-filter-select" style="width: 100px;">
+                <option value="">-- Pilih Tahun --</option>
+            </select>
+
+            <select id="filterTrashBulan" class="std-filter-select" style="width: 110px;">
+                <option value="">-- Pilih Bulan --</option>
+            </select>
+
+            <select id="filterTrashJenjang" class="std-filter-select" style="width: 110px;">
+                <option value="">-- Pilih Jenjang --</option>
+            </select>
+
+            <select id="filterTrashSekolah" class="std-filter-select" style="flex-grow: 1; min-width: 150px;">
+                <option value="">-- Pilih Nama Sekolah --</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 10px; align-items: center;">
+            
+            <div class="filter-group search-group" style="position: relative; width: 220px; margin: 0;">
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                <input type="text" id="searchTrash" class="std-search-input" placeholder="Cari data..." 
+                       style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+            </div>
+            
+            <button onclick="App.inits['lapbul_trash']()" class="btn-icon-refresh" title="Refresh Data">
+                <i class="fas fa-sync-alt"></i>
+            </button>
+        </div>
+
+    </div>
+
+    <div class="std-table-container">
+        <table id="trashTable" class="std-table">
+            <thead></thead>
+            <tbody></tbody>
+        </table>
+    </div>
+</div>

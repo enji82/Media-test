@@ -28,8 +28,29 @@ const SPREADSHEET_CONFIG = {
     SD:   { id: "1u4tNL3uqt5xHITXYwHnytK6Kul9Siam-vNYuzmdZB4s", sheet: "Input SD" }
   },
   LAPBUL_STATUS: {
-    PAUD: { id: "1an0oQQPdMh6wrUJIAzTGYk3DKFvYprK5SU7RmRXjIgs", sheet: "Input PAUD" },
-    SD:   { id: "1u4tNL3uqt5xHITXYwHnytK6Kul9Siam-vNYuzmdZB4s", sheet: "Input SD" }
+    PAUD: { id: "1an0oQQPdMh6wrUJIAzTGYk3DKFvYprK5SU7RmRXjIgs", sheet: "Status PAUD" },
+    SD:   { id: "1u4tNL3uqt5xHITXYwHnytK6Kul9Siam-vNYuzmdZB4s", sheet: "Status SD" }
+  },
+  PTK_PAUD_KEADAAN: { 
+    id: "1an0oQQPdMh6wrUJIAzTGYk3DKFvYprK5SU7RmRXjIgs", 
+    sheet: "Keadaan PTK PAUD" 
+  },
+  PTK_PAUD_JUMLAH_BULANAN: { 
+    id: "1an0oQQPdMh6wrUJIAzTGYk3DKFvYprK5SU7RmRXjIgs",
+    sheet: "Jumlah PTK Bulanan"
+  },
+  PTK_PAUD_DB: { 
+    id: "1XetGkBymmN2NZQlXpzZ2MQyG0nhhZ0sXEPcNsLffhEU", 
+    sheet: "PTK PAUD" 
+  },
+  // [BARU] Tambahan Config SD
+  PTK_SD_DB: { 
+    id: "1HlyLv3Ai3_vKFJu3EKznqI9v8g0tfqiNg0UbIojNMQ0", 
+    sheet: "PTK SD" 
+  },
+    PTK_PAUD_MUTASI: { 
+    id: "1HlyLv3Ai3_vKFJu3EKznqI9v8g0tfqiNg0UbIojNMQ0", 
+    sheet: "PTK PAUD MUTASI" 
   }
 };
 
@@ -51,6 +72,8 @@ const FOLDER_CONFIG = {
   LAPBUL_KB: "18CxRT-eledBGRtHW1lFd2AZ8Bub6q5ra",
   LAPBUL_TK: "1WUNz_BSFmcwRVlrG67D2afm9oJ-bVI9H",
   LAPBUL_SD: "1I8DRQYpBbTt1mJwtD1WXVD6UK51TC8El",
+  TRASH_SD: "1MpEgpCDrTX-SHjdNIa3aUpKUyYZpejrb",
+  TRASH_PAUD: "1EUIOthRbotJQlSphxVZ-QAdewe17UCOU",
 
   // Folder Siaba
   SIABA_LUPA: "10kwGuGfwO5uFreEt7zBJZUaDx1fUSXo9",
@@ -88,6 +111,14 @@ function include(filename) {
            '<small>Error detail: ' + e.message + '</small>' +
            '</div>';
   }
+}
+
+function getPage(page) {
+  if (page === 'ptk_kelola_paud' || page === 'ptk_kelola_sd') {
+      page = 'page_ptk_kelola'; 
+  }
+  // Panggil include yang sudah Anda punya, atau createTemplate langsung
+  return HtmlService.createTemplateFromFile(page).evaluate().getContent();
 }
 
 function loginUser(username, password) {
@@ -147,4 +178,16 @@ function getOrCreateFolder(parentFolder, folderName) {
 // Pengaman jika form submit secara native (mencegah blank)
 function doPost(e) {
   return doGet(e);
+}
+
+function getDataFromSheet(configKey) {
+  const conf = SPREADSHEET_CONFIG[configKey];
+  if (!conf) throw new Error("Konfigurasi sheet tidak ditemukan: " + configKey);
+  
+  const ss = SpreadsheetApp.openById(conf.id);
+  const sheet = ss.getSheetByName(conf.sheet);
+  if (!sheet) throw new Error("Sheet tidak ditemukan: " + conf.sheet);
+  
+  // Ambil data sebagai String (Display Values) agar format angka/tanggal aman
+  return sheet.getDataRange().getDisplayValues();
 }
