@@ -27,7 +27,8 @@ const LAPBUL_COLUMNS = {
         
         // --- PERBAIKAN DI SINI (SESUAIKAN ANGKA-NYA) ---
         'User': 219,   // <--- Ganti dengan nomor kolom "User" yang benar
-        'Update': 218  // <--- Ganti dengan nomor kolom "Tanggal Edit/Update"
+        'Update': 218,  // <--- Ganti dengan nomor kolom "Tanggal Edit/Update"
+        'User Edit':220
     }
 };
 

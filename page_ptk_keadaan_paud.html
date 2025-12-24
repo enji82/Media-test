@@ -1,54 +1,61 @@
 <style>
-    /* --- 1. PERBAIKAN LAYOUT (Agar Scroll Berjalan tapi HTML tetap Standar) --- */
-    /* Kita targetkan ID halaman ini saja agar tidak merusak halaman lain */
+    /* 1. LAYOUT HALAMAN (KUNCI UTAMA) */
     #view_ptk_keadaan_paud {
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        overflow: hidden; /* Mencegah double scrollbar */
+        height: 100%; 
+        display: flex; 
+        flex-direction: column; 
+        overflow: hidden; /* Hapus Scroll Halaman */
     }
-
+    
     #view_ptk_keadaan_paud .std-content-wrapper {
-        flex-grow: 1;
-        overflow-y: auto; /* Scroll Vertical Aktif */
-        display: flex;
+        flex-grow: 1; 
+        display: flex; 
         flex-direction: column;
+        overflow: hidden; /* Pastikan wrapper tidak scroll */
+        padding-bottom: 20px; /* Beri sedikit jarak aman di bawah */
     }
 
-    /* --- 2. PERBAIKAN TABEL (Agar Scroll Horizontal Muncul) --- */
-    #keadaanPtkPaudTable th, 
-    #keadaanPtkPaudTable td {
-        white-space: nowrap; /* Teks dilarang turun baris -> Memicu scroll samping */
-        vertical-align: middle;
-        padding: 8px 12px;
-    }
-
+    /* 2. KONTAINER TABEL (Logika: Shrink-to-Fit + Scroll) */
     .std-table-container {
-        overflow-x: auto; /* Scroll Horizontal Aktif */
+        /* PENTING: Jangan gunakan flex-grow: 1 */
+        flex-grow: 0;       
+        flex-shrink: 1;     /* Izinkan menyusut agar muat di layar */
+        
+        /* PENTING: Tinggi mengikuti konten, tapi jangan lebih dari layar */
+        height: auto;       
+        max-height: 100%;   
+        
+        overflow: auto;     /* Scrollbar muncul jika mentok max-height */
         width: 100%;
-        flex-grow: 1; /* Memastikan tabel mengisi ruang sisa */
+        background: #fff;
     }
 
-    /* --- 3. STYLING KOLOM (Warna & Posisi) --- */
+    /* 3. FORMAT SEL TABEL */
+    #keadaanPtkPaudTable th, #keadaanPtkPaudTable td {
+        white-space: nowrap; vertical-align: middle; padding: 8px 12px;
+    }
+
     /* Rata Tengah Kolom Angka (Mulai kolom ke-7) */
-    #keadaanPtkPaudTable th:nth-child(n+7),
+    #keadaanPtkPaudTable th:nth-child(n+7), 
     #keadaanPtkPaudTable td:nth-child(n+7) {
-        text-align: center;
-        min-width: 60px;
+        text-align: center; min-width: 60px;
+    }
+    /* Lebar Nama Lembaga */
+    #keadaanPtkPaudTable th:nth-child(2), 
+    #keadaanPtkPaudTable td:nth-child(2) {
+        min-width: 250px;
     }
 
-    /* Warna Kolom Terakhir (Body) */
+    /* 4. WARNA KOLOM TERAKHIR (Highlight) */
     #keadaanPtkPaudTable tbody td:last-child {
         background-color: #e2e8f0 !important; 
-        color: #1e293b !important;
-        font-weight: 700 !important;
+        color: #1e293b !important; 
+        font-weight: 700 !important; 
         border-left: 2px solid #cbd5e1;
     }
-
-    /* Warna Kolom Terakhir (Footer) */
     #keadaanPtkPaudTable tfoot td:last-child {
-        background-color: #e2e8f0 !important;
-        font-weight: 800 !important;
+        background-color: #e2e8f0 !important; 
+        font-weight: 800 !important; 
         border-left: 2px solid #94a3b8;
     }
 </style>
@@ -64,10 +71,10 @@
 
     <div id="tableWrapper" class="std-content-wrapper">
 
-        <div class="std-filter-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
+        <div class="std-filter-card" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 15px;">
             
             <div style="flex-grow: 1;">
-                <select id="filterJenjang" class="std-filter-select" style="min-width: 150px;">
+                <select id="filterJenjang" class="std-filter-select" style="min-width: 180px;">
                     <option value="">-- Semua Jenjang --</option>
                 </select>
             </div>
@@ -76,10 +83,10 @@
                 <div class="filter-group search-group" style="position: relative; width: 250px; margin: 0;">
                     <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
                     <input type="text" id="searchKeadaanPaud" class="std-search-input" placeholder="Cari Lembaga..." 
-                           style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+                           style="width: 100%; padding-left: 35px;">
                 </div>
                 
-                <button onclick="App.inits['ptk_keadaan_paud']()" class="btn-icon-refresh" title="Muat Ulang Data">
+                <button onclick="App.inits['ptk_keadaan_paud']()" class="std-btn-refresh" title="Muat Ulang Data">
                     <i class="fas fa-sync-alt"></i>
                 </button>
             </div>

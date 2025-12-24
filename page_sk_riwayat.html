@@ -1,47 +1,57 @@
 <style>
-    /* 1. Rata Kiri untuk Kolom Tertentu (Isi Tabel Saja) */
-    /* Kolom 2: Nama Sekolah */
-    #riwayatTable tbody td:nth-child(2),
-    /* Kolom 5: Nomor SK */
-    #riwayatTable tbody td:nth-child(5),
-    /* Kolom 11: User (Kolom Terakhir) */
-    #riwayatTable tbody td:nth-child(11) {
-        text-align: left !important;
-        padding-left: 15px; /* Sedikit jarak agar rapi */
-    }
+    /* Style Spesifik Tabel Riwayat */
+    #riwayatTable tbody td:nth-child(2) { text-align: left !important; } /* Nama Sekolah */
+    #riwayatTable tbody td:nth-child(5) { text-align: left !important; } /* Nomor SK */
+    #riwayatTable tbody td:nth-child(10) { text-align: left !important; } /* Nomor SK */
 </style>
 
 <div class="std-header">
-    <h1>Riwayat Pengiriman SK Pembagian Tugas</h1>
+    <h1><i class="fas fa-history" style="color:var(--primary, #0284c7); margin-right:10px;"></i> Riwayat Pengiriman SK Pembagian Tugas</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Daftar SK Pembagian Tugas yang telah diunggah.</p>
 </div>
 
 <div id="tableWrapper" class="std-content-wrapper">
 
     <div class="std-filter-card">
         <div class="filter-group">
-            <label class="std-filter-label">Tahun Ajaran:</label>
-            <select id="filterTahun" class="std-filter-select"><option value="">Semua</option></select>
+            <select id="filterTahun" class="std-filter-select">
+                <option value="">-- Semua Tahun --</option>
+            </select>
         </div>
+
         <div class="filter-group">
-            <label class="std-filter-label">Semester:</label>
-            <select id="filterSemester" class="std-filter-select"><option value="">Semua</option></select>
+            <select id="filterSemester" class="std-filter-select">
+                <option value="">-- Semua Semester --</option>
+            </select>
         </div>
         
-        <div class="filter-group" style="margin-left: auto;">
-            <div style="position: relative;">
-                <i class="fas fa-search" style="position: absolute; left: 10px; top: 9px; color: #94a3b8;"></i>
-                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data..." style="padding-left: 30px;">
+        <div class="filter-group">
+            <select id="filterNamaSekolah" class="std-filter-select">
+                <option value="">-- Cari Sekolah --</option>
+            </select>
+        </div>
+
+        <div style="margin-left: auto; display:flex; gap:10px; align-items:center;">
+            <div style="position: relative; width: 200px; height: 42px;">
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; z-index:1;"></i>
+                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data..." style="padding-left: 35px;">
             </div>
+            
+            <button onclick="document.getElementById('filterTahun').value=''; 
+                            document.getElementById('filterSemester').value=''; 
+                            document.getElementById('filterNamaSekolah').value=''; 
+                            document.getElementById('searchFilter').value=''; 
+                            App.inits['sk_riwayat']()" 
+                    class="std-filter-btn" 
+                    title="Refresh & Reset Filter">
+                <i class="fas fa-sync-alt"></i>
+            </button>
         </div>
     </div>
 
     <div class="std-table-container">
         <table id="riwayatTable" class="std-table">
-            <thead>
-                </thead>
-            <tbody>
-                </tbody>
-        </table>
+            <thead></thead> <tbody></tbody> </table>
     </div>
 
 </div>

@@ -1,112 +1,122 @@
 <style>
-    /* Rata Kiri untuk kolom spesifik (Index berdasarkan struktur baru) */
-    /* 5: No SK, 13: User, 14: Verifikator, 15: Keterangan */
-    #kelolaTable tbody td:nth-child(5),
-    #kelolaTable tbody td:nth-child(13),
-    #kelolaTable tbody td:nth-child(14),
-    #kelolaTable tbody td:nth-child(15) {
+    /* --- ATURAN LEBAR KOLOM KHUSUS TABEL KELOLA SK --- */
+    /* Target tabel dengan ID kelolaTable */
+
+    /* Kolom 5: Nomor SK */
+    #kelolaTable th:nth-child(5),
+    #kelolaTable td:nth-child(5) {
+        min-width: 180px; 
+        max-width: 250px;
+        white-space: normal;
+        word-wrap: break-word;
         text-align: left !important;
-        padding-left: 15px;
+    }
+
+    /* Kolom 10: Keterangan */
+    #kelolaTable th:nth-child(10),
+    #kelolaTable td:nth-child(10) {
+        min-width: 150px;
+        max-width: 300px;
+        text-align: left !important;
+        white-space: normal;
+    }
+
+    /* Kolom 13: Pengunggah */
+    #kelolaTable th:nth-child(13),
+    #kelolaTable td:nth-child(13) {
+        width: 120px;
+        text-align: left !important;
+        font-size: 0.85em;
+        color: #334155;
+    }
+
+    /* Kolom 15: Editor */
+    #kelolaTable th:nth-child(15),
+    #kelolaTable td:nth-child(15) {
+        width: 120px;
+        text-align: left !important;
+        font-size: 0.85em;
+        color: #334155;
+    }
+
+    /* Kolom 17: Verifikator */
+    #kelolaTable th:nth-child(17),
+    #kelolaTable td:nth-child(17) {
+        width: 120px;
+        text-align: left !important;
+        font-size: 0.85em;
+        font-weight: 600;
+        color: #334155;
+    }
+
+    /* Tambahan: Pastikan kolom No (Kolom 1) kecil */
+    #kelolaTable th:nth-child(1),
+    #kelolaTable td:nth-child(1) {
+        width: 50px;
+        text-align: center;
     }
 </style>
 
 <div class="std-header">
-    <h1>Kelola Data SK Pembagian Tugas</h1>
+    <h1><i class="fas fa-tasks" style="color:var(--primary, #0284c7); margin-right:10px;"></i> Kelola Data SK Pembagian Tugas</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Verifikasi dan manajemen data SK yang sudah diunggah.</p>
 </div>
 
-<div id="tableWrapper" class="std-content-wrapper">
+<div class="std-content-wrapper">
 
-    <div class="std-filter-card">
+    <div class="std-filter-card" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:15px;">
+        
         <div class="filter-group">
-            <label class="std-filter-label">Tahun Ajaran:</label>
-            <select id="filterTahun" class="std-filter-select"><option value="">Semua</option></select>
+            <select id="kelolaTahun" class="std-filter-select">
+                <option value="">-- Semua Tahun --</option>
+            </select>
         </div>
+
         <div class="filter-group">
-            <label class="std-filter-label">Semester:</label>
-            <select id="filterSemester" class="std-filter-select"><option value="">Semua</option></select>
+            <select id="kelolaSemester" class="std-filter-select">
+                <option value="">-- Semua Semester --</option>
+            </select>
         </div>
+
         <div class="filter-group">
-            <label class="std-filter-label">Nama Sekolah:</label>
-            <select id="filterNamaSekolah" class="std-filter-select"><option value="">Semua</option></select>
-        </div>
-        <div class="filter-group">
-            <label class="std-filter-label">Status:</label>
-            <select id="filterStatus" class="std-filter-select"><option value="">Semua</option></select>
+             <select id="kelolaSekolah" class="std-filter-select">
+                <option value="">-- Cari Sekolah --</option>
+            </select>
         </div>
         
-        <div class="filter-group" style="margin-left: auto;">
-            <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data...">
+        <div class="filter-group">
+            <select id="kelolaStatus" class="std-filter-select">
+                <option value="">-- Semua Status --</option>
+                <option value="Diproses">Menunggu Verifikasi</option>
+                <option value="OK">Disetujui (OK)</option>
+                <option value="Revisi">Perlu Revisi</option>
+                <option value="Ditolak">Ditolak</option>
+            </select>
         </div>
-    </div>
 
-    <div id="loadingStatus" class="loading-container" style="display: none;">
-        <div class="spinner-container">
-            <div class="spinner-bar"></div><div class="spinner-bar"></div><div class="spinner-bar"></div>
+        <div style="margin-left: auto; display:flex; gap:10px; align-items:center;">
+             
+             <div style="position: relative; width: 220px; height: 42px;"> 
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events:none; z-index:1;"></i>
+                <input type="text" id="kelolaSearch" class="std-search-input" placeholder="Cari data..." style="padding-left: 35px;">
+            </div>
+            
+            <button onclick="document.getElementById('kelolaTahun').value='';
+                             document.getElementById('kelolaSemester').value='';
+                             document.getElementById('kelolaSekolah').value='';
+                             document.getElementById('kelolaStatus').value='';
+                             document.getElementById('kelolaSearch').value='';
+                             App.inits['sk_kelola']()"
+                    class="std-filter-btn"
+                    title="Reset & Refresh">
+                <i class="fas fa-sync-alt"></i>
+            </button>
         </div>
-        <p style="color:#64748b;">Memuat Data...</p>
     </div>
 
     <div class="std-table-container">
         <table id="kelolaTable" class="std-table">
-            <thead></thead>
-            <tbody id="kelolaTableBody"></tbody>
-            <tfoot class="has-content"></tfoot>
-        </table>
+            <thead></thead> <tbody></tbody> </table>
     </div>
 
-</div>
-
-<div id="verificationModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content verif-box">
-        
-        <div class="verif-header">
-            <h3><i class="fas fa-tasks"></i> Verifikasi Data</h3>
-            <button onclick="document.getElementById('verificationModal').style.display='none'" class="close-btn">&times;</button>
-        </div>
-
-        <div class="verif-body">
-            <div class="verif-left">
-                <div class="preview-container-box">
-                    <iframe id="verifPreviewFrame" src=""></iframe>
-                    <div id="verifLoading" class="loader-overlay">Memuat Dokumen...</div>
-                    <div id="verifNoDoc" class="no-doc-overlay" style="display:none;">
-                        <i class="fas fa-file-excel"></i>
-                        <p>Tidak ada dokumen terlampir</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="verif-right">
-                <form id="verifForm">
-                    <input type="hidden" id="verifRowIndex">
-                    
-                    <div class="info-block">
-                        <label>Sekolah</label>
-                        <span id="verifSekolahName">-</span>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Perubahan Status</label>
-                        <select id="verifStatus" class="std-input" style="width:100%; font-weight:bold;">
-                            <option value="Diproses">Diproses</option>
-                            <option value="OK" style="color:green;">&#xf00c; OK (Disetujui)</option>
-                            <option value="Revisi" style="color:#d97706;">&#xf071; Revisi</option>
-                            <option value="Ditolak" style="color:red;">&#xf00d; Ditolak</option>
-                        </select>
-                    </div>
-
-                    <div class="form-group" style="flex:1; display:flex; flex-direction:column;">
-                        <label>Catatan / Keterangan</label>
-                        <textarea id="verifKeterangan" class="std-input" style="flex:1; resize:none; padding:10px; height:100px;" placeholder="Tulis alasan jika Revisi/Ditolak..."></textarea>
-                    </div>
-
-                    <div style="margin-top:auto; pt-3;">
-                        <button type="submit" class="submit-btn" style="width:100%;">
-                            <i class="fas fa-save"></i> SIMPAN PERUBAHAN
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
 </div>

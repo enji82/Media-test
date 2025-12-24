@@ -1,40 +1,60 @@
 <div class="std-header">
-    <h1><i class="fas fa-chart-bar" style="color:var(--primary); margin-right:10px;"></i> Status Pengiriman Laporan Bulan</h1>
-    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Matriks kelengkapan laporan bulan per sekolah.</p>
+    <h1><i class="fas fa-chart-bar" style="color:var(--primary, #0284c7); margin-right:10px;"></i> Status Pengiriman Laporan</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Matrix pemantauan kelengkapan laporan bulanan per sekolah.</p>
 </div>
 
-<div id="tableWrapper" class="std-content-wrapper">
+<div class="std-content-wrapper">
 
-    <div class="std-filter-card" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+    <!-- FILTER CARD -->
+    <div class="std-filter-card" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:15px;">
         
-        <div style="display: flex; gap: 10px;">
-            <select id="filterTahun" class="std-filter-select" style="width: 100px;">
-                </select>
-            <select id="filterJenjang" class="std-filter-select" style="width: 120px;">
-                </select>
+        <!-- Filter Tahun -->
+        <div class="filter-group">
+            <select id="filterTahun" class="std-filter-select">
+                <!-- Diisi JS -->
+            </select>
         </div>
 
-        <select id="filterNamaSekolah" class="std-filter-select" style="flex-grow: 1; min-width: 150px;">
+        <!-- Filter Jenjang -->
+        <div class="filter-group">
+            <select id="filterJenjang" class="std-filter-select">
+                <option value="">-- Jenjang --</option>
+                <option value="SD">SD</option>
+                <option value="PAUD">PAUD</option>
             </select>
+        </div>
 
-        <div style="display: flex; gap: 10px; align-items: center; margin-left: auto;">
-            <div class="filter-group search-group" style="position: relative; width: 200px; margin: 0;">
-                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
-                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari..." 
-                       style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
-            </div>
-            
-            <button onclick="App.inits['lapbul_status']()" class="btn-icon-refresh" title="Refresh Data">
+        <!-- Filter Sekolah (Dependent) -->
+        <div class="filter-group">
+             <select id="filterNamaSekolah" class="std-filter-select">
+                <option value="">-- Cari Sekolah --</option>
+            </select>
+        </div>
+
+        <!-- Search & Refresh -->
+        <div style="margin-left: auto; display:flex; gap:10px; align-items:center;">
+             <!-- Legend Kecil -->
+             <div style="display:flex; gap:8px; margin-right:15px; font-size:0.8em; color:#64748b;">
+                <span style="display:flex; align-items:center;"><i class="fas fa-check-circle" style="color:#16a34a; margin-right:4px;"></i> Sudah unggah</span>
+                <span style="display:flex; align-items:center;"><span style="width:8px; height:8px; background:#f8fafc; border:1px solid #cbd5e1; display:inline-block; margin-right:4px;"></span> Belum unggah</span>
+             </div>
+
+             <!-- Tombol Refresh (UX Global) -->
+             <button onclick="App.inits['lapbul_status']()" 
+                    class="std-filter-btn" 
+                    title="Muat Ulang Data">
                 <i class="fas fa-sync-alt"></i>
             </button>
         </div>
-
     </div>
 
-    <div class="std-table-container table-responsive">
-        <table id="lapbulStatusTable" class="std-table">
+    <!-- TABEL DATA (STANDAR) -->
+    <div class="std-table-container">
+        <!-- Hapus class 'matrix-mode' agar kembali ke style tabel biasa -->
+        <table id="lapbulStatusTable" class="std-table table-bordered" style="width:100%;">
             <thead></thead>
             <tbody></tbody>
         </table>
     </div>
+
 </div>

@@ -1,45 +1,43 @@
 <div class="std-header">
-    <h1>Arsip SK Pembagian Tugas</h1>
+    <h1><i class="fas fa-archive" style="color:var(--primary, #0284c7); margin-right:10px;"></i>Arsip SK Pembagian Tugas</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Arsip digital hasil scan dokumen asli dalam format PDF.</p>
 </div>
 
 <div class="std-content-wrapper">
 
-    <div class="fm-toolbar-container" style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+    <div class="std-filter-card" style="display:flex; align-items:center; gap:15px; padding:10px 15px;">
         
-        <div style="display:flex; align-items:center; flex:1; overflow:hidden;">
-            <i class="fas fa-folder-open" style="color:#fbbf24; font-size:1.2em; margin-right:10px;"></i>
-            <div id="arsipBreadcrumb" class="fm-breadcrumb-box"></div>
+        <div class="fm-btn-group">
+            <button onclick="App.inits['sk_arsip']()" class="fm-btn" title="Ke Awal (Home)">
+                <i class="fas fa-home"></i>
+            </button>
+            
+            <button onclick="App.navUpArsip()" class="fm-btn" title="Folder Sebelumnya">
+                <i class="fas fa-arrow-up"></i>
+            </button>
         </div>
 
-        <div style="position: relative; width: 200px;">
+        <div id="arsipBreadcrumb" style="flex-grow:1; display:flex; align-items:center; font-size:0.95em; overflow:hidden; white-space:nowrap; color:#475569;">
+             </div>
+
+        <div style="position: relative; width: 220px;">
             <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8;"></i>
-            <input type="text" id="arsipSearchInput" class="std-input" placeholder="Cari..." 
-                   style="width: 100%; padding-left: 30px; height: 35px;" onkeyup="App.filterArsipFiles()">
+            <input type="text" id="arsipSearchInput" class="std-search-input" placeholder="Cari file..." 
+                   style="width: 100%; padding-left: 30px; height:36px;" onkeyup="App.filterArsipFiles()">
         </div>
 
-        <div style="display:flex; gap:5px;">
-            <button class="view-toggle-btn active" id="btnViewGrid" onclick="App.toggleArsipView('grid')" title="Tampilan Grid">
+        <div class="fm-btn-group">
+            <button id="btnViewGrid" onclick="App.toggleArsipView('grid')" class="fm-btn active" title="Tampilan Grid">
                 <i class="fas fa-th-large"></i>
             </button>
-            <button class="view-toggle-btn" id="btnViewList" onclick="App.toggleArsipView('list')" title="Tampilan Daftar">
+            <button id="btnViewList" onclick="App.toggleArsipView('list')" class="fm-btn" title="Tampilan Detail">
                 <i class="fas fa-list"></i>
             </button>
         </div>
 
     </div>
 
-    <div class="fm-container">
-        <div id="arsipLoading" class="fm-loader-overlay" style="display:none;">
-            <div class="app-spinner"></div>
-            <div class="fm-loader-text">Memuat Arsip...</div>
+    <div id="fileContainer" class="fm-container" style="min-height:300px; padding:10px 0;">
         </div>
-        
-        <div id="fileGrid" class="file-grid"></div>
-        
-        <div id="emptyFolderMsg" class="fm-empty" style="display:none;">
-            <i class="fas fa-folder-open"></i>
-            <p>Folder ini kosong / Tidak ditemukan</p>
-        </div>
-    </div>
 
 </div>

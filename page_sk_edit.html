@@ -1,81 +1,99 @@
 <div class="std-header">
-    <h1>Edit Data SK Pembagian Tugas</h1>
+    <h1><i class="fas fa-edit" style="color:var(--primary, #0284c7); margin-right:10px;"></i> Edit Data SK Pembagian Tugas</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Perbarui data SK yang telah diunggah sebelumnya.</p>
 </div>
 
 <div class="std-content-wrapper">
+
     <div class="form-container">
         <form id="skEditForm">
-            <input type="hidden" name="rowIndex" id="editRowIndex">
-            <input type="hidden" name="statusSekolah" id="editStatusSekolah">
-            
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+            <!-- Hidden Fields untuk ID Baris -->
+            <input type="hidden" id="editRowIndex" name="rowIndex">
+
+            <!-- GRID UTAMA (Gap dikurangi jadi 15px agar lebih rapat) -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
                 
+                <!-- 1. DATA TERKUNCI -->
+                <div class="form-group">
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Tahun Ajaran</label>
+                    <input type="text" id="viewTahun" class="std-input" style="width:100%; background-color:#f1f5f9; color:#64748b; cursor:not-allowed;" disabled>
+                    <input type="hidden" id="editTahun" name="tahunAjaran">
+                </div>
+
+                <div class="form-group">
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Semester</label>
+                    <input type="text" id="viewSemester" class="std-input" style="width:100%; background-color:#f1f5f9; color:#64748b; cursor:not-allowed;" disabled>
+                    <input type="hidden" id="editSemester" name="semester">
+                </div>
+
                 <div class="form-group" style="grid-column: span 2;">
-                    <label style="font-weight:600; color:#475569;">Nama Sekolah <small style="color:#ef4444;">(Tidak dapat diubah)</small></label>
-                    <input type="text" id="editNamaSekolah" name="namaSekolah" class="std-input" 
-                           style="width:100%; background:#f1f5f9; color:#64748b; cursor:not-allowed;" readonly>
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Nama Sekolah</label>
+                    <input type="text" id="viewNamaSekolah" class="std-input" style="width:100%; background-color:#f1f5f9; color:#64748b; cursor:not-allowed;" disabled>
+                    <input type="hidden" id="editNamaSekolah" name="namaSekolah">
+                </div>
+
+                <!-- 2. DATA EDITABLE -->
+                <div class="form-group">
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Nomor SK</label>
+                    <input type="text" id="editNomorSK" name="nomorSK" class="std-input" style="width:100%" placeholder="Contoh: 800/..." required>
                 </div>
 
                 <div class="form-group">
-                    <label style="font-weight:600; color:#475569;">Tahun Ajaran</label>
-                    <select id="editTahun" name="tahunAjaran" class="std-input" style="width:100%" required>
-                        <option value="">Memuat...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label style="font-weight:600; color:#475569;">Semester</label>
-                    <select id="editSemester" name="semester" class="std-input" style="width:100%" required>
-                        <option value="">Memuat...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label style="font-weight:600; color:#475569;">Nomor SK</label>
-                    <input type="text" id="editNomorSK" name="nomorSK" class="std-input" style="width:100%" required>
-                </div>
-
-                <div class="form-group">
-                    <label style="font-weight:600; color:#475569;">Tanggal SK</label>
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Tanggal SK</label>
                     <input type="date" id="editTanggalSK" name="tanggalSK" class="std-input" style="width:100%" required>
                 </div>
 
                 <div class="form-group" style="grid-column: span 2;">
-                    <label style="font-weight:600; color:#475569;">Kriteria SK</label>
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Kriteria SK</label>
                     <select id="editKriteria" name="kriteriaSK" class="std-input" style="width:100%" required>
                         <option value="">Memuat...</option>
                     </select>
                 </div>
 
-                <div class="form-group" style="grid-column: span 2; background:#f8fafc; border: 1px dashed #cbd5e1; padding: 20px; border-radius: 8px;">
-                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:15px;">Dokumen SK</label>
+                <!-- 3. FILE DOKUMEN (SEJAJAR KIRI KANAN) -->
+                <div class="form-group" style="grid-column: span 2;">
+                    <label style="font-weight:600; color:#475569; display:block; margin-bottom:5px;">Dokumen SK</label>
                     
-                    <div id="currentFileArea" style="display:flex; align-items:center; gap:10px; margin-bottom: 20px; padding-bottom:15px; border-bottom:1px solid #e2e8f0;">
-                        <span style="font-size:0.9em; color:#64748b;">File Saat Ini:</span>
-                        <div id="currentFileLink"></div> </div>
-                    
-                    <label style="font-size:0.95em; color:#334155; font-weight:600;">Unggah File Baru</label>
-                    <p style="font-size:0.85em; color:#64748b; margin: 5px 0 10px 0;">
-                        (Lewati apabila tidak ingin mengganti file)<br>
-                        Scan SK asli dalam format PDF ukuran maksimal 1 MB. Pastikan file terbaca jelas dan sudah ditandatangani.
-                    </p>
-                    <input type="file" id="editFile" name="file" class="std-input" style="width:100%; padding: 8px; background:white;" accept="application/pdf">
+                    <div style="display:flex; flex-wrap:wrap; gap:20px; align-items:flex-start; border:1px solid #e2e8f0; padding:15px; border-radius:6px; background:#fff;">
+                        
+                        <!-- KIRI: File Saat Ini -->
+                        <div style="flex:1; min-width:280px; padding-right:20px; border-right:1px solid #f1f5f9;">
+                            <span style="display:block; font-size:0.9em; font-weight:700; color:#334155; margin-bottom:8px;">
+                                <i class="fas fa-file-pdf text-danger" style="margin-right:5px;"></i> File Tersimpan
+                            </span>
+                            <div id="btnLihatFileContainer" style="margin-top:10px;">
+                                <span class="text-muted small italic">Memuat info file...</span>
+                            </div>
+                        </div>
+
+                        <!-- KANAN: Upload Baru -->
+                        <div style="flex:1; min-width:280px;">
+                            <span style="display:block; font-size:0.9em; font-weight:700; color:#334155; margin-bottom:8px;">
+                                <i class="fas fa-upload text-primary" style="margin-right:5px;"></i> Ganti File (Opsional)
+                            </span>
+                            <input type="file" id="editFile" name="fileSK" class="std-input" style="width:100%; padding:5px; font-size:0.9em;" accept="application/pdf">
+                            <div style="margin-top:5px; font-size:0.8em; color:#64748b; line-height:1.4;">
+                                * Biarkan kosong jika tidak ingin mengubah file.<br>
+                                * Format wajib PDF (Max 1MB).
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
 
             </div>
 
-            <div style="margin-top: 30px; display:flex; justify-content: flex-end; gap: 10px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
-                <button type="button" class="action-btn" 
-                        style="height: 42px; background:#fff; color:#64748b; border:1px solid #cbd5e1; padding: 0 25px; display:inline-flex; align-items:center; justify-content:center;" 
-                        onclick="App.loadPage(event, 'sk_kelola')">
+            <!-- FOOTER TOMBOL -->
+            <div style="margin-top: 30px; display:flex; justify-content:flex-end; gap:10px; border-top: 1px solid #e2e8f0; padding-top: 20px;">
+                <button type="button" onclick="App.loadPage(null, 'sk_kelola')" class="submit-btn" style="background:#fff; border:1px solid #cbd5e1; color:#475569; min-width: 100px;">
                     Batal
                 </button>
-                <button type="submit" class="submit-btn" 
-                        style="height: 42px; min-width: 150px; display:inline-flex; align-items:center; justify-content:center;">
-                    Simpan Perubahan
+                <button type="submit" id="btnSimpanEdit" class="submit-btn" style="min-width: 150px;">
+                    <i class="fas fa-save" style="margin-right:8px;"></i> Simpan Data
                 </button>
             </div>
 
         </form>
     </div>
+
 </div>

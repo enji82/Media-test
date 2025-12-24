@@ -1,162 +1,200 @@
-<header class="std-header" style="border:none; padding-bottom:10px;">
-  <h2 style="margin:0; font-size:1.4em; color:#1e293b;">
-      <i class="fas fa-edit" style="color:var(--primary); margin-right:10px;"></i>
-      Edit Laporan SD
-  </h2>
-</header>
-
-<div id="loading-data" style="display:block; padding:50px; text-align:center;">
-    <div class="app-spinner"></div>
-    <p style="color:#64748b; margin-top:10px;">Mengambil data formulir...</p>
+<div class="std-header">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h1><i class="fas fa-edit" style="color:#f59e0b; margin-right:10px;"></i> Edit Laporan Bulanan (SD)</h1>
+            <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Perbarui data laporan bulanan sekolah dasar.</p>
+        </div>
+        <button onclick="App.loadPage(null, 'lapbul_kelola')" class="btn-action-sm" style="background:#fff; border:1px solid #cbd5e1; color:#475569; padding:8px 15px;">
+            <i class="fas fa-arrow-left"></i> Kembali
+        </button>
+    </div>
 </div>
 
-<main class="form-card" id="form-edit-container" style="display:none;">
-  
-  <form id="lapbulEditFormSd" style="display: flex; flex-direction: column; height: 100%;" autocomplete="off">
-      
-      <div class="tabs-header">
-        <button type="button" class="tab-link active" data-tab="edit-dataSekolah">1. Data Sekolah</button>
-        <button type="button" class="tab-link" data-tab="edit-dataMurid">2. Data Murid</button>
-        <button type="button" class="tab-link" data-tab="edit-dataPtk">3. Data PTK</button>
-        <button type="button" class="tab-link" data-tab="edit-dataUnggah">4. Dokumen</button>
-      </div>
+<div class="std-content-wrapper">
 
-      <div class="tab-content-wrapper">
+    <!-- LOADING SPINNER AWAL -->
+    <div id="loading-data" style="text-align:center; padding:50px;">
+        <div class="spinner-border text-primary" role="status"></div>
+        <p style="margin-top:15px; color:#64748b;">Mengambil data laporan...</p>
+    </div>
 
-        <div id="edit-dataSekolah" class="tab-content-form active">
-          <div class="form-grid-2">
-              <div class="form-group">
-                  <label>Bulan (Terkunci)</label>
-                  <input type="text" name="Bulan" class="form-control" readonly style="background:#f1f5f9; font-weight:bold; color:#64748b;">
-              </div>
-              <div class="form-group">
-                  <label>Tahun (Terkunci)</label>
-                  <input type="number" name="Tahun" class="form-control" readonly style="background:#f1f5f9; font-weight:bold; color:#64748b;">
-              </div>
-          </div>
-          
-          <div class="form-section">
-              <h3 class="form-section-title"><i class="fas fa-building"></i> Identitas Sekolah</h3>
-              <div class="form-grid-2">
-                  <div class="form-group">
-                      <label>Status Sekolah</label>
-                      <input type="text" name="Status" class="form-control" readonly style="background:#f1f5f9;">
-                  </div>
-                  <div class="form-group">
-                      <label>Nama Sekolah</label>
-                      <input type="text" name="Nama Sekolah" class="form-control" readonly style="background:#f1f5f9; font-weight:bold;">
-                  </div>
-              </div>
-              <div class="form-grid-2">
-                <div class="form-group"><label>NPSN</label><input type="text" name="NPSN" class="form-control"></div>
-                <div class="form-group"><label>Total Rombel (Semua Kelas)</label><input type="number" name="Rombel" class="form-control"></div>
-              </div>
-          </div>
+    <!-- CONTAINER FORM (Hidden Awal) -->
+    <div id="form-edit-container" style="display:none;">
+        <div class="form-container">
+            <form id="lapbulEditFormSd">
+                <!-- Hidden Fields Penting -->
+                <input type="hidden" name="rowIndex">
+                <input type="hidden" name="source" value="SD">
+
+                <!-- TAB NAVIGASI -->
+                <div class="form-tabs" id="tab-nav">
+                    <button type="button" class="tab-link active" data-tab="dataSekolah">1. Lembaga</button>
+                    <button type="button" class="tab-link" data-tab="dataMurid">2. Murid</button>
+                    <button type="button" class="tab-link" data-tab="dataPtk">3. PTK</button>
+                    <button type="button" class="tab-link" data-tab="dataUnggah">4. Dokumen</button>
+                </div>
+
+                <!-- TAB 1: DATA SEKOLAH -->
+                <div id="dataSekolah" class="tab-content-form active">
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px;">
+                        <div class="form-group">
+                            <label>Nama Sekolah</label>
+                            <input type="text" name="Nama Sekolah" class="std-input" readonly style="background:#f1f5f9;">
+                        </div>
+                        <div class="form-group">
+                            <label>NPSN</label>
+                            <input type="text" name="NPSN" class="std-input" readonly style="background:#f1f5f9;">
+                        </div>
+                        <div class="form-group">
+                            <label>Kecamatan</label>
+                            <input type="text" name="Kecamatan" class="std-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Desa/Kelurahan</label>
+                            <input type="text" name="Kelurahan" class="std-input">
+                        </div>
+                        <div class="form-group">
+                            <label>Status Sekolah</label>
+                            <input type="text" name="Status" class="std-input" readonly style="background:#f1f5f9;">
+                        </div>
+                        <div class="form-group">
+                            <label>Email Sekolah</label>
+                            <input type="email" name="Email" class="std-input">
+                        </div>
+                    </div>
+
+                    <div style="margin-top:20px; text-align:right;">
+                        <button type="button" class="submit-btn next-tab-btn" data-target="dataMurid">Selanjutnya <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- TAB 2: DATA MURID (DINAMIS GENERATED BY JS) -->
+                <div id="dataMurid" class="tab-content-form">
+                    
+                    <!-- Sub-Tab Kelas 1-6 -->
+                    <div id="edit-subTabContainer" class="sub-tabs-container">
+                        <!-- Diisi oleh JS (App.setupSdEditLogic) -->
+                    </div>
+
+                    <!-- Area Input Dinamis -->
+                    <div id="edit-kelasContentArea" style="min-height:300px;">
+                        <!-- Diisi oleh JS -->
+                    </div>
+                    
+                    <div style="margin-top:20px; display:flex; justify-content:space-between;">
+                        <button type="button" class="btn-secondary prev-tab-btn" data-target="dataSekolah"><i class="fas fa-arrow-left"></i> Sebelumnya</button>
+                        <button type="button" class="submit-btn next-tab-btn" data-target="dataPtk">Selanjutnya <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- TAB 3: DATA PTK -->
+                <div id="dataPtk" class="tab-content-form">
+                    <h5 style="border-bottom:1px solid #e2e8f0; padding-bottom:10px; margin-bottom:15px; color:#334155;">Rekapitulasi Guru & Tendik</h5>
+                    
+                    <div class="alert-box" id="ptk-alert-box" style="display:none;"></div>
+
+                    <!-- Input Grid Sederhana untuk PTK -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap:15px;">
+                        
+                        <!-- Kepala Sekolah -->
+                        <div class="input-box-card">
+                            <span class="box-title">Kepala Sekolah</span>
+                            <div class="lp-wrapper">
+                                <div class="lp-field"><label>PNS</label><input type="number" name="KS PNS" class="form-control-mini val-ks"></div>
+                                <div class="lp-field"><label>PPPK</label><input type="number" name="KS PPPK" class="form-control-mini val-ks"></div>
+                                <div class="lp-field"><label>Non ASN</label><input type="number" name="KS NON ASN" class="form-control-mini val-ks"></div>
+                            </div>
+                        </div>
+
+                        <!-- Guru Kelas -->
+                        <div class="input-box-card">
+                            <span class="box-title">Guru Kelas</span>
+                            <div class="lp-wrapper">
+                                <div class="lp-field"><label>PNS</label><input type="number" name="Guru Kelas PNS" class="form-control-mini val-guru"></div>
+                                <div class="lp-field"><label>PPPK</label><input type="number" name="Guru Kelas PPPK" class="form-control-mini val-guru"></div>
+                                <div class="lp-field"><label>Non ASN</label><input type="number" name="Guru Kelas NON ASN" class="form-control-mini val-guru"></div>
+                            </div>
+                        </div>
+
+                        <!-- Guru PAI -->
+                        <div class="input-box-card">
+                            <span class="box-title">Guru PAI</span>
+                            <div class="lp-wrapper">
+                                <div class="lp-field"><label>PNS</label><input type="number" name="Guru PAI PNS" class="form-control-mini val-guru"></div>
+                                <div class="lp-field"><label>PPPK</label><input type="number" name="Guru PAI PPPK" class="form-control-mini val-guru"></div>
+                                <div class="lp-field"><label>Non ASN</label><input type="number" name="Guru PAI NON ASN" class="form-control-mini val-guru"></div>
+                            </div>
+                        </div>
+                        
+                        <!-- Guru PJOK -->
+                        <div class="input-box-card">
+                            <span class="box-title">Guru PJOK</span>
+                            <div class="lp-wrapper">
+                                <div class="lp-field"><label>PNS</label><input type="number" name="Guru PJOK PNS" class="form-control-mini val-guru"></div>
+                                <div class="lp-field"><label>PPPK</label><input type="number" name="Guru PJOK PPPK" class="form-control-mini val-guru"></div>
+                                <div class="lp-field"><label>Non ASN</label><input type="number" name="Guru PJOK NON ASN" class="form-control-mini val-guru"></div>
+                            </div>
+                        </div>
+
+                        <!-- Penjaga & Pustakawan -->
+                         <div class="input-box-card">
+                            <span class="box-title">Tendik Lainnya</span>
+                            <div class="lp-wrapper">
+                                <div class="lp-field"><label>Penjaga</label><input type="number" name="Penjaga Sekolah" class="form-control-mini"></div>
+                                <div class="lp-field"><label>Pustaka</label><input type="number" name="Tenaga Pustakawan" class="form-control-mini"></div>
+                                <div class="lp-field"><label>Admin</label><input type="number" name="Tenaga Administrasi" class="form-control-mini"></div>
+                            </div>
+                        </div>
+
+                    </div>
+
+                    <div style="margin-top:20px; display:flex; justify-content:space-between;">
+                        <button type="button" class="btn-secondary prev-tab-btn" data-target="dataMurid"><i class="fas fa-arrow-left"></i> Sebelumnya</button>
+                        <button type="button" class="submit-btn next-tab-btn" data-target="dataUnggah">Selanjutnya <i class="fas fa-arrow-right"></i></button>
+                    </div>
+                </div>
+
+                <!-- TAB 4: UNGGAH DOKUMEN -->
+                <div id="dataUnggah" class="tab-content-form">
+                    
+                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:20px; margin-bottom:20px;">
+                        <div class="form-group">
+                            <label>Tahun Laporan</label>
+                            <select name="Tahun" class="std-input">
+                                <option value="2024">2024</option>
+                                <option value="2025">2025</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Bulan Laporan</label>
+                            <select name="Bulan" class="std-input">
+                                <option value="Januari">Januari</option>
+                                <option value="Februari">Februari</option>
+                                <!-- dst -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- File Preview -->
+                    <div style="background:#f8fafc; border:1px solid #e2e8f0; padding:15px; border-radius:8px; display:flex; align-items:center; gap:15px; margin-bottom:20px;">
+                        <div id="existingFileLink" style="flex:1; display:flex; align-items:center; gap:15px;">
+                            <!-- Diisi JS -->
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Update File (Opsional)</label>
+                        <input type="file" id="fileLapbulSdEdit" name="fileLapbul" class="std-input" accept="application/pdf">
+                        <small style="color:#64748b;">Maksimal 1MB, Format PDF.</small>
+                    </div>
+
+                    <div style="margin-top:30px; display:flex; justify-content:space-between; border-top:1px solid #e2e8f0; padding-top:20px;">
+                        <button type="button" class="btn-secondary prev-tab-btn" data-target="dataPtk"><i class="fas fa-arrow-left"></i> Sebelumnya</button>
+                        <button type="submit" id="edit-lapbul-sd-submit" class="submit-btn"><i class="fas fa-save"></i> SIMPAN PERUBAHAN</button>
+                    </div>
+                </div>
+
+            </form>
         </div>
-
-        <div id="edit-dataMurid" class="tab-content-form">
-          <div id="edit-subTabContainer" class="sub-tabs-container"></div>
-          <div id="edit-kelasContentArea"></div>
-        </div>
-
-        <div id="edit-dataPtk" class="tab-content-form">
-          
-          <div id="ptk-alert-box" style="display:none; margin-bottom:15px; padding:10px; border-radius:6px; font-size:0.9em; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;"></div>
-
-          <div class="form-section">
-            <h3 class="form-section-title"><i class="fas fa-user-tie"></i> Kepala Sekolah (Maks 1)</h3>
-            <div class="form-grid-4">
-              <div class="form-group"><label>PNS</label><input type="number" name="KS PNS" class="form-control val-ks" style="text-align:center;" value="0"></div>
-              <div class="form-group"><label>PPPK</label><input type="number" name="KS PPPK" class="form-control val-ks" style="text-align:center;" value="0"></div>
-              <div class="form-group"><label>Non ASN</label><input type="number" name="KS NON ASN" class="form-control val-ks" style="text-align:center;" value="0"></div>
-            </div>
-          </div>
-
-          <div class="form-section">
-            <h3 class="form-section-title"><i class="fas fa-chalkboard-teacher"></i> Data Guru</h3>
-            <div class="table-responsive-wrapper" style="border:none;"> 
-                <table class="matrix-input-table">
-                <thead>
-                  <tr>
-                    <th style="width: 25%;">Jenis Guru</th>
-                    <th>PNS</th><th>PPPK</th><th>PPPK PW</th><th>GTY</th><th>GTT</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr><td>Guru Kelas</td><td><input type="number" name="GK PNS" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GK PPPK" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GK PPPK PW" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GK GTY" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GK GTT" class="form-control-mini val-guru" value="0"></td></tr>
-                  <tr><td>Guru PAI</td><td><input type="number" name="GPAI PNS" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPAI PPPK" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPAI PPPK PW" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPAI GTY" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPAI GTT" class="form-control-mini val-guru" value="0"></td></tr>
-                  <tr><td>Guru PJOK</td><td><input type="number" name="GPJOK PNS" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPJOK PPPK" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPJOK PPPK PW" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPJOK GTY" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPJOK GTT" class="form-control-mini val-guru" value="0"></td></tr>
-                  <tr><td>Guru PA Kristen</td><td><input type="number" name="GPA KRIS PNS" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KRIS PPPK" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KRIS PPPK PW" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KRIS GTY" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KRIS GTT" class="form-control-mini val-guru" value="0"></td></tr>
-                  <tr><td>Guru PA Katolik</td><td><input type="number" name="GPA KAT PNS" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KAT PPPK" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KAT PPPK PW" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KAT GTY" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GPA KAT GTT" class="form-control-mini val-guru" value="0"></td></tr>
-                  <tr><td>Guru Bhs. Inggris</td><td><input type="number" name="GBING PNS" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GBING PPPK" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GBING PPPK PW" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GBING GTY" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GBING GTT" class="form-control-mini val-guru" value="0"></td></tr>
-                  <tr><td>Guru Mapel Lain</td><td><input type="number" name="GMAP PNS" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GMAP PPPK" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GMAP PPPK PW" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GMAP GTY" class="form-control-mini val-guru" value="0"></td><td><input type="number" name="GMAP GTT" class="form-control-mini val-guru" value="0"></td></tr>
-                </tbody>
-                </table>
-            </div>
-          </div>
-          
-          <div class="section-divider"><span>Tenaga Kependidikan</span></div>
-          <div class="table-responsive-wrapper">
-             <table class="matrix-input-table">
-               <thead>
-                 <tr>
-                   <th style="width: 25%;">Jenis Tendik</th>
-                   <th>PNS</th><th>PPPK</th><th>PPPK PW</th><th>PTY</th><th>PTT</th>
-                 </tr>
-               </thead>
-               <tbody>
-                  <tr><td>Pengelola Umum Ops.</td><td><input type="number" name="PUO PNS" class="form-control-mini" value="0"></td><td><input type="number" name="PUO PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="PUO PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="PUO PTY" class="form-control-mini" value="0"></td><td><input type="number" name="PUO PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Operator Layanan</td><td><input type="number" name="OLO PNS" class="form-control-mini" value="0"></td><td><input type="number" name="OLO PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="OLO PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="OLO PTY" class="form-control-mini" value="0"></td><td><input type="number" name="OLO PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Pengelola Layanan</td><td><input type="number" name="PLO PNS" class="form-control-mini" value="0"></td><td><input type="number" name="PLO PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="PLO PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="PLO PTY" class="form-control-mini" value="0"></td><td><input type="number" name="PLO PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Penata Layanan</td><td><input type="number" name="PTLO PNS" class="form-control-mini" value="0"></td><td><input type="number" name="PTLO PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="PTLO PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="PTLO PTY" class="form-control-mini" value="0"></td><td><input type="number" name="PTLO PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Adm. Perkantoran</td><td><input type="number" name="ADM KAN PNS" class="form-control-mini" value="0"></td><td><input type="number" name="ADM KAN PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="ADM KAN PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="ADM KAN PTY" class="form-control-mini" value="0"></td><td><input type="number" name="ADM KAN PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Penjaga Sekolah</td><td><input type="number" name="PJG PNS" class="form-control-mini" value="0"></td><td><input type="number" name="PJG PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="PJG PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="PJG PTY" class="form-control-mini" value="0"></td><td><input type="number" name="PJG PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Tenaga Administrasi</td><td><input type="number" name="TAS PNS" class="form-control-mini" value="0"></td><td><input type="number" name="TAS PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="TAS PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="TAS PTY" class="form-control-mini" value="0"></td><td><input type="number" name="TAS PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Pustakawan</td><td><input type="number" name="PUST PNS" class="form-control-mini" value="0"></td><td><input type="number" name="PUST PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="PUST PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="PUST PTY" class="form-control-mini" value="0"></td><td><input type="number" name="PUST PTT" class="form-control-mini" value="0"></td></tr>
-                  <tr><td>Tendik Lainnya</td><td><input type="number" name="TDKLAIN PNS" class="form-control-mini" value="0"></td><td><input type="number" name="TDKLAIN PPPK" class="form-control-mini" value="0"></td><td><input type="number" name="TDKLAIN PPPK PW" class="form-control-mini" value="0"></td><td><input type="number" name="TDKLAIN PTY" class="form-control-mini" value="0"></td><td><input type="number" name="TDKLAIN PTT" class="form-control-mini" value="0"></td></tr>
-               </tbody>
-             </table>
-          </div>
-        </div>
-        
-        <div id="edit-dataUnggah" class="tab-content-form">
-          
-          <div class="form-section">
-              <h3 class="form-section-title"><i class="fas fa-file-contract"></i> Dokumen Saat Ini</h3>
-              <div id="existingFileLink" style="background:#f1f5f9; padding:15px; border-radius:8px; border:1px solid #cbd5e1; display:flex; align-items:center; gap:10px;">
-                  <i class="fas fa-spinner fa-spin"></i> Memuat info file...
-              </div>
-          </div>
-
-          <div class="form-section" style="text-align:center; margin-top:30px;">
-            <h3 class="form-section-title" style="justify-content:center;"><i class="fas fa-sync-alt"></i> Ganti Dokumen (Opsional)</h3>
-            <p style="color:#64748b; margin-bottom:20px;">Klik di bawah jika ingin mengganti file laporan bulan lama dengan yang baru.</p>
-            
-            <div class="file-upload-area" 
-                 onclick="document.getElementById('fileLapbulSdEdit').click()" 
-                 style="cursor:pointer; border:2px dashed #cbd5e1; border-radius:10px; padding:40px; background:#fff; transition:all 0.2s;" 
-                 onmouseover="this.style.borderColor=getComputedStyle(document.documentElement).getPropertyValue('--primary');this.style.backgroundColor='#eff6ff'" 
-                 onmouseout="this.style.borderColor='#cbd5e1';this.style.backgroundColor='#fff'">
-                
-                <i class="fas fa-cloud-upload-alt" style="font-size:3em; color:var(--primary); margin-bottom:10px;"></i>
-                <h4 style="margin:10px 0; color:#334155; font-size:1.1em; font-weight:600;">Klik untuk ganti file</h4>
-                <p style="color:#94a3b8; font-size:0.9em; margin:0;">Maksimal 300 KB. Format PDF.</p>
-                
-                <input type="file" id="fileLapbulSdEdit" name="fileData" accept=".pdf" style="display:none;" 
-                       onchange="var n=this.files[0]?this.files[0].name:''; var el=document.getElementById('fileNameSdEdit'); el.textContent=n; el.style.display=n?'block':'none';">
-            </div>
-            
-            <div id="fileNameSdEdit" style="margin-top:15px; font-weight:bold; color:var(--primary); min-height:20px; display:none;"></div>
-          </div>
-          
-          <div class="tab-form-footer" style="margin-top:30px;">
-              <button type="button" class="btn-secondary prev-tab-btn">Sebelumnya</button>
-              <button type="submit" class="btn-primary" id="finalSubmitBtnSdEdit" style="padding-left:30px; padding-right:30px;">
-                  <i class="fas fa-save"></i> SIMPAN PERUBAHAN
-              </button>
-          </div>
-        </div>
-
-      </div> 
-  </form>
-</main>
+    </div>
+</div>

@@ -1,49 +1,85 @@
+<style>
+    /* --- STYLE KHUSUS HALAMAN RIWAYAT --- */
+    
+    /* Buat kolom terakhir (User) rata kiri dan teks agak tebal */
+    #riwayatTable td:last-child {
+        text-align: left !important;
+        font-weight: 500;
+        color: #334155;
+    }
+
+    /* Opsional: Atur lebar kolom Dokumen (tombol Lihat) agar pas */
+    #riwayatTable td:nth-last-child(2) {
+        text-align: center !important;
+        white-space: nowrap;
+    }
+</style>
+
 <div class="std-header">
-    <h1><i class="fas fa-history" style="color:var(--primary); margin-right:10px;"></i> Riwayat Pengiriman</h1>
-    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Daftar gabungan laporan PAUD dan SD yang telah masuk.</p>
+    <h1><i class="fas fa-history" style="color:var(--primary, #0284c7); margin-right:10px;"></i> Riwayat Pengiriman Laporan Bulan</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Daftar laporan bulanan yang telah Anda kirimkan.</p>
 </div>
 
-<div id="tableWrapper" class="std-content-wrapper">
+<div class="std-content-wrapper">
 
-    <div class="std-filter-card" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
+    <!-- FILTER CARD -->
+    <div class="std-filter-card" style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; padding:15px;">
         
-        <div style="display: flex; gap: 10px; flex-grow: 1;">
-            <select id="filterTahun" class="std-filter-select" style="width: 100px;">
+        <!-- Filter Tahun -->
+        <div class="filter-group">
+            <select id="filterTahun" class="std-filter-select">
                 <option value="">-- Tahun --</option>
-            </select>
-
-            <select id="filterBulan" class="std-filter-select" style="width: 110px;">
-                <option value="">-- Bulan --</option>
-            </select>
-
-            <select id="filterJenjang" class="std-filter-select" style="width: 110px;">
-                <option value="">-- Jenjang --</option>
-            </select>
-
-            <select id="filterSekolah" class="std-filter-select" style="flex-grow: 1; min-width: 150px;">
-                <option value="">-- Nama Sekolah --</option>
             </select>
         </div>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
-            
-            <div class="filter-group search-group" style="position: relative; width: 220px; margin: 0;">
-                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
-                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data..." 
-                       style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+        <!-- Filter Bulan -->
+        <div class="filter-group">
+            <select id="filterBulan" class="std-filter-select">
+                <option value="">-- Bulan --</option>
+            </select>
+        </div>
+
+        <!-- Filter Jenjang -->
+        <div class="filter-group">
+             <select id="filterJenjang" class="std-filter-select">
+                <option value="">-- Jenjang --</option>
+            </select>
+        </div>
+        
+        <!-- Filter Sekolah -->
+        <div class="filter-group">
+            <select id="filterSekolah" class="std-filter-select">
+               <option value="">-- Sekolah --</option>
+           </select>
+       </div>
+
+        <!-- Search & Refresh -->
+        <div style="margin-left: auto; display:flex; gap:10px; align-items:center;">
+             <div style="position: relative; width: 220px; height: 42px;"> 
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events:none; z-index:1;"></i>
+                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari data..." style="padding-left: 35px;">
             </div>
             
-            <button onclick="App.inits['lapbul_riwayat']()" class="btn-icon-refresh" title="Refresh Data">
+            <!-- Tombol Refresh (UX Global) -->
+            <button onclick="document.getElementById('filterTahun').value='';
+                             document.getElementById('filterBulan').value='';
+                             document.getElementById('filterJenjang').value='';
+                             document.getElementById('filterSekolah').value='';
+                             document.getElementById('searchFilter').value='';
+                             App.inits['lapbul_riwayat']()"
+                    class="std-filter-btn"
+                    title="Refresh & Reset Filter">
                 <i class="fas fa-sync-alt"></i>
             </button>
         </div>
-
     </div>
 
+    <!-- TABEL DATA -->
     <div class="std-table-container">
         <table id="riwayatTable" class="std-table">
-            <thead></thead>
-            <tbody></tbody>
+            <thead></thead> <!-- Header via JS -->
+            <tbody></tbody> <!-- Body via JS -->
         </table>
     </div>
+
 </div>

@@ -1,55 +1,97 @@
-<div class="std-header">
-    <h1><i class="fas fa-users" style="color:#f1c40f; margin-right:10px;"></i> Jumlah PTK PAUD Bulanan</h1>
-    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">
-        Rekapitulasi data jumlah Pendidik dan Tenaga Kependidikan per lembaga berdasarkan Laporan Bulanan.
-    </p>
-</div>
+<style>
+    /* 1. SETUP KOLOM */
+    /* Kolom No (Index 1) */
+    #ptkJumlahBulananPaudTable th:nth-child(1),
+    #ptkJumlahBulananPaudTable td:nth-child(1) {
+        width: 40px; text-align: center;
+    }
+    /* Kolom Nama Lembaga (Index 2) */
+    #ptkJumlahBulananPaudTable th:nth-child(2),
+    #ptkJumlahBulananPaudTable td:nth-child(2) {
+        min-width: 250px; text-align: left;
+    }
+    /* Kolom Angka (Index 7 s.d. Akhir) */
+    #ptkJumlahBulananPaudTable th:nth-child(n+7),
+    #ptkJumlahBulananPaudTable td:nth-child(n+7) {
+        text-align: center; min-width: 65px;
+    }
 
-<div id="tableWrapper" class="std-content-wrapper">
+    /* 2. STYLE FOOTER */
+    #ptkJumlahBulananPaudTable tfoot td {
+        background-color: var(--bg-header-tbl, #e2e8f0);
+        font-weight: bold;
+        color: #334155;
+        text-align: center;
+        border-top: 2px solid #94a3b8;
+    }
+    #ptkJumlahBulananPaudTable tfoot td:first-child {
+        text-align: left; padding-left: 10px;
+    }
 
-    <div class="std-filter-card" style="display: flex; flex-wrap: wrap; gap: 10px; align-items: center;">
-        
-        <div style="display: flex; gap: 10px; flex-grow: 1; flex-wrap: wrap;">
-            
-            <select id="filterTahun" class="std-filter-select" style="min-width: 100px;">
-                <option value="">-- Tahun --</option>
-            </select>
-            
-            <select id="filterBulan" class="std-filter-select" style="min-width: 120px;">
-                <option value="">-- Bulan --</option>
-            </select>
-            
-            <select id="filterJenjang" class="std-filter-select" style="min-width: 120px;">
-                <option value="">-- Jenjang --</option>
-            </select>
-            
-            <select id="filterNamaLembaga" class="std-filter-select" style="min-width: 200px; flex-grow: 1;">
-                <option value="">-- Nama Lembaga --</option>
-            </select>
-            
-        </div>
+    /* 3. SCROLL VERTIKAL SAFETY (Memastikan scroll jalan di layar berapapun) */
+    #view_ptk_jumlah_bulanan_paud {
+        height: 100%; display: flex; flex-direction: column; overflow: hidden;
+    }
+    #view_ptk_jumlah_bulanan_paud .std-content-wrapper {
+        flex-grow: 1; display: flex; flex-direction: column;
+        overflow: hidden; /* Kunci scroll body */
+    }
+    #view_ptk_jumlah_bulanan_paud .std-table-container {
+        flex-grow: 1; 
+        overflow: auto; /* Scrollbar Tabel */
+        background: #fff;
+        border-bottom: none;
+        /* Trik Flexbox agar scroll tidak 'bocor' ke parent */
+        min-height: 0; 
+    }
+</style>
 
-        <div style="display: flex; gap: 10px; align-items: center;">
+<div id="view_ptk_jumlah_bulanan_paud" class="content-section">
+
+    <div class="std-header">
+        <h1><i class="fas fa-users" style="color:#f1c40f; margin-right:10px;"></i> Jumlah PTK PAUD Bulanan</h1>
+        <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">
+            Rekapitulasi data jumlah Pendidik dan Tenaga Kependidikan per lembaga.
+        </p>
+    </div>
+
+    <div id="tableWrapper" class="std-content-wrapper">
+
+        <div class="std-filter-card" style="justify-content: space-between;">
             
-            <div class="filter-group search-group" style="position: relative; width: 200px; margin: 0;">
-                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
-                <input type="text" id="searchFilter" class="std-search-input" placeholder="Cari sekolah..." 
-                       style="width: 100%; padding: 8px 10px 8px 35px; box-sizing: border-box;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap; flex-grow: 1;">
+                <select id="filterTahun" class="std-filter-select" style="min-width: 100px;">
+                    <option value="">-- Tahun --</option>
+                </select>
+                <select id="filterBulan" class="std-filter-select" style="min-width: 120px;">
+                    <option value="">-- Bulan --</option>
+                </select>
+                <select id="filterJenjangBulanan" class="std-filter-select" style="min-width: 150px;">
+                    <option value="">-- Jenjang --</option>
+                </select>
             </div>
-            
-            <button onclick="App.inits['ptk_jumlah_bulanan_paud']()" class="btn-icon-refresh" title="Refresh Data">
-                <i class="fas fa-sync-alt"></i>
-            </button>
-            
+
+            <div style="display: flex; gap: 10px; align-items: center;">
+                <div class="filter-group search-group" style="position: relative; width: 220px; margin: 0;">
+                    <i class="fas fa-search" style="position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: #94a3b8; font-size: 0.9em;"></i>
+                    <input type="text" id="searchJumlahBulanan" class="std-search-input" placeholder="Cari Sekolah..." 
+                           style="padding-left: 32px;">
+                </div>
+                
+                <button onclick="App.inits['ptk_jumlah_bulanan_paud']()" class="std-btn-refresh" title="Muat Ulang Data">
+                    <i class="fas fa-sync-alt"></i>
+                </button>
+            </div>
+
         </div>
 
+        <div class="std-table-container">
+            <table id="ptkJumlahBulananPaudTable" class="std-table">
+                <thead></thead>
+                <tbody></tbody>
+                <tfoot></tfoot> 
+            </table>
+        </div>
+        
     </div>
-
-    <div class="std-table-container">
-        <table id="ptkJumlahBulananPaudTable" class="std-table">
-            <thead></thead>
-            <tbody></tbody>
-            <tfoot></tfoot> </table>
-    </div>
-    
 </div>

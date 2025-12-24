@@ -1,20 +1,37 @@
 <div class="std-header">
-    <h1 style="color:#ef4444;"><i class="fas fa-trash-alt"></i> Trash (Data Dihapus)</h1>
+    <h1><i class="fas fa-trash-alt" style="color:#ef4444; margin-right:10px;"></i> Trash (Data Dihapus)</h1>
+    <p style="margin:5px 0 0 35px; color:#64748b; font-size:0.9em;">Data SK yang telah dihapus. (Hanya Admin)</p>
 </div>
 
-<div id="tableWrapper" class="std-content-wrapper">
-    
-    <div class="std-filter-card">
-        <div class="filter-group" style="flex:1;">
-            <label class="std-filter-label">Cari Data:</label>
-            <input type="text" id="trashSearch" class="std-filter-select" placeholder="Ketik nama sekolah..." style="padding:5px;">
+<div class="std-content-wrapper">
+
+    <!-- FILTER & SEARCH -->
+    <div class="std-filter-card" style="display:flex; align-items:center; justify-content:space-between; padding:15px;">
+        
+        <div style="color:#64748b; font-size:0.9em; font-style:italic;">
+            <i class="fas fa-info-circle"></i> Data di sini adalah riwayat penghapusan.
+        </div>
+
+        <div style="display:flex; gap:10px; align-items:center;">
+             <div style="position: relative; width: 250px; height: 42px;"> 
+                <i class="fas fa-search" style="position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; pointer-events:none; z-index:1;"></i>
+                <input type="text" id="trashSearch" class="std-search-input" placeholder="Cari data sampah..." style="padding-left: 35px;">
+            </div>
+            
+            <button onclick="document.getElementById('trashSearch').value=''; App.inits['sk_trash']()"
+                    class="std-filter-btn"
+                    title="Refresh Data">
+                <i class="fas fa-sync-alt"></i>
+            </button>
         </div>
     </div>
 
+    <!-- TABEL DATA -->
     <div class="std-table-container">
         <table id="trashTable" class="std-table">
-            <thead></thead>
-            <tbody></tbody>
+            <thead></thead> 
+            <tbody></tbody> 
         </table>
     </div>
+
 </div>
